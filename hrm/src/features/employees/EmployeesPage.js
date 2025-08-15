@@ -5,23 +5,27 @@ import ActionsBar from "./components/ActionsBar";
 import ExportModal from "./components/ExportModal";
 import EmployeesTable from "./components/EmployeesTable";
 import UploadExcelModal from "./components/UploadExcelModal";
-import SendCredentialsModal from "./components/SendCredentialsModal"; // <-- NEW
+import SendCredentialsModal from "./components/SendCredentialsModal";
+import AddEmployeeModal from "./components/AddEmployeeModal"; // wizard (UI only)
 import useEmployees from "./hooks/useEmployees";
 
 export default function EmployeesPage() {
   const {
+    // data & filters
     filters, setFilter, resetFilters,
     perPage, setPerPage,
     page, setPage, totalPages, firstItem,
     rows, total,
+    // export
     openExport, setOpenExport,
+    // actions (UI submits handled via form submit)
     apply, exportData,
-    // backend later; UI only for now
-    addNew,
   } = useEmployees();
 
+  // local UI state for modals
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);       // <-- NEW
+  const [sendOpen, setSendOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -40,14 +44,14 @@ export default function EmployeesPage() {
           <Filters filters={filters} onChange={setFilter} />
 
           <ActionsBar
-            // form submit handles apply
+            // submit = apply (handled by form)
             onClear={resetFilters}
             perPage={perPage}
             setPerPage={setPerPage}
             setOpenExport={setOpenExport}
-            onOpenUpload={() => setUploadOpen(true)}   // open Upload Excel (UI)
-            onSendCreds={() => setSendOpen(true)}      // open Send Credentials (UI)
-            onAddNew={addNew}
+            onOpenUpload={() => setUploadOpen(true)}     // Upload Excel (UI)
+            onSendCreds={() => setSendOpen(true)}        // Send Credentials (UI)
+            onAddNew={() => setAddOpen(true)}            // Add Employee wizard (UI)
             total={total}
           />
 
@@ -55,7 +59,7 @@ export default function EmployeesPage() {
             <ExportModal
               onClose={() => setOpenExport(false)}
               onExport={() => {
-                exportData();
+                exportData(); // UI hook – replace with backend later
                 setOpenExport(false);
               }}
             />
@@ -102,6 +106,16 @@ export default function EmployeesPage() {
           // UI-only preview; replace with backend later
           alert(`Pretend sending credentials to: ${payload.employee}`);
           setSendOpen(false);
+        }}
+      />
+
+      {/* Add Employee Wizard (UI only) */}
+      <AddEmployeeModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        onSave={() => {
+          // UI-only action; wire to backend later
+          setAddOpen(false);
         }}
       />
     </div>
