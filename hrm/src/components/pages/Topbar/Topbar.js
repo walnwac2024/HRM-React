@@ -1,3 +1,4 @@
+// src/components/pages/Topbar/Topbar.jsx
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -18,16 +19,17 @@ const menu = [
 ];
 
 function getInitials(name = "User") {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(p => p[0]?.toUpperCase())
-    .join("");
+  return name.split(" ").filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join("");
 }
 
-export default function Topbar({ userName = "User", logoSrc = "/images/logo.png" }) {
+export default function Topbar({ userName = "User", logoSrc }) {
   const location = useLocation();
+
+  // Default to public/hrm-logo.png; use PUBLIC_URL so it works under any base path
+  const defaultLogo = `${process.env.PUBLIC_URL}/hrm-logo.png`;
+  const fallbackLogo = `${process.env.PUBLIC_URL}/logo192.png`;
+  const logo = logoSrc || defaultLogo;
+
   const activeMenu = menu.find(m => location.pathname.startsWith(m.to));
   const activeLabel = activeMenu?.label ?? "";
 
@@ -36,8 +38,19 @@ export default function Topbar({ userName = "User", logoSrc = "/images/logo.png"
       {/* Top white bar */}
       <div className="bg-white border-b border-gray-200">
         <div className="mx-auto max-w-screen-2xl h-14 px-4 flex items-center">
-          {/* Left: logo */}
-          <img src={logoSrc} alt="Logo" className="h-8 w-auto mr-5" />
+          {/* Left: logo (clickable) */}
+          <Link to="/dashboard" className="flex items-center shrink-0 mr-5" aria-label="Go to dashboard">
+            <img
+              src={logo}
+              alt="HRM Logo"
+              className="h-8 w-auto"
+              onError={(e) => {
+                if (e.currentTarget.src !== fallbackLogo) {
+                  e.currentTarget.src = fallbackLogo;
+                }
+              }}
+            />
+          </Link>
 
           {/* Center: menu */}
           <nav className="hidden md:grid grid-flow-col auto-cols-[6rem] gap-6 justify-center items-end text-slate-500 flex-1">
@@ -48,8 +61,9 @@ export default function Topbar({ userName = "User", logoSrc = "/images/logo.png"
                 <Link
                   key={item.key}
                   to={item.to}
-                  className={`group w-24 mx-auto flex flex-col items-center justify-center leading-none
-                    ${isActive ? "text-customRed" : "hover:text-customRed"}`}
+                  className={`group w-24 mx-auto flex flex-col items-center justify-center leading-none ${
+                    isActive ? "text-customRed" : "hover:text-customRed"
+                  }`}
                 >
                   <Icon
                     className={`text-[18px] mb-1 ${
@@ -57,7 +71,6 @@ export default function Topbar({ userName = "User", logoSrc = "/images/logo.png"
                     }`}
                   />
                   <span className="text-[10px] uppercase tracking-wide">{item.label}</span>
-
                   {isActive ? (
                     <span className="mt-1 h-0.5 w-8 bg-customRed rounded-full" />
                   ) : (
