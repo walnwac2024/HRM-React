@@ -1,110 +1,184 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+// src/userdetails/Login.jsx
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
 
-function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(null);
-  const [userData, setUserData] = useState(null);
+export default function Login({
+  onSubmit,                         // optional: (payload) => Promise<void>
+  illustrationSrc = process.env.PUBLIC_URL + "/hrm.jpg",
+  status,                           // optional: string from server
+  serverErrors = [],                // optional: array of strings from server
+}) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(false);
+  const [show, setShow] = useState(false);
+  const [errors, setErrors] = useState([]);
 
-  const handleLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setErrors([]);
 
+    // basic client-side checks
+    const nextErrors = [];
+    if (!email) nextErrors.push("Email is required.");
+    if (!password) nextErrors.push("Password is required.");
+    if (nextErrors.length) return setErrors(nextErrors);
+
+    const payload = { email, password, remember };
+
+    // If you pass an onSubmit prop, we'll use it; otherwise just log.
     try {
-      const response = await axios.post(
-        'http://localhost:5000/login',
-        { username, password },
-        { withCredentials: true }
-      );
-
-      if (response.status === 200) {
-        alert('Login successful!');
-        console.log('The response from the backend is:', response);
-        setUserData(response.data.user);
+      if (onSubmit) {
+        await onSubmit(payload);
+      } else {
+        console.log("Login payload:", payload);
+        // TODO: wire up your API call here (e.g., fetch/axios)
+        // await fetch("/api/login", { method: "POST", body: JSON.stringify(payload) })
       }
     } catch (err) {
-      setError('Invalid username or password');
+      setErrors([err?.message || "Login failed."]);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-6">
-        {/* Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="mb-6 text-center">
-            <h1 className="text-2xl font-bold text-gray-900">Sign in</h1>
-            <p className="mt-1 text-sm text-gray-500">
-              Use your account to continue
-            </p>
+    <div className="min-h-screen overflow-hidden flex flex-col md:flex-row bg-white">
+      {/* Left: Form Section */}
+      <div className="w-full md:w-1/2 h-screen flex items-center justify-center p-8 md:p-16">
+        <div className="w-full max-w-md space-y-6">
+          {/* Title */}
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 leading-tight">
+              Welcome back! <br />
+              <span className="underline decoration-customRed">Sign in</span> to continue.
+            </h1>
           </div>
 
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
+          {/* Session Status */}
+          {status ? <div className="text-sm text-green-600">{status}</div> : null}
+
+          {/* Validation Errors */}
+          {(serverErrors.length > 0 || errors.length > 0) && (
+            <ul className="text-sm text-red-600 space-y-1">
+              {[...serverErrors, ...errors].map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Username
+              <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                Email
               </label>
               <input
-                type="text"
-                placeholder="Enter your username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                id="email"
+                type="email"
+                name="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-customRed focus:border-customRed outline-none"
               />
             </div>
 
+            {/* Password with eye toggle */}
             <div>
-              <label className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 Password
               </label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={show ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-md bg-blue-50 focus:ring-customRed focus:border-customRed outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShow((s) => !s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-customRed transition"
+                  aria-label="Toggle password visibility"
+                >
+                  {!show ? (
+                    // eye
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M1.5 12s3.75-7.5 10.5-7.5S22.5 12 22.5 12s-3.75 7.5-10.5 7.5S1.5 12 1.5 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  ) : (
+                    // eye-off
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19.5c-6.75 0-10.5-7.5-10.5-7.5a18.34 18.34 0 0 1 3.16-4.14" />
+                      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
 
-            <button
-              type="submit"
-              className="mt-2 w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              Login
-            </button>
+            {/* Remember & Forgot */}
+            <div className="flex items-center justify-between text-sm">
+              <label className="inline-flex items-center">
+                <input
+                  type="checkbox"
+                  name="remember"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  className="text-customRed border-gray-300 rounded"
+                />
+                <span className="ml-2 text-gray-600">Remember Me</span>
+              </label>
+
+              {/* Update these links to your routes if needed */}
+              <Link to="/forgot-password" className="text-customRed hover:underline">
+                Forget Password?
+              </Link>
+            </div>
+
+            {/* Button */}
+            <div>
+              <button
+                type="submit"
+                className="w-full bg-customRed text-white font-semibold py-2 rounded-md hover:bg-red-700 transition-all"
+              >
+                Sign in →
+              </button>
+            </div>
           </form>
-        </div>
 
-        {/* User data after successful login */}
-        {userData && (
-          <div className="bg-white rounded-2xl shadow-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900">Profile</h2>
-            <div className="mt-4 space-y-2 text-sm text-gray-700">
-              <p>
-                <span className="font-medium text-gray-900">Username:</span>{' '}
-                {userData.username}
-              </p>
-              <p>
-                <span className="font-medium text-gray-900">Email:</span>{' '}
-                {userData.email}
-              </p>
-              <p>
-                <span className="font-medium text-gray-900">Role:</span>{' '}
-                {userData.role}
-              </p>
-            </div>
+          {/* Optional Register Link */}
+          <p className="text-sm text-gray-600 text-center">
+            Don’t have an account?{" "}
+            <Link to="/register" className="text-customRed font-medium hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </div>
+      </div>
+
+      {/* Right: Preview/Brand Section */}
+      <div className="hidden md:flex w-1/2 h-screen bg-gray-50 items-center justify-center px-6 py-8 overflow-hidden">
+        <div className="max-w-lg text-center">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+            Simplify HR.<br />
+            Empower your workforce.<br />
+          </h2>
+          <div className="mt-6 flex justify-center">
+            <img
+              src={illustrationSrc}
+              alt="HRM Illustration"
+              className="max-w-[300px] max-h-[300px] w-full h-auto rounded-xl shadow-md border border-gray-200"
+            />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 }
-
-export default Login;
