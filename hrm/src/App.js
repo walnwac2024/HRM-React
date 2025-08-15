@@ -11,6 +11,8 @@ import Layout from './components/pages/Layout/Layout';
 // Dashboard page (your big component)
 import Dashboard from './Dashbord/Dashbord'; // <-- matches your folder/file name
 
+import EmployeesPage from "./features/employees";
+
 function App() {
   return (
     <Router>
@@ -22,6 +24,8 @@ function App() {
         <Route element={<Layout />}>
           {/* Make / redirect to /dashboard */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          <Route path="/employees" element={<EmployeesPage />} />
 
           {/* Show your Dashboard page */}
           <Route path="/dashboard" element={<Dashboard />} />
