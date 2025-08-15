@@ -1,59 +1,47 @@
+// src/App.js
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
+// Standalone pages
 import Login from './userdetails/Login';
-import Dashboard from './Dashbord/Dashbord'; // will act as a layout (has <Outlet/>)
-import Home from './components/pages/Home/Home';
+
+// Layout (Topbar + Outlet)
+import Layout from './components/pages/Layout/Layout';
+
+// Dashboard page (your big component)
+import Dashboard from './Dashbord/Dashbord'; // <-- matches your folder/file name
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/* Layout route: everything inside uses the Dashboard layout */}
-        <Route element={<Dashboard />}>
-          {/* default (/) goes to Home inside the Dashboard layout */}
-          <Route path="/" element={<Home />} />
-          {/* add more child pages here, e.g.: */}
-          {/* <Route path="/employees" element={<AllEmployees />} /> */}
+        {/* No Topbar */}
+        <Route path="/login" element={<Login />} />
+
+        {/* With Topbar via Layout */}
+        <Route element={<Layout />}>
+          {/* Make / redirect to /dashboard */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+          {/* Show your Dashboard page */}
+          <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* Stubs for menu links; replace with real pages later */}
+          <Route path="/organization" element={<div className="p-4">Organization</div>} />
+          <Route path="/recruitment"  element={<div className="p-4">Recruitment</div>} />
+          <Route path="/employees"    element={<div className="p-4">Employees</div>} />
+          <Route path="/timesheet"    element={<div className="p-4">Timesheet</div>} />
+          <Route path="/leave"        element={<div className="p-4">Leave</div>} />
+          <Route path="/performance"  element={<div className="p-4">Performance</div>} />
+          <Route path="/payroll"      element={<div className="p-4">Payroll</div>} />
+          <Route path="/reports"      element={<div className="p-4">Reports</div>} />
         </Route>
 
-        {/* Standalone routes that should NOT use the Dashboard layout */}
-        <Route path="/login" element={<Login />} />
+        {/* 404 */}
+        <Route path="*" element={<h1 className="p-6">Page Not Found</h1>} />
       </Routes>
     </Router>
   );
 }
 
 export default App;
-
-
-
-// {/* <Route element={<AdminLayout />}>
-//         <Route path="/" element={<MainDashbord />} />
-//         <Route path="/projects" element={<Projects />} />
-//         <Route path="/clients" element={<Clients />} />
-//         <Route path="/new-project" element={<CreateProjects />} />
-        
-//         <Route path="/new-client" element={<NewClient />} />
-//         <Route path="/edit-project" element={<EditProject />} />
-//         {/* teams routes */}
-//         <Route path="/teams" element={<Teams />} />
-//         <Route path="/new-team" element={<CreateTeam />} />
-//         <Route path="/add-team-members" element={<AssignedMembers />} />
-//         <Route path={routes.teams.UpdateTeams} element={<EditTeam />} />
-//         <Route path={routes.teams.ViewTeam} element={<ViewTeam />} />
-//         <Route path={routes.jotform.Allforms} element={<Forms />} />
-//         <Route path={routes.jotform.ViewSubmission} element={<ViewSubmitForm />} />
-//         <Route path={routes.jotform.Allsubmission} element={<Allforms />} />
-//         <Route path="/forms/dynamic-form" element={<AutoBuilderForm />} />
-//         <Route path={routes.jotform.OperatorReaderForm} element={<OperatorReaderForm />} />
-
-//             <Route path="*" element={<Pagenotfound />} />
-
-//         {/* end of team routs */}
-//          <Route path="/project-details" element={<ViewDashbord />}>
-//           <Route index element={<Overview />} />
-//           <Route path="project-media" element={<ProjectMedia />} />
-//         </Route>
-    
-//       </Route> */}

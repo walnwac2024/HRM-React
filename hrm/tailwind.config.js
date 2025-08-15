@@ -4,7 +4,12 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        customRed: "#E11D48", // change hex to your exact red
+        customLightGrey: "#94A3B8",
+      },
+    },
   },
   plugins: [],
-}
+};
