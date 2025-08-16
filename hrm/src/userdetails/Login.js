@@ -1,7 +1,9 @@
 // src/userdetails/Login.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-
+import axios from 'axios'
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 export default function Login({
   onSubmit,                         // optional: (payload) => Promise<void>
   illustrationSrc = process.env.PUBLIC_URL + "/hrm.jpg",
@@ -13,32 +15,61 @@ export default function Login({
   const [remember, setRemember] = useState(false);
   const [show, setShow] = useState(false);
   const [errors, setErrors] = useState([]);
-
+  const { setUser } = useAuth();
+const navigate = useNavigate(); 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setErrors([]);
+  e.preventDefault();
+  setErrors([]);
 
-    // basic client-side checks
-    const nextErrors = [];
-    if (!email) nextErrors.push("Email is required.");
-    if (!password) nextErrors.push("Password is required.");
-    if (nextErrors.length) return setErrors(nextErrors);
+  const nextErrors = [];
+  if (!email) nextErrors.push("Email is required.");
+  if (!password) nextErrors.push("Password is required.");
+  if (nextErrors.length) return setErrors(nextErrors);
 
-    const payload = { email, password, remember };
+  const payload = { email, password, remember };
+  const url = "http://localhost:5000/api/v1/login"; // adjust if needed
 
-    // If you pass an onSubmit prop, we'll use it; otherwise just log.
-    try {
-      if (onSubmit) {
-        await onSubmit(payload);
-      } else {
-        console.log("Login payload:", payload);
-        // TODO: wire up your API call here (e.g., fetch/axios)
-        // await fetch("/api/login", { method: "POST", body: JSON.stringify(payload) })
-      }
-    } catch (err) {
-      setErrors([err?.message || "Login failed."]);
-    }
-  };
+  try {
+ 
+
+  const res = await axios.post(url, payload, {
+    headers: { "Content-Type": "application/json" },
+    withCredentials: true,
+    timeout: 15000,
+    validateStatus: () => true,
+  });
+
+  if (res.status >= 200 && res.status < 300) {
+    console.log("the result is:",res)
+    setUser(res.data)
+    navigate("/dashboard");
+  } else {
+    const msg =
+      res.data?.message ||
+      res.data?.error ||
+      (Array.isArray(res.data?.errors) && res.data.errors.join(", ")) ||
+      (typeof res.data === "string" ? res.data : null) ||
+      `Request failed with status ${res.status}`;
+    setErrors([msg]);
+  }
+} catch (err) {
+  const code = err?.code;
+  let msg =
+    err?.message ||
+    (err?.response?.data?.message ||
+      err?.response?.data?.error ||
+      (Array.isArray(err?.response?.data?.errors) &&
+        err.response.data.errors.join(", "))) ||
+    "Request failed.";
+
+  if (code === "ERR_NETWORK") msg = "Network/CORS error.";
+  else if (code === "ECONNABORTED") msg = "Request timed out.";
+
+  setErrors([msg]);
+}
+
+};
+
 
   return (
     <div className="min-h-screen overflow-hidden flex flex-col md:flex-row bg-white">

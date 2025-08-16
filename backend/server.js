@@ -1,103 +1,102 @@
-const express = require('express');
-const session = require('express-session');
-const bcrypt = require('bcryptjs');
+// server.js
+const express = require("express");
+const session = require("express-session");
+const MySQLStoreFactory = require("express-mysql-session")(session);
+const cors = require("cors");
+const helmet = require("helmet");
+const dotenv = require("dotenv");
+const csurf = require("csurf"); // <= add
+
+dotenv.config();
+
 const app = express();
-const port = 5000;
-const cors = require('cors');
+const routes = require("./Routes/Route");
+
+const isProd = process.env.NODE_ENV === "production";
+
+// 1) Security headers FIRST
+app.use(helmet());
+
+// 2) CORS BEFORE routes (and allow credentials)
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  })
+);
+
+// 3) JSON parser
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:3000',  // Allow React app to communicate with the backend
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],  // Allow these HTTP methods
-  credentials: true,  // Allow cookies if needed
-}));
-// Configure session
+
+// 4) Trust proxy when deploying behind Nginx/Heroku/etc.
+app.set("trust proxy", 1);
+
+// 5) Session store (MySQL)
+const sessionStore = new MySQLStoreFactory({
+  host: process.env.DB_HOST,
+  port: Number(process.env.DB_PORT || 3306),
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME,
+  createDatabaseTable: true,
+  // Optional cleanup config:
+  clearExpired: true,
+  checkExpirationInterval: 15 * 60 * 1000, // every 15 minutes
+  expiration: 7 * 24 * 60 * 60 * 1000,     // 7 days
+  schema: {
+    tableName: "sessions",
+    columnNames: {
+      session_id: "session_id",
+      expires: "expires",
+      data: "data",
+    },
+  },
+});
+
+// 6) Session middleware
 app.use(
   session({
-    secret: 'thisisme', // A secret string to sign the session ID
+    name: "sid",
+    secret: process.env.SESSION_SECRET || "change_this_secret",
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: sessionStore,
     cookie: {
-      secure: false, // set to true if using https (ensure you use HTTPS in production)
-      httpOnly: true, // prevents client-side JS from accessing the cookie
-      maxAge: 3600000, // session expiry time (1 hour in ms)
+      httpOnly: true,
+      secure: isProd,                       // only over HTTPS in production
+      sameSite: isProd ? "none" : "lax",    // if cross-domain in prod: 'none' requires HTTPS
+      maxAge: 1000 * 60 * 60 * 24 * 7,      // 7 days
     },
   })
 );
 
-// Fake user database (for demonstration)
-const users = [
-  {
-    id: 1,
-    username: 'admin',
-    email: 'admin@example.com',
-    password: 'adminpass', // In real apps, use bcrypt to hash passwords
-    role: 'admin',
-  },
-  {
-    id: 2,
-    username: 'user',
-    email: 'user@example.com',
-    password: 'userpass',
-    role: 'user',
-  },
-];
+/**
+ * 7) CSRF — PLACE **AFTER session** and **BEFORE routes**
+ * Uses the session store (cookie: false).
+ * Safe methods (GET/HEAD/OPTIONS) don't require token by default.
+ */
+app.use(csurf({ cookie: false }));
 
-// Login route to authenticate user and store session data
-app.post('/login', (req, res) => {
-  const { username, password } = req.body;
-
-  const user = users.find((user) => user.username === username);
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid username or password' });
-  }
-
-  // Compare passwords (using bcrypt in real apps)
-  if (user.password !== password) {
-    return res.status(400).json({ message: 'Invalid username or password' });
-  }
-
-  // Store user data in session
-  req.session.user = {
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    role: user.role,
-  };
-
-  return res.status(200).json({ message: 'Login successful', user: req.session.user });
+// 8) A small endpoint for the frontend to fetch the CSRF token
+app.get("/api/v1/csrf", (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
 });
 
-// Route to check if the user is authenticated
-app.get('/profile', (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ message: 'Unauthorized' });
+// 9) Your application routes
+app.use("/api/v1", routes);
+
+// 10) Centralized error handler (handles CSRF errors cleanly)
+app.use((err, req, res, next) => {
+  if (err.code === "EBADCSRFTOKEN") {
+    return res.status(403).json({ message: "Invalid CSRF token" });
   }
-
-  res.status(200).json({ user: req.session.user });
+  console.error(err);
+  return res.status(500).json({ message: "Server error" });
 });
 
-// Logout route
-app.post('/logout', (req, res) => {
-  req.session.destroy((err) => {
-    if (err) return res.status(500).json({ message: 'Failed to log out' });
-    res.status(200).json({ message: 'Logged out successfully' });
-  });
-});
-
+// 11) Boot
+const port = Number(process.env.PORT || 5000);
 app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
-});
-
-
-// Middleware to check if the user is an admin
-function isAdmin(req, res, next) {
-  if (req.session.user && req.session.user.role === 'admin') {
-    return next();
-  }
-  res.status(403).json({ message: 'Forbidden' });
-}
-
-// Protected route example
-app.get('/admin-dashboard', isAdmin, (req, res) => {
-  res.status(200).json({ message: 'Welcome to the Admin Dashboard' });
+  console.log(`Server listening on http://localhost:${port}`);
 });
