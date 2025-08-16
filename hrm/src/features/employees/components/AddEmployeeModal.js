@@ -1,5 +1,5 @@
 // src/features/employees/components/AddEmployeeModal.jsx
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
   FaUser,
   FaInfoCircle,
@@ -10,6 +10,8 @@ import {
   FaUpload,
   FaTimes,
 } from "react-icons/fa";
+// at top with other imports
+import AdditionalInformation from "./AdditionalInformation";
 
 const TABS = [
   { key: "general", label: "General Information", Icon: FaUser },
@@ -39,6 +41,9 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
     photo: null,
   });
 
+  const [touched, setTouched] = useState({});
+  const [submitted, setSubmitted] = useState(false);
+
   const fileRef = useRef(null);
   const set = (name) => (e) => {
     const v =
@@ -48,6 +53,35 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
           : e.target.value
         : e;
     setForm((f) => ({ ...f, [name]: v }));
+  };
+
+  const markTouched = (name) => () =>
+    setTouched((t) => ({ ...t, [name]: true }));
+
+  // ---- Validation ----
+  const validate = (f) => {
+    const errs = {};
+    if (!f.employeeCode.trim()) errs.employeeCode = "Employee Code is required.";
+    if (!f.punchCode.trim()) errs.punchCode = "Punch Code is required.";
+    if (!f.firstName.trim()) errs.firstName = "First Name is required.";
+    if (!f.lastName.trim()) errs.lastName = "Last Name is required.";
+    if (!f.mobile.trim()) errs.mobile = "Mobile No is required.";
+    if (!f.email.trim()) {
+      errs.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) {
+      errs.email = "Enter a valid email address.";
+    }
+    return errs;
+  };
+
+  const errors = useMemo(() => validate(form), [form]);
+  const showError = (name) => (submitted || touched[name]) && !!errors[name];
+
+  const handleSave = () => {
+    setSubmitted(true);
+    if (Object.keys(errors).length === 0) {
+      onSave?.(form);
+    }
   };
 
   return (
@@ -74,9 +108,9 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
             </button>
           </div>
 
-          {/* Tabs */}
+          {/* Tabs – icon above label */}
           <div className="px-3 sm:px-4 bg-white">
-            <nav className="flex gap-2 overflow-x-auto py-2">
+            <nav className="flex gap-4 overflow-x-auto py-3">
               {TABS.map(({ key, label, Icon }) => {
                 const isActive = active === key;
                 return (
@@ -84,15 +118,30 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
                     key={key}
                     type="button"
                     onClick={() => setActive(key)}
-                    className={`px-3 sm:px-4 py-2 rounded-md border text-[12px] flex items-center gap-2 whitespace-nowrap transition
-                      ${
-                        isActive
-                          ? "bg-customRed text-white border-customRed shadow-sm"
-                          : "bg-gray-50 text-slate-700 border-slate-200 hover:bg-gray-100"
-                      }`}
+                    aria-current={isActive ? "page" : undefined}
+                    className={`relative flex flex-col items-center justify-center shrink-0
+                      min-w-[120px] px-3 py-2 rounded-md transition
+                      ${isActive ? "bg-white" : "hover:bg-slate-50"}`}
                   >
-                    <Icon className="text-[14px]" />
-                    {label}
+                    <span
+                      className={`h-11 w-11 rounded-full grid place-items-center border
+                        ${
+                          isActive
+                            ? "bg-customRed text-white border-customRed shadow-sm"
+                            : "bg-gray-100 text-slate-600 border-slate-200"
+                        }`}
+                    >
+                      <Icon className="text-[18px]" />
+                    </span>
+                    <span
+                      className={`mt-2 text-[12px] font-medium text-center whitespace-nowrap
+                        ${isActive ? "text-customRed" : "text-slate-700"}`}
+                    >
+                      {label}
+                    </span>
+                    {isActive && (
+                      <span className="absolute -bottom-px left-0 right-0 h-[2px] bg-customRed" />
+                    )}
                   </button>
                 );
               })}
@@ -103,7 +152,16 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
         {/* Scrollable content */}
         <div className="px-4 py-4 overflow-y-auto">
           {active === "general" ? (
-            <GeneralInfoTab form={form} set={set} fileRef={fileRef} />
+            <GeneralInfoTab
+              form={form}
+              set={set}
+              fileRef={fileRef}
+              errors={errors}
+              showError={showError}
+              markTouched={markTouched}
+            />
+          ) : active === "additional" ? (
+            <AdditionalInformation form={form} set={set} />
           ) : (
             <PlaceholderTab label={TABS.find((t) => t.key === active)?.label} />
           )}
@@ -124,7 +182,7 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
             <div className="space-x-2">
               <button
                 type="button"
-                onClick={onSave}
+                onClick={handleSave}
                 className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90 shadow-sm"
               >
                 Update
@@ -150,16 +208,24 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
 
 /* ---------------- Tabs ---------------- */
 
-function GeneralInfoTab({ form, set, fileRef }) {
+function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) {
+  const disabledCreds = !form.allowLogin;
+
+  const baseInput =
+    "w-full h-9 border rounded px-3 focus:ring-customRed focus:border-customRed";
+  const normalBorder = "border-slate-300";
+  const errorBorder = "border-customRed";
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* Left form */}
       <div className="lg:col-span-8 space-y-4">
-        <Field label="Prefix">
+        <Field label="Prefix:">
           <select
-            className="w-full h-9 border border-slate-300 rounded focus:ring-customRed focus:border-customRed"
+            className={`${baseInput} ${normalBorder} px-2`}
             value={form.prefix}
             onChange={set("prefix")}
+            onBlur={markTouched("prefix")}
           >
             <option>None</option>
             <option>Mr</option>
@@ -169,74 +235,89 @@ function GeneralInfoTab({ form, set, fileRef }) {
         </Field>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Employee Code" required>
+          <Field label="Employee Code:" required error={showError("employeeCode") && errors.employeeCode}>
             <input
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${showError("employeeCode") ? errorBorder : normalBorder}`}
               value={form.employeeCode}
               onChange={set("employeeCode")}
+              onBlur={markTouched("employeeCode")}
+              aria-invalid={showError("employeeCode")}
             />
           </Field>
-          <Field label="Punch Code" required>
+          <Field label="Punch Code:" required error={showError("punchCode") && errors.punchCode}>
             <input
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${showError("punchCode") ? errorBorder : normalBorder}`}
               value={form.punchCode}
               onChange={set("punchCode")}
+              onBlur={markTouched("punchCode")}
+              aria-invalid={showError("punchCode")}
             />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="First Name" required>
+          <Field label="First Name:" required error={showError("firstName") && errors.firstName}>
             <input
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${showError("firstName") ? errorBorder : normalBorder}`}
               value={form.firstName}
               onChange={set("firstName")}
+              onBlur={markTouched("firstName")}
+              aria-invalid={showError("firstName")}
             />
           </Field>
-          <Field label="Last Name" required>
+          <Field label="Last Name:" required error={showError("lastName") && errors.lastName}>
             <input
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${showError("lastName") ? errorBorder : normalBorder}`}
               value={form.lastName}
               onChange={set("lastName")}
+              onBlur={markTouched("lastName")}
+              aria-invalid={showError("lastName")}
             />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Mobile No">
+          <Field label="Mobile No:" required error={showError("mobile") && errors.mobile}>
             <input
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              type="tel"
+              className={`${baseInput} ${showError("mobile") ? errorBorder : normalBorder}`}
               value={form.mobile}
               onChange={set("mobile")}
+              onBlur={markTouched("mobile")}
+              aria-invalid={showError("mobile")}
             />
           </Field>
-          <Field label="Email" required>
+          <Field label="Email:" required error={showError("email") && errors.email}>
             <input
               type="email"
-              className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${showError("email") ? errorBorder : normalBorder}`}
               value={form.email}
               onChange={set("email")}
+              onBlur={markTouched("email")}
+              aria-invalid={showError("email")}
             />
           </Field>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Employee Reports To">
+          <Field label="Employee Reports To:">
             <select
-              className="w-full h-9 border border-slate-300 rounded focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${normalBorder} px-2`}
               value={form.reportsTo}
               onChange={set("reportsTo")}
+              onBlur={markTouched("reportsTo")}
             >
               <option value="">Select One</option>
               <option value="mgr1">Manager 1</option>
               <option value="mgr2">Manager 2</option>
             </select>
           </Field>
-          <Field label="Allow Manual Attendance">
+          <Field label="Allow Manual Attendance:">
             <select
-              className="w-full h-9 border border-slate-300 rounded focus:ring-customRed focus:border-customRed"
+              className={`${baseInput} ${normalBorder} px-2`}
               value={form.manualAttendance}
               onChange={set("manualAttendance")}
+              onBlur={markTouched("manualAttendance")}
             >
               <option>No</option>
               <option>Yes</option>
@@ -244,46 +325,58 @@ function GeneralInfoTab({ form, set, fileRef }) {
           </Field>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 pt-1">
           <label className="inline-flex items-center gap-2">
             <input
               type="checkbox"
               checked={form.allowLogin}
               onChange={set("allowLogin")}
+              onBlur={markTouched("allowLogin")}
             />
             <span className="text-sm text-slate-700">Allow Employee Login</span>
           </label>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Roles Template">
-              <select
-                className="w-full h-9 border border-slate-300 rounded focus:ring-customRed focus:border-customRed"
-                value={form.roleTemplate}
-                onChange={set("roleTemplate")}
-              >
-                <option value="">Select One</option>
-                <option value="HR">HR</option>
-                <option value="Manager">Manager</option>
-              </select>
-            </Field>
+          <Field label="Roles Template;">
+            <select
+              className={`${baseInput} ${normalBorder} px-2`}
+              value={form.roleTemplate}
+              onChange={set("roleTemplate")}
+              onBlur={markTouched("roleTemplate")}
+            >
+              <option value="">Select One</option>
+              <option value="HR">HR</option>
+              <option value="Manager">Manager</option>
+            </select>
+          </Field>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="User Name">
-                <input
-                  className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
-                  value={form.userName}
-                  onChange={set("userName")}
-                />
-              </Field>
-              <Field label="Password">
-                <input
-                  type="password"
-                  className="w-full h-9 border border-slate-300 rounded px-3 focus:ring-customRed focus:border-customRed"
-                  value={form.password}
-                  onChange={set("password")}
-                />
-              </Field>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Field label="User Name:">
+              <input
+                disabled={disabledCreds}
+                className={`${baseInput} ${
+                  disabledCreds
+                    ? "border-slate-200 bg-slate-100 text-slate-500"
+                    : normalBorder
+                }`}
+                value={form.userName}
+                onChange={set("userName")}
+                onBlur={markTouched("userName")}
+              />
+            </Field>
+            <Field label="Password:">
+              <input
+                type="password"
+                disabled={disabledCreds}
+                className={`${baseInput} ${
+                  disabledCreds
+                    ? "border-slate-200 bg-slate-100 text-slate-500"
+                    : normalBorder
+                }`}
+                value={form.password}
+                onChange={set("password")}
+                onBlur={markTouched("password")}
+              />
+            </Field>
           </div>
         </div>
       </div>
@@ -299,7 +392,10 @@ function GeneralInfoTab({ form, set, fileRef }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="text-slate-400 text-sm">Portrait</div>
+              <div className="text-slate-400 text-sm flex flex-col items-center">
+                <FaUser className="text-3xl mb-1" />
+                Portrait
+              </div>
             )}
           </div>
 
@@ -342,13 +438,16 @@ function PlaceholderTab({ label }) {
   );
 }
 
-function Field({ label, required, children }) {
+function Field({ label, required, error, children }) {
   return (
     <div>
       <label className="block text-sm text-slate-700 mb-1">
-        {label} {required && <span className="text-customRed">*</span>}
+        {label} {required && <span className="text-customRed align-middle">*</span>}
       </label>
       {children}
+      {error ? (
+        <p className="mt-1 text-[12px] text-customRed">{error}</p>
+      ) : null}
     </div>
   );
 }
