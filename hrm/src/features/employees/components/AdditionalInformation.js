@@ -110,8 +110,6 @@ export default function AdditionalInformation({
             <option value="">Select One</option>
             <option>Single</option>
             <option>Married</option>
-            <option>Divorced</option>
-            <option>Widowed</option>
           </select>
         </Field>
 
