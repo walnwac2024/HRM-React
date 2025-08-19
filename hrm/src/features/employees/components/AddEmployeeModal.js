@@ -12,6 +12,7 @@ import {
 } from "react-icons/fa";
 import AdditionalInformation from "./AdditionalInformation";
 import CompanyInformation from "./CompanyInformation";
+import EmployeeDocuments from "./EmployeeDocuments"; // NEW
 
 const TABS = [
   { key: "general", label: "General Information", Icon: FaUser },
@@ -48,13 +49,16 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
     // Company
     station: "",
     department: "",
-    designation: "",
+    designation: "", // required
     employeeStatus: "",
     employeeGroup: "",
     joiningDate: "",
     confirmationDueDate: "",
     confirmationDate: "",
     resignDate: "",
+
+    // Documents
+    documents: [], // NEW
   });
 
   const [touched, setTouched] = useState({});
@@ -117,7 +121,7 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
   const isLast = idx === TABS.length - 1;
   const prevKey = !isFirst ? TABS[idx - 1].key : null;
   const nextKey = !isLast ? TABS[idx + 1].key : null;
-  const showUpdate = isFirst || isLast; // <-- only first & last
+  const showUpdate = isFirst || isLast; // only first & last
 
   return (
     <div
@@ -211,6 +215,8 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
               showError={showError}
               markTouched={markTouched}
             />
+          ) : active === "documents" ? (
+            <EmployeeDocuments form={form} set={set} />
           ) : (
             <PlaceholderTab label={TABS.find((t) => t.key === active)?.label} />
           )}
