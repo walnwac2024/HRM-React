@@ -10,8 +10,8 @@ import {
   FaUpload,
   FaTimes,
 } from "react-icons/fa";
-// at top with other imports
 import AdditionalInformation from "./AdditionalInformation";
+import CompanyInformation from "./CompanyInformation";
 
 const TABS = [
   { key: "general", label: "General Information", Icon: FaUser },
@@ -23,7 +23,9 @@ const TABS = [
 
 export default function AddEmployeeModal({ open, onClose, onSave }) {
   const [active, setActive] = useState("general");
+
   const [form, setForm] = useState({
+    // General
     prefix: "None",
     employeeCode: "",
     punchCode: "",
@@ -39,6 +41,20 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
     password: "",
     sendByEmail: false,
     photo: null,
+
+    // Additional
+    gender: "",
+
+    // Company
+    station: "",
+    department: "",
+    designation: "",
+    employeeStatus: "",
+    employeeGroup: "",
+    joiningDate: "",
+    confirmationDueDate: "",
+    confirmationDate: "",
+    resignDate: "",
   });
 
   const [touched, setTouched] = useState({});
@@ -61,6 +77,7 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
   // ---- Validation ----
   const validate = (f) => {
     const errs = {};
+    // General
     if (!f.employeeCode.trim()) errs.employeeCode = "Employee Code is required.";
     if (!f.punchCode.trim()) errs.punchCode = "Punch Code is required.";
     if (!f.firstName.trim()) errs.firstName = "First Name is required.";
@@ -71,6 +88,18 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) {
       errs.email = "Enter a valid email address.";
     }
+
+    // Additional
+    if (!f.gender?.trim()) errs.gender = "Gender is required.";
+
+    // Company
+    if (!f.department?.trim()) errs.department = "Department is required.";
+    if (!f.designation?.trim()) errs.designation = "Designation is required.";
+    if (!f.employeeStatus?.trim())
+      errs.employeeStatus = "Employee Status is required.";
+    if (!f.employeeGroup?.trim())
+      errs.employeeGroup = "Employee Group is required.";
+
     return errs;
   };
 
@@ -79,10 +108,16 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
 
   const handleSave = () => {
     setSubmitted(true);
-    if (Object.keys(errors).length === 0) {
-      onSave?.(form);
-    }
+    if (Object.keys(errors).length === 0) onSave?.(form);
   };
+
+  // Wizard footer state
+  const idx = TABS.findIndex((t) => t.key === active);
+  const isFirst = idx === 0;
+  const isLast = idx === TABS.length - 1;
+  const prevKey = !isFirst ? TABS[idx - 1].key : null;
+  const nextKey = !isLast ? TABS[idx + 1].key : null;
+  const showUpdate = isFirst || isLast; // <-- only first & last
 
   return (
     <div
@@ -161,7 +196,21 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
               markTouched={markTouched}
             />
           ) : active === "additional" ? (
-            <AdditionalInformation form={form} set={set} />
+            <AdditionalInformation
+              form={form}
+              set={set}
+              errors={errors}
+              showError={showError}
+              markTouched={markTouched}
+            />
+          ) : active === "company" ? (
+            <CompanyInformation
+              form={form}
+              set={set}
+              errors={errors}
+              showError={showError}
+              markTouched={markTouched}
+            />
           ) : (
             <PlaceholderTab label={TABS.find((t) => t.key === active)?.label} />
           )}
@@ -170,34 +219,53 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
         {/* Sticky footer */}
         <div className="sticky bottom-0 bg-white z-20 border-t">
           <div className="px-4 py-3 flex items-center justify-between">
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.sendByEmail}
-                onChange={set("sendByEmail")}
-              />
-              <span>Send Credentials by Email</span>
-            </label>
+            {/* Checkbox ONLY on General tab */}
+            {active === "general" ? (
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.sendByEmail}
+                  onChange={set("sendByEmail")}
+                />
+                <span>Send Credentials by Email</span>
+              </label>
+            ) : (
+              <span /> // spacer
+            )}
 
-            <div className="space-x-2">
-              <button
-                type="button"
-                onClick={handleSave}
-                className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90 shadow-sm"
-              >
-                Update
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const idx = TABS.findIndex((t) => t.key === active);
-                  const next = TABS[(idx + 1) % TABS.length].key;
-                  setActive(next);
-                }}
-                className="h-9 px-5 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10"
-              >
-                Next »
-              </button>
+            <div className="space-x-2 flex items-center">
+              {/* PREVIOUS */}
+              {prevKey && (
+                <button
+                  type="button"
+                  onClick={() => setActive(prevKey)}
+                  className="h-9 px-5 rounded border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+                >
+                  « Previous
+                </button>
+              )}
+
+              {/* UPDATE — only first & last */}
+              {showUpdate && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90 shadow-sm"
+                >
+                  Update
+                </button>
+              )}
+
+              {/* NEXT */}
+              {nextKey && (
+                <button
+                  type="button"
+                  onClick={() => setActive(nextKey)}
+                  className="h-9 px-5 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10"
+                >
+                  Next »
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -235,18 +303,30 @@ function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) 
         </Field>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Employee Code:" required error={showError("employeeCode") && errors.employeeCode}>
+          <Field
+            label="Employee Code:"
+            required
+            error={showError("employeeCode") && errors.employeeCode}
+          >
             <input
-              className={`${baseInput} ${showError("employeeCode") ? errorBorder : normalBorder}`}
+              className={`${baseInput} ${
+                showError("employeeCode") ? errorBorder : normalBorder
+              }`}
               value={form.employeeCode}
               onChange={set("employeeCode")}
               onBlur={markTouched("employeeCode")}
               aria-invalid={showError("employeeCode")}
             />
           </Field>
-          <Field label="Punch Code:" required error={showError("punchCode") && errors.punchCode}>
+          <Field
+            label="Punch Code:"
+            required
+            error={showError("punchCode") && errors.punchCode}
+          >
             <input
-              className={`${baseInput} ${showError("punchCode") ? errorBorder : normalBorder}`}
+              className={`${baseInput} ${
+                showError("punchCode") ? errorBorder : normalBorder
+              }`}
               value={form.punchCode}
               onChange={set("punchCode")}
               onBlur={markTouched("punchCode")}
@@ -256,18 +336,30 @@ function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) 
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="First Name:" required error={showError("firstName") && errors.firstName}>
+          <Field
+            label="First Name:"
+            required
+            error={showError("firstName") && errors.firstName}
+          >
             <input
-              className={`${baseInput} ${showError("firstName") ? errorBorder : normalBorder}`}
+              className={`${baseInput} ${
+                showError("firstName") ? errorBorder : normalBorder
+              }`}
               value={form.firstName}
               onChange={set("firstName")}
               onBlur={markTouched("firstName")}
               aria-invalid={showError("firstName")}
             />
           </Field>
-          <Field label="Last Name:" required error={showError("lastName") && errors.lastName}>
+          <Field
+            label="Last Name:"
+            required
+            error={showError("lastName") && errors.lastName}
+          >
             <input
-              className={`${baseInput} ${showError("lastName") ? errorBorder : normalBorder}`}
+              className={`${baseInput} ${
+                showError("lastName") ? errorBorder : normalBorder
+              }`}
               value={form.lastName}
               onChange={set("lastName")}
               onBlur={markTouched("lastName")}
@@ -336,7 +428,7 @@ function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) 
             <span className="text-sm text-slate-700">Allow Employee Login</span>
           </label>
 
-          <Field label="Roles Template;">
+          <Field label="Roles Template:">
             <select
               className={`${baseInput} ${normalBorder} px-2`}
               value={form.roleTemplate}
@@ -433,9 +525,7 @@ function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) 
 }
 
 function PlaceholderTab({ label }) {
-  return (
-    <div className="text-sm text-slate-500">{label} — UI coming next.</div>
-  );
+  return <div className="text-sm text-slate-500">{label} — UI coming next.</div>;
 }
 
 function Field({ label, required, error, children }) {
@@ -445,9 +535,7 @@ function Field({ label, required, error, children }) {
         {label} {required && <span className="text-customRed align-middle">*</span>}
       </label>
       {children}
-      {error ? (
-        <p className="mt-1 text-[12px] text-customRed">{error}</p>
-      ) : null}
+      {error ? <p className="mt-1 text-[12px] text-customRed">{error}</p> : null}
     </div>
   );
 }

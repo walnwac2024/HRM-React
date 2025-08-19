@@ -1,4 +1,3 @@
-// features/employees/components/AdditionalInformation.js
 import React, { useState } from "react";
 import { FaPlus, FaTrash } from "react-icons/fa";
 
