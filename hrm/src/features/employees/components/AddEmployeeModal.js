@@ -10,9 +10,11 @@ import {
   FaUpload,
   FaTimes,
 } from "react-icons/fa";
+
 import AdditionalInformation from "./AdditionalInformation";
 import CompanyInformation from "./CompanyInformation";
-import EmployeeDocuments from "./EmployeeDocuments"; // NEW
+import EmployeeDocuments from "./EmployeeDocuments";
+import SalaryInformation from "./SalaryInformation"; // NEW
 
 const TABS = [
   { key: "general", label: "General Information", Icon: FaUser },
@@ -58,7 +60,20 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
     resignDate: "",
 
     // Documents
-    documents: [], // NEW
+    documents: [],
+
+    // Salary (NEW)
+    salary: {
+      payrollSetup: "General",
+      salaryType: "Monthly Salary",
+      currency: "PKR",
+      monthlyGross: "",
+      annualGross: 0,
+      overtime: false,
+      shortTime: false,
+      paymentDetails: false,
+      items: [], // SalaryInformation will seed defaults
+    },
   });
 
   const [touched, setTouched] = useState({});
@@ -217,6 +232,8 @@ export default function AddEmployeeModal({ open, onClose, onSave }) {
             />
           ) : active === "documents" ? (
             <EmployeeDocuments form={form} set={set} />
+          ) : active === "salary" ? (
+            <SalaryInformation form={form} set={set} />
           ) : (
             <PlaceholderTab label={TABS.find((t) => t.key === active)?.label} />
           )}
