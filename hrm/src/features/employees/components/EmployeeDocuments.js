@@ -121,7 +121,7 @@ export default function EmployeeDocuments({ form, set }) {
 
   return (
     // Slightly increased bottom padding to align with other tabs
-    <div className="space-y-6 pb-4">
+    <div className="space-y-6 pb-[16.20rem]">
       {docs.map((d, idx) => {
         const hasFile = !!d.file;
         const fileName = hasFile ? d.file.name : "";
