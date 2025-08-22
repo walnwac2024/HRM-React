@@ -120,7 +120,8 @@ export default function EmployeeDocuments({ form, set }) {
     "h-9 w-full border border-slate-300 rounded px-3 text-[14px] focus:outline-none focus:ring-2 focus:ring-customRed/40 focus:border-customRed";
 
   return (
-    <div className="space-y-4">
+    // Slightly increased bottom padding to align with other tabs
+    <div className="space-y-6 pb-4">
       {docs.map((d, idx) => {
         const hasFile = !!d.file;
         const fileName = hasFile ? d.file.name : "";
