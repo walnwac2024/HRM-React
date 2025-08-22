@@ -21,7 +21,7 @@ export default function CompanyInformation(props) {
     "text-[13px] font-semibold text-slate-700 bg-gray-100 border border-slate-200 rounded px-3 py-2";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-[12.10rem]">
       {/* Station / Department / Designation / Status / Group */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Field label="Station:">
