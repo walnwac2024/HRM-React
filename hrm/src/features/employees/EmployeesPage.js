@@ -10,6 +10,9 @@ import AddEmployeeModal from "./components/AddEmployeeModal";
 import useEmployees from "./hooks/useEmployees";
 import EmployeeSidebar from "./components/EmployeeSidebar";
 
+// NEW: profile request page
+import EmployeeProfileRequest from "./components/EmployeeProfileRequest";
+
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
 
@@ -27,9 +30,14 @@ export default function EmployeesPage() {
   const [addOpen, setAddOpen] = useState(false);
 
   const renderMain = () => {
+    // Route to Employee Profile Request
+    if (active === "employee-profile-request") {
+      return <EmployeeProfileRequest />;
+    }
+
+    // Placeholder pages for the rest
     if (active !== "employee-list") {
       const labelMap = {
-        "employee-profile-request": "Employee Profile Request",
         "employee-transfer": "Employee Transfer",
         "employee-role": "Employee Role",
         "employee-info-request": "Employee Info Request",
@@ -40,7 +48,9 @@ export default function EmployeesPage() {
         <div className="pt-6 pr-6 pb-6">
           <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 p-8">
             <h2 className="text-lg font-semibold mb-2">{labelMap[active] ?? "Section"}</h2>
-            <p className="text-slate-600">This section is a placeholder. Hook up its UI here when ready.</p>
+            <p className="text-slate-600">
+              This section is a placeholder. Hook up its UI here when ready.
+            </p>
           </div>
         </div>
       );
@@ -48,7 +58,7 @@ export default function EmployeesPage() {
 
     // Employee List (Filters + Table)
     return (
-      <div className=" pr-6 pb-6">
+      <div className="pr-6 pb-6">
         {/* Filters Card — micro-adjusted with mt-[2px] for pixel-perfect alignment */}
         <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 mt-[2px]">
           <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -135,10 +145,17 @@ export default function EmployeesPage() {
     <div className="min-h-screen bg-slate-50">
       {/* No horizontal padding so main edge sits flush with sidebar */}
       <div className="mx-auto max-w-[1600px] pt-14 pb-6">
-        <div className="grid grid-cols-[15rem_1fr] gap-6 items-start">
-          <EmployeeSidebar activeKey={active} onNavigate={setActive} />
-          {/* Match sidebar height calc to keep columns balanced */}
-          <main className="min-h-[calc(100vh-3.5rem)]">{renderMain()}</main>
+        {/* Flex + items-stretch keeps sidebar & main the same visual height */}
+        <div className="flex gap-6 items-stretch">
+          {/* Sidebar column (fixed width) */}
+          <div className="w-[15rem] shrink-0 flex">
+            <EmployeeSidebar activeKey={active} onNavigate={setActive} />
+          </div>
+
+          {/* Main column (stretches) */}
+          <main className="flex-1 flex flex-col">
+            {renderMain()}
+          </main>
         </div>
       </div>
     </div>
