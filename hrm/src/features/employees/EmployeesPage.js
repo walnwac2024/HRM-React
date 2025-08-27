@@ -12,7 +12,12 @@ import EmployeeSidebar from "./components/EmployeeSidebar";
 
 // Screens
 import EmployeeProfileRequest from "./components/EmployeeProfileRequest";
-import EmployeeTransfer from "./components/EmployeeTransfer"; // NEW
+import EmployeeTransfer from "./components/EmployeeTransfer";
+
+// Employee Role screens
+import EmployeeRoleMainView from "./components/EmployeeRoleMainView";
+import CopyRoleView from "./components/CopyRoleView";
+import RoleTemplatesView from "./components/RoleTemplatesView";
 
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
@@ -31,20 +36,20 @@ export default function EmployeesPage() {
   const [addOpen, setAddOpen] = useState(false);
 
   const renderMain = () => {
-    // Route: Employee Profile Request
-    if (active === "employee-profile-request") {
-      return <EmployeeProfileRequest />;
+    // Employee Role routes
+    if (active === "employee-role" || active === "employee-role/main") {
+      return <EmployeeRoleMainView />;
     }
+    if (active === "employee-role/copy") return <CopyRoleView />;
+    if (active === "employee-role/templates") return <RoleTemplatesView />;
 
-    // Route: Employee Transfer (NEW)
-    if (active === "employee-transfer") {
-      return <EmployeeTransfer />;
-    }
+    // Other routes
+    if (active === "employee-profile-request") return <EmployeeProfileRequest />;
+    if (active === "employee-transfer") return <EmployeeTransfer />;
 
-    // Placeholder pages for the rest (until you build them)
+    // Placeholders
     if (active !== "employee-list") {
       const labelMap = {
-        "employee-role": "Employee Role",
         "employee-info-request": "Employee Info Request",
         "employee-approvals": "Employee Approvals",
         "employee-settings": "Employee Settings",
@@ -68,7 +73,8 @@ export default function EmployeesPage() {
         <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 mt-[2px]">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-medium">Filters</div>
-            <button className="text-slate-500 hover:text-slate-700" title="Toggle">
+            {/* icon button colored with customRed */}
+            <button className="text-customRed hover:text-customRed/80" title="Toggle">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 5h18v2H3zM7 11h10v2H7zM10 17h4v2h-4z" />
               </svg>
@@ -78,6 +84,7 @@ export default function EmployeesPage() {
           <form onSubmit={apply} className="p-4">
             <Filters filters={filters} onChange={setFilter} />
 
+            {/* ActionsBar already uses customRed styles */}
             <ActionsBar
               onClear={resetFilters}
               perPage={perPage}
@@ -107,9 +114,10 @@ export default function EmployeesPage() {
           <div className="px-4 py-3 flex items-center justify-between text-sm">
             <div>Page {page} of {totalPages}</div>
             <div className="space-x-2">
+              {/* Outline customRed buttons */}
               <button
                 type="button"
-                className="h-8 px-3 rounded border bg-white hover:bg-slate-50 disabled:opacity-40"
+                className="h-8 px-3 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page <= 1}
               >
@@ -117,7 +125,7 @@ export default function EmployeesPage() {
               </button>
               <button
                 type="button"
-                className="h-8 px-3 rounded border bg-white hover:bg-slate-50 disabled:opacity-40"
+                className="h-8 px-3 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
               >
