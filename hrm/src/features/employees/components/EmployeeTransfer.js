@@ -1,5 +1,6 @@
 // src/features/employees/components/EmployeeTransfer.js
 import React, { useState } from "react";
+import EmployeeTransferModal from "./EmployeeTransferModal"; // NEW
 
 const Field = ({ label, children }) => (
   <div>
@@ -9,12 +10,6 @@ const Field = ({ label, children }) => (
 );
 const Select = (props) => (
   <select
-    {...props}
-    className="w-full h-9 rounded border border-slate-300 focus:border-customRed focus:ring-customRed"
-  />
-);
-const Input = (props) => (
-  <input
     {...props}
     className="w-full h-9 rounded border border-slate-300 focus:border-customRed focus:ring-customRed"
   />
@@ -33,11 +28,14 @@ export default function EmployeeTransfer() {
     flag: "ALL",
   });
 
-  const set = (name) => (e) => setFilters((f) => ({ ...f, [name]: e.target.value }));
+  const [openForm, setOpenForm] = useState(false); // NEW
+
+  const set = (name) => (e) =>
+    setFilters((f) => ({ ...f, [name]: e.target.value }));
 
   const handleApply = (e) => {
     e.preventDefault();
-    // TODO: fetch with `filters`
+    // TODO: fetch with filters
   };
 
   const handleClear = () =>
@@ -81,7 +79,9 @@ export default function EmployeeTransfer() {
               <Select value={filters.station} onChange={set("station")}>
                 <option value=""></option>
                 {["--ALL--", "RegionalOffice", "HeadOffice"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -90,16 +90,23 @@ export default function EmployeeTransfer() {
               <Select value={filters.department} onChange={set("department")}>
                 <option value=""></option>
                 {["--ALL--", "Marketing", "HR", "IT", "Finance"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
 
             <Field label="Employee Group">
-              <Select value={filters.employee_group} onChange={set("employee_group")}>
+              <Select
+                value={filters.employee_group}
+                onChange={set("employee_group")}
+              >
                 <option value=""></option>
                 {["--ALL--", "Head Group", "A", "B"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -107,9 +114,10 @@ export default function EmployeeTransfer() {
             <Field label="Employee">
               <Select value={filters.employee} onChange={set("employee")}>
                 <option value=""></option>
-                {/* Replace with real employees */}
                 {["--ALL--", "John Doe", "Sumitha Thomas"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -118,7 +126,9 @@ export default function EmployeeTransfer() {
               <Select value={filters.year} onChange={set("year")}>
                 <option value=""></option>
                 {["--ALL--", "2022", "2023", "2024"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -126,8 +136,20 @@ export default function EmployeeTransfer() {
             <Field label="Month">
               <Select value={filters.month} onChange={set("month")}>
                 <option value=""></option>
-                {["--ALL--", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                {[
+                  "--ALL--",
+                  "Jan",
+                  "Feb",
+                  "Mar",
+                  "Apr",
+                  "May",
+                  "Jun",
+                  "Jul",
+                  "Aug",
+                ].map((v) => (
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -135,15 +157,22 @@ export default function EmployeeTransfer() {
             <Field label="Action">
               <Select value={filters.action} onChange={set("action")}>
                 {["ALL", "Approved", "Pending", "Rejected"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
 
             <Field label="Request Type">
-              <Select value={filters.request_type} onChange={set("request_type")}>
+              <Select
+                value={filters.request_type}
+                onChange={set("request_type")}
+              >
                 {["My Requests", "All Requests"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -151,7 +180,9 @@ export default function EmployeeTransfer() {
             <Field label="Flag">
               <Select value={filters.flag} onChange={set("flag")}>
                 {["ALL", "YES", "NO"].map((v) => (
-                  <option key={v} value={v}>{v}</option>
+                  <option key={v} value={v}>
+                    {v}
+                  </option>
                 ))}
               </Select>
             </Field>
@@ -178,7 +209,7 @@ export default function EmployeeTransfer() {
               <button
                 type="button"
                 className="h-8 px-4 rounded bg-customRed text-white hover:bg-customRed/90 text-sm"
-                onClick={() => alert("Open 'Apply for Employee Transfer' form/modal here.")}
+                onClick={() => setOpenForm(true)} // NEW
               >
                 + Apply for Employee Transfer
               </button>
@@ -234,6 +265,18 @@ export default function EmployeeTransfer() {
           </table>
         </div>
       </div>
+
+      {/* Modal */}
+      <EmployeeTransferModal
+        open={openForm}
+        onClose={() => setOpenForm(false)}
+        onSubmit={(payload) => {
+          // TODO: call API here
+          console.log("Transfer request payload:", payload);
+          alert("Transfer request submitted!");
+          setOpenForm(false);
+        }}
+      />
     </div>
   );
 }
