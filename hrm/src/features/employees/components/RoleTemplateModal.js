@@ -1,81 +1,166 @@
-import React, { useEffect, useState } from "react";
+// src/features/employees/components/RoleTemplateModal.js
+import React, { useState, useMemo } from "react";
 
 export default function RoleTemplateModal({
   open,
   onClose,
   onSave,
-  options = [],     // [{key, label}]
-  initial = "",     // e.g. "admin"
+  templates = [], // optional: [{id:'admin', name:'System Administrator (Full Access)'}]
 }) {
-  const [value, setValue] = useState(initial || "");
+  const [title, setTitle] = useState("");
+  const [cloneOn, setCloneOn] = useState(false);
+  const [cloneFrom, setCloneFrom] = useState("");
 
-  // when the modal re-opens, reset to the current template
-  useEffect(() => {
-    if (open) setValue(initial || "");
-  }, [open, initial]);
+  // quick reset when opened/closed
+  React.useEffect(() => {
+    if (!open) return;
+    setTitle("");
+    setCloneOn(false);
+    setCloneFrom("");
+  }, [open]);
+
+  const canSave = useMemo(() => {
+    if (!title.trim()) return false;
+    if (cloneOn && !cloneFrom) return false;
+    return true;
+  }, [title, cloneOn, cloneFrom]);
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+    >
       {/* overlay */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       {/* card */}
-      <div className="relative z-10 w-[520px] max-w-[95vw] rounded-xl bg-white shadow-xl border border-slate-200">
-        <div className="px-4 py-3 border-b flex items-center justify-between">
-          <h3 className="font-semibold">Role Template</h3>
+      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl">
+        {/* header - slim, like the reference */}
+        <div className="flex items-center justify-between bg-slate-100 px-4 py-2.5 border-b">
+          <h3 className="text-sm font-semibold text-slate-700">Add New Template</h3>
           <button
             type="button"
             onClick={onClose}
-            className="h-8 w-8 grid place-items-center rounded hover:bg-slate-100"
+            className="h-7 w-7 grid place-items-center rounded hover:bg-slate-200"
             aria-label="Close"
+            title="Close"
           >
-            ✕
+            <svg
+              className="h-4 w-4 text-slate-600"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
         </div>
 
-        <div className="p-4 space-y-4">
-          <div>
-            <label className="block text-sm text-slate-600 mb-1">Roles Template</label>
-            <select
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              className="w-full h-9 rounded border border-slate-300 px-3 focus:border-customRed focus:ring-customRed"
-            >
-              <option value="">Select One</option>
-              {options.map((o) => (
-                <option key={o.key} value={o.key}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
+        {/* body */}
+        <div className="px-4 py-4 space-y-4">
+          {/* Template Title */}
+          <div className="space-y-1.5">
+            <label className="text-[13px] text-slate-600">
+              Template Title <span className="text-customRed">*</span>
+            </label>
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Template for HR"
+              className="h-9 w-full rounded border border-slate-300 px-3 text-[14px] focus:border-customRed focus:ring-customRed"
+            />
           </div>
+
+          {/* Clone toggle row */}
+          <div className="flex items-center gap-3">
+            <Toggle
+              checked={cloneOn}
+              onChange={setCloneOn}
+              ariaLabel="Clone it From Another Template?"
+            />
+            <span className="text-[13px] text-slate-700">
+              Clone it From Another Template ?
+            </span>
+          </div>
+
+          {/* When toggle is ON show select */}
+          {cloneOn && (
+            <div className="space-y-1.5">
+              <label className="text-[13px] text-slate-600">Select Template</label>
+              <select
+                value={cloneFrom}
+                onChange={(e) => setCloneFrom(e.target.value)}
+                className="h-9 w-full rounded border border-slate-300 px-2 text-[14px] focus:border-customRed focus:ring-customRed"
+              >
+                <option value="">Select One</option>
+                {templates.map((t) => (
+                  <option key={t.id ?? t.value ?? t.name} value={t.id ?? t.value ?? t.name}>
+                    {t.name ?? t.label ?? String(t)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
-        <div className="px-4 py-3 border-t flex justify-end gap-2">
+        {/* footer - right aligned Save like reference */}
+        <div className="flex justify-end gap-2 px-4 py-3 border-t bg-white">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 px-4 rounded border border-slate-300 bg-white hover:bg-slate-50 active:bg-slate-100"
+            className="h-9 rounded border border-slate-300 bg-white px-4 text-sm text-slate-700 hover:bg-slate-50"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={() => value && onSave?.(value)}
-            disabled={!value}
-            className={
-              "h-9 px-5 rounded text-white " +
-              (value
-                ? "bg-customRed hover:bg-customRed/90 active:bg-customRed/80"
-                : "bg-slate-300 cursor-not-allowed")
+            disabled={!canSave}
+            onClick={() =>
+              onSave?.({
+                title: title.trim(),
+                cloneFrom: cloneOn ? cloneFrom : null,
+              })
             }
+            className={[
+              "h-9 rounded px-4 text-sm text-white shadow-sm",
+              canSave
+                ? "bg-customRed hover:bg-customRed/90"
+                : "bg-customRed/60 cursor-not-allowed",
+            ].join(" ")}
           >
             Save
           </button>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ---------- tiny toggle used above ---------- */
+function Toggle({ checked, onChange, ariaLabel }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onChange?.(!checked)}
+      className={[
+        "relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+        checked ? "bg-customRed" : "bg-slate-300",
+      ].join(" ")}
+    >
+      <span
+        className={[
+          "inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform",
+          checked ? "translate-x-4" : "translate-x-1",
+        ].join(" ")}
+      />
+    </button>
   );
 }

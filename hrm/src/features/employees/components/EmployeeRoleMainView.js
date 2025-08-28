@@ -87,7 +87,7 @@ export default function EmployeeRoleMainView() {
   };
 
   return (
-    <div className="pt-6 pr-6 pb-6">
+    <div className=" pr-6 pb-6">
       <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200">
         {/* Header */}
         <div className="px-4 py-3 border-b flex items-center justify-between">
