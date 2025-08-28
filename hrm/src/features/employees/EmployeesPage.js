@@ -13,6 +13,7 @@ import EmployeeSidebar from "./components/EmployeeSidebar";
 // Screens
 import EmployeeProfileRequest from "./components/EmployeeProfileRequest";
 import EmployeeTransfer from "./components/EmployeeTransfer";
+import EmployeeInfoRequest from "./components/EmployeeInfoRequest"; // ← NEW
 
 // Employee Role screens
 import EmployeeRoleMainView from "./components/EmployeeRoleMainView";
@@ -46,11 +47,11 @@ export default function EmployeesPage() {
     // Other routes
     if (active === "employee-profile-request") return <EmployeeProfileRequest />;
     if (active === "employee-transfer") return <EmployeeTransfer />;
+    if (active === "employee-info-request") return <EmployeeInfoRequest />; // ← NEW
 
-    // Placeholders
+    // Placeholders for the rest
     if (active !== "employee-list") {
       const labelMap = {
-        "employee-info-request": "Employee Info Request",
         "employee-approvals": "Employee Approvals",
         "employee-settings": "Employee Settings",
       };
