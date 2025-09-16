@@ -2,14 +2,13 @@
 import React, { useMemo, useState } from "react";
 
 /**
- * Employee Info Request
- * - Clean, compact filter bar (4-up grid on desktop)
- * - Primary actions in brand color (customRed)
- * - Table with icon-only cells for "Details" and "Approvals"
- * - Works with optional `rows` prop; falls back to a demo row
+ * Employee Info Request (Compact)
+ * - Denser filter bar that fits more fields per row
+ * - Smaller inputs, labels, and buttons
+ * - Tighter table
  */
 
-export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
+export default function EmployeeInfoRequest({ rows: externalRows = [], compact = true }) {
   // ----- Demo / fallback data (safe if you already provide rows via props)
   const demoRows = useMemo(
     () => [
@@ -47,7 +46,6 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
   const handleApply = (e) => {
     e.preventDefault();
     // TODO: call your fetch with `filters`
-    // console.log("Apply with filters:", filters);
   };
 
   const handleClear = () => {
@@ -63,45 +61,72 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
     });
   };
 
+  // ---- Compact class helpers
+  const sizes = compact
+    ? {
+        label: "text-[11px]",
+        gap: "gap-1",
+        select: "h-8 text-[12px] px-2",
+        grid: "grid-cols-2 md:grid-cols-6 gap-3",
+        btn: "h-8 px-3 text-[12px]",
+        iconBtn: "h-7 w-7",
+        pill: "px-2 py-[2px] text-[11px]",
+        tableText: "text-[12px]",
+        th: "px-3 py-2 text-[12px]",
+        td: "px-3 py-2",
+      }
+    : {
+        label: "text-[12px]",
+        gap: "gap-2",
+        select: "h-9 text-[13px] px-2",
+        grid: "grid-cols-1 md:grid-cols-4 gap-4",
+        btn: "h-9 px-4 text-[13px]",
+        iconBtn: "h-8 w-8",
+        pill: "px-2.5 py-1 text-[12px]",
+        tableText: "text-sm",
+        th: "px-4 py-3 text-[13px]",
+        td: "px-4 py-3",
+      };
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
-        <h2 className="text-[15px] font-semibold text-slate-800">Employee Info Request</h2>
+      <div className="flex items-center justify-between px-5 py-3 border-b border-slate-200">
+        <h2 className="text-[14px] font-semibold text-slate-800">Employee Info Request</h2>
         <button className="text-xs text-slate-500 hover:text-slate-700">Filters</button>
       </div>
 
       {/* Filters */}
-      <form onSubmit={handleApply} className="px-5 pt-4 pb-2">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Field label="Station">
-            <Select value={filters.station} onChange={set("station")} />
+      <form onSubmit={handleApply} className="px-5 pt-3 pb-2">
+        <div className={`grid ${sizes.grid}`}>
+          <Field label="Station" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.station} onChange={set("station")} sizeClass={sizes.select} />
           </Field>
-          <Field label="Department">
-            <Select value={filters.department} onChange={set("department")} />
+          <Field label="Department" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.department} onChange={set("department")} sizeClass={sizes.select} />
           </Field>
-          <Field label="Employee Group">
-            <Select value={filters.employeeGroup} onChange={set("employeeGroup")} />
+          <Field label="Employee Group" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.employeeGroup} onChange={set("employeeGroup")} sizeClass={sizes.select} />
           </Field>
-          <Field label="Employee">
-            <Select value={filters.employee} onChange={set("employee")} />
+          <Field label="Employee" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.employee} onChange={set("employee")} sizeClass={sizes.select} />
           </Field>
 
-          <Field label="Action">
-            <Select value={filters.action} onChange={set("action")}>
+          <Field label="Action" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.action} onChange={set("action")} sizeClass={sizes.select}>
               <option value="ALL">ALL</option>
               <option value="ADD">ADD</option>
               <option value="UPDATE">UPDATE</option>
             </Select>
           </Field>
-          <Field label="Request Type">
-            <Select value={filters.requestType} onChange={set("requestType")}>
+          <Field label="Request Type" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.requestType} onChange={set("requestType")} sizeClass={sizes.select}>
               <option>My Requests</option>
               <option>All Requests</option>
             </Select>
           </Field>
-          <Field label="Flag">
-            <Select value={filters.flag} onChange={set("flag")}>
+          <Field label="Flag" labelClass={sizes.label} gapClass={sizes.gap}>
+            <Select value={filters.flag} onChange={set("flag")} sizeClass={sizes.select}>
               <option>ALL</option>
               <option>Pending</option>
               <option>Approved</option>
@@ -109,12 +134,12 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
             </Select>
           </Field>
 
-          {/* Per page with records counter + primary CTA on desktop row */}
-          <div className="flex items-end justify-between md:col-span-1">
+          {/* Per page + records */}
+          <div className="flex items-end justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-[13px] text-slate-600">Show</span>
+              <span className="text-[12px] text-slate-600">Show</span>
               <select
-                className="h-9 w-[84px] rounded-md border border-slate-300 bg-white px-2 text-[13px] outline-none focus:border-customRed focus:ring-customRed"
+                className={`rounded-md border border-slate-300 bg-white outline-none focus:border-customRed focus:ring-customRed w-[78px] ${sizes.select}`}
                 value={filters.perPage}
                 onChange={set("perPage")}
               >
@@ -124,17 +149,17 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
                   </option>
                 ))}
               </select>
-              <span className="text-[13px] text-slate-600">( {rows.length} ) Records</span>
+              <span className="text-[12px] text-slate-600">( {rows.length} ) Records</span>
             </div>
           </div>
         </div>
 
         {/* Actions row */}
-        <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div className="mt-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
           <div className="flex gap-2">
             <button
               type="submit"
-              className="h-9 rounded-md bg-customRed px-4 text-white shadow-sm hover:bg-customRed/90 focus:outline-none"
+              className={`rounded-md bg-customRed text-white shadow-sm hover:bg-customRed/90 focus:outline-none ${sizes.btn}`}
             >
               Apply
             </button>
@@ -142,7 +167,7 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
             <button
               type="button"
               onClick={handleClear}
-              className="h-9 rounded-md border border-slate-300 bg-white px-4 text-slate-700 hover:bg-slate-50"
+              className={`rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 ${sizes.btn}`}
             >
               Clear Filters
             </button>
@@ -150,7 +175,7 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
 
           <button
             type="button"
-            className="inline-flex items-center justify-center gap-2 h-9 rounded-md bg-customRed px-4 text-white shadow-sm hover:bg-customRed/90"
+            className={`inline-flex items-center justify-center gap-2 rounded-md bg-customRed text-white shadow-sm hover:bg-customRed/90 ${sizes.btn}`}
             onClick={() => {
               // TODO: open apply-for-employee-info modal
             }}
@@ -161,33 +186,33 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
         </div>
       </form>
 
-      {/* Divider for breathing room above table */}
-      <div className="mt-3 border-t border-slate-200" />
+      {/* Divider */}
+      <div className="mt-2 border-t border-slate-200" />
 
       {/* Table */}
       <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
+        <table className={`min-w-full ${sizes.tableText}`}>
           <thead>
             <tr className="text-left text-slate-600">
-              <Th className="w-12">S#</Th>
-              <Th className="min-w-[220px]">Employee Name</Th>
-              <Th>Details</Th>
-              <Th className="w-32">Status</Th>
-              <Th className="w-48">Added On</Th>
-              <Th className="w-24">Details</Th>
-              <Th className="w-24">Approvals</Th>
-              <Th className="w-16">Action</Th>
+              <Th className={`w-12 ${sizes.th}`}>S#</Th>
+              <Th className={`min-w-[200px] ${sizes.th}`}>Employee Name</Th>
+              <Th className={sizes.th}>Details</Th>
+              <Th className={`w-28 ${sizes.th}`}>Status</Th>
+              <Th className={`w-44 ${sizes.th}`}>Added On</Th>
+              <Th className={`w-20 ${sizes.th}`}>Details</Th>
+              <Th className={`w-20 ${sizes.th}`}>Approvals</Th>
+              <Th className={`w-14 ${sizes.th}`}>Action</Th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
             {rows.map((r) => (
               <tr key={r.id} className="hover:bg-slate-50/60">
-                <Td>{r.sn ?? r.id}</Td>
+                <Td className={sizes.td}>{r.sn ?? r.id}</Td>
 
-                <Td className="text-customRed hover:underline cursor-pointer">{r.name}</Td>
+                <Td className={`text-customRed hover:underline cursor-pointer ${sizes.td}`}>{r.name}</Td>
 
-                <Td>
-                  <div className="text-[13px] text-slate-700 leading-5">
+                <Td className={sizes.td}>
+                  <div className="text-[12px] text-slate-700 leading-5">
                     <div>
                       <span className="font-medium">Station :</span> {r.station}
                     </div>
@@ -203,21 +228,22 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
                   </div>
                 </Td>
 
-                <Td>
-                  <StatusPill value={r.status} />
+                <Td className={sizes.td}>
+                  <StatusPill value={r.status} compact={compact} />
                 </Td>
 
-                <Td>
-                  <div className="text-[13px] text-slate-700">
+                <Td className={sizes.td}>
+                  <div className="text-[12px] text-slate-700">
                     {r.addedOn}
                     <div className="text-slate-500">By {r.addedBy}</div>
                   </div>
                 </Td>
 
                 {/* ICON-ONLY CELLS (Details / Approvals) */}
-                <Td>
+                <Td className={sizes.td}>
                   <IconButton
                     title="Details"
+                    sizeClass={sizes.iconBtn}
                     onClick={() => {
                       // TODO: open details modal
                     }}
@@ -226,9 +252,10 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
                   </IconButton>
                 </Td>
 
-                <Td>
+                <Td className={sizes.td}>
                   <IconButton
                     title="Approvals"
+                    sizeClass={sizes.iconBtn}
                     onClick={() => {
                       // TODO: open approvals
                     }}
@@ -237,8 +264,8 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
                   </IconButton>
                 </Td>
 
-                <Td>
-                  <IconButton title="More actions" onClick={() => {}}>
+                <Td className={sizes.td}>
+                  <IconButton title="More actions" sizeClass={sizes.iconBtn} onClick={() => {}}>
                     <EllipsisIcon />
                   </IconButton>
                 </Td>
@@ -255,64 +282,51 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
  * Small UI helpers
  * ------------------------- */
 
-const Field = ({ label, children }) => (
-  <label className="flex flex-col gap-1">
-    <span className="text-[12px] font-medium text-slate-600">{label}</span>
+const Field = ({ label, labelClass = "text-[12px]", gapClass = "gap-1.5", children }) => (
+  <label className={`flex flex-col ${gapClass}`}>
+    <span className={`${labelClass} font-medium text-slate-600`}>{label}</span>
     {children}
   </label>
 );
 
-const Select = ({ children, ...props }) => (
+const Select = ({ sizeClass = "h-8 text-[12px] px-2", children, ...props }) => (
   <select
     {...props}
-    className="h-9 w-full rounded-md border border-slate-300 bg-white px-2 text-[13px] outline-none focus:border-customRed focus:ring-customRed"
+    className={`w-full rounded-md border border-slate-300 bg-white outline-none focus:border-customRed focus:ring-customRed ${sizeClass}`}
   >
-    {children ?? (
-      <>
-        <option value="">--ALL--</option>
-      </>
-    )}
+    {children ?? <option value="">--ALL--</option>}
   </select>
 );
 
 const Th = ({ className = "", children }) => (
-  <th className={["px-4 py-3 text-[13px] font-semibold", className].join(" ")}>{children}</th>
+  <th className={`font-semibold ${className}`}>{children}</th>
 );
 
 const Td = ({ className = "", children }) => (
-  <td className={["px-4 py-3 align-top text-slate-800", className].join(" ")}>{children}</td>
+  <td className={`align-top text-slate-800 ${className}`}>{children}</td>
 );
 
-const StatusPill = ({ value = "" }) => {
+const StatusPill = ({ value = "", compact = true }) => {
   const color =
     value.toLowerCase() === "approved"
       ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : value.toLowerCase() === "pending"
       ? "bg-amber-50 text-amber-700 border-amber-200"
       : "bg-rose-50 text-rose-700 border-rose-200";
+  const size = compact ? "px-2 py-[2px] text-[11px]" : "px-2.5 py-1 text-[12px]";
   return (
-    <span
-      className={[
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[12px] font-medium",
-        color,
-      ].join(" ")}
-    >
+    <span className={`inline-flex items-center rounded-full border font-medium ${size} ${color}`}>
       {value}
     </span>
   );
 };
 
-const IconButton = ({ title, className = "", ...props }) => (
+const IconButton = ({ title, sizeClass = "h-7 w-7", className = "", ...props }) => (
   <button
     {...props}
     title={title}
     aria-label={title}
-    className={[
-      "h-8 w-8 inline-flex items-center justify-center rounded-md",
-      "border border-slate-300 text-slate-600 hover:text-customRed hover:border-customRed/40 hover:bg-customRed/5",
-      "transition-colors",
-      className,
-    ].join(" ")}
+    className={`inline-flex items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:text-customRed hover:border-customRed/40 hover:bg-customRed/5 transition-colors ${sizeClass} ${className}`}
   />
 );
 
