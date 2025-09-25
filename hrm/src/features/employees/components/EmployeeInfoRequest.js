@@ -1,5 +1,6 @@
 // src/features/employees/components/EmployeeInfoRequest.js
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import apiService from "../../../utils/apiService";
 
 /**
  * Employee Info Request
@@ -29,7 +30,19 @@ export default function EmployeeInfoRequest({ rows: externalRows = [] }) {
     []
   );
   const rows = externalRows.length ? externalRows : demoRows;
-
+  const [employee, setEmployee]=useState([])
+   const featchempdata=async ()=>{
+    try {
+     const response= apiService.get('/all-employee')
+      
+      setEmployee(response.data)
+    } catch (error) {
+      console.log('Error',error)
+    }
+   }
+   useEffect(()=>{
+      featchempdata()
+   },[])
   // ----- Filters state (replace with your real source of options/data)
   const [filters, setFilters] = useState({
     station: "",

@@ -163,7 +163,7 @@ export default function EmployeesPage() {
             <EmployeeSidebar activeKey={active} onNavigate={setActive} />
           </div>
 
-          <main className="flex-1 flex flex-col">
+          <main className="flex-1 min-w-0 flex flex-col">
             {renderMain()}
           </main>
         </div>

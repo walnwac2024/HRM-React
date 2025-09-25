@@ -51,7 +51,7 @@ const login=async(req, res)=> {
       return res.status(400).json({ message: 'usernameOrEmail and password are required' });
 
     const [rows] = await pool.execute(
-      'SELECT id, email, password FROM users WHERE email = ? LIMIT 1',
+      'SELECT * FROM users WHERE email = ? LIMIT 1',
       [email]
     );
 
@@ -62,10 +62,7 @@ const login=async(req, res)=> {
     if (!ok) return res.status(400).json({ message: 'Invalid credentials' });
 
     req.session.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
+      user
     };
 
     return res.status(200).json({ message: 'Login successful', user: req.session.user });

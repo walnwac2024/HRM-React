@@ -6,8 +6,8 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [state, setState] = useState({ loading: true, user: null });
-  console.log("the user at context:",state)
-  // Initial load: fetch current session user
+
+
   useEffect(() => {
     let mounted = true;
     api
@@ -36,6 +36,7 @@ const setUser = (value) => {
   // Optional helpers if you want context to own auth calls:
   const login = async (email, password, remember) => {
     const { data } = await api.post("/login", { email, password, remember });
+
     setUser(data.user); // instant UI update
     return data.user;
   };
