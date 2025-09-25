@@ -13,12 +13,16 @@ import EmployeeSidebar from "./components/EmployeeSidebar";
 // Screens
 import EmployeeProfileRequest from "./components/EmployeeProfileRequest";
 import EmployeeTransfer from "./components/EmployeeTransfer";
-import EmployeeInfoRequest from "./components/EmployeeInfoRequest"; // ← NEW
+import EmployeeInfoRequest from "./components/EmployeeInfoRequest";
+import EmployeeApprovals from "./components/EmployeeApprovals"; // ✅ NEW
 
 // Employee Role screens
 import EmployeeRoleMainView from "./components/EmployeeRoleMainView";
 import CopyRoleView from "./components/CopyRoleView";
 import RoleTemplatesView from "./components/RoleTemplatesView";
+
+// Employee Settings Screen
+import EmployeeSettings from "./components/EmployeeSettings"; // ✅ Added the Employee Settings screen
 
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
@@ -47,12 +51,17 @@ export default function EmployeesPage() {
     // Other routes
     if (active === "employee-profile-request") return <EmployeeProfileRequest />;
     if (active === "employee-transfer") return <EmployeeTransfer />;
-    if (active === "employee-info-request") return <EmployeeInfoRequest />; // ← NEW
+    if (active === "employee-info-request") return <EmployeeInfoRequest />;
+    if (active === "employee-approvals") return <EmployeeApprovals />; // ✅ Renders real page
 
-    // Placeholders for the rest
+    // Employee Settings Route
+    if (active === "employee-settings") {
+      return <EmployeeSettings />; // ✅ Added Employee Settings Page
+    }
+
+    // Placeholder only for sections without UI yet
     if (active !== "employee-list") {
       const labelMap = {
-        "employee-approvals": "Employee Approvals",
         "employee-settings": "Employee Settings",
       };
       return (
@@ -74,7 +83,6 @@ export default function EmployeesPage() {
         <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 mt-[2px]">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-medium">Filters</div>
-            {/* icon button colored with customRed */}
             <button className="text-customRed hover:text-customRed/80" title="Toggle">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M3 5h18v2H3zM7 11h10v2H7zM10 17h4v2h-4z" />
@@ -85,7 +93,6 @@ export default function EmployeesPage() {
           <form onSubmit={apply} className="p-4">
             <Filters filters={filters} onChange={setFilter} />
 
-            {/* ActionsBar already uses customRed styles */}
             <ActionsBar
               onClear={resetFilters}
               perPage={perPage}
@@ -115,7 +122,6 @@ export default function EmployeesPage() {
           <div className="px-4 py-3 flex items-center justify-between text-sm">
             <div>Page {page} of {totalPages}</div>
             <div className="space-x-2">
-              {/* Outline customRed buttons */}
               <button
                 type="button"
                 className="h-8 px-3 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
