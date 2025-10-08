@@ -1,0 +1,67 @@
+// src/features/attendance/constants.js
+
+/** Sidebar items */
+export const ATTENDANCE_NAV = [
+  { id: 'attendance-request', label: 'Attendance Request', active: true },
+  { id: 'exemption-request',  label: 'Exemption Request' },
+  { id: 'worksheet',          label: 'WorkSheet' },
+  { id: 'remote-work',        label: 'Remote Work Request' },
+  { id: 'shift-request',      label: 'Shift Request' },
+  { id: 'amend-attendance',   label: 'Amend Attendance' },
+  { id: 'amend-employee-shift', label: 'Amend Employee Shift' },
+  { id: 'attendance-approval',  label: 'Attendance Approval' },
+  { id: 'schedule',           label: 'Schedule' },
+  { id: 'attendance-settings', label: 'Attendance Settings' },
+];
+
+/** Route mapping used by the Sidebar (NavLink targets) */
+export const ATTENDANCE_ROUTES = {
+  'attendance-request'   : '/attendance',
+  'exemption-request'    : '/attendance/exemption',
+  'worksheet'            : '/attendance/worksheet',
+  'remote-work'          : '/attendance/remote-work',
+  'shift-request'        : '/attendance/shift',
+  'amend-attendance'     : '/attendance/amend',
+  'amend-employee-shift' : '/attendance/amend-shift',
+  'attendance-approval'  : '/attendance/approval',
+  'schedule'             : '/attendance/schedule',
+  'attendance-settings'  : '/attendance/settings',
+};
+
+/** Filter option sets (strings are fine for <option>) */
+export const STATIONS = ['--ALL--', 'Karachi', 'Lahore', 'Islamabad'];
+
+export const DEPARTMENTS = ['--ALL--', 'HR', 'Engineering', 'Finance'];
+
+export const SUB_DEPARTMENTS = [
+  '--ALL--',
+  'Recruitment',
+  'Payroll',
+  'Backend',
+  'Frontend',
+];
+
+export const EMPLOYEE_GROUPS = ['--ALL--', 'A', 'B', 'C'];
+
+export const EMPLOYEES = [
+  '--ALL--',
+  'Sumitha Thomas',
+  'Ahmed Khan',
+  'Sara Malik',
+];
+
+export const STATUSES = ['--ALL--', 'Pending', 'Approved', 'Rejected'];
+
+export const REQUEST_TYPES = ['My Requests', 'Pending Approvals', 'All Requests'];
+
+export const FLAGS = ['--ALL--', 'Flagged', 'Unflagged'];
+
+export const MARK_FROM_DASHBOARD = ['--ALL--', 'Yes', 'No'];
+
+export const ATTENDANCE_TYPES = [
+  '--ALL--',
+  'In/Out Adjust',
+  'Work From Home',
+  'Remote',
+  'On Site',
+];

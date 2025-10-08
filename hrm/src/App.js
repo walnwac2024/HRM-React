@@ -10,6 +10,9 @@ import DashboardTabsLayout from "./components/pages/DashboardTabsLayout";
 import EmployeesPage from "./features/employees";
 import { initCsrf } from "./utils/api";
 
+// ✅ Updated import path for AttendancePage
+import { AttendancePage } from "./features/attendance";
+
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
 const RecruitmentDashboard = () => <div className="p-6 text-sm">Recruitment Dashboard — coming soon.</div>;
@@ -60,6 +63,8 @@ export default function App() {
 
           {/* Other top-level pages */}
           <Route path="/employees" element={<EmployeesPage />} />
+          {/* ✅ New Attendance route */}
+          <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/organization" element={<div className="p-4">Organization</div>} />
           <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
           <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />

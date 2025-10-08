@@ -1,17 +1,91 @@
+/* Tailwind layers */
 @tailwind base;
 @tailwind components;
+
+@layer components {
+  /* -------- page + card -------- */
+  .page { @apply mx-auto max-w-screen-2xl px-6 pt-4 pb-6; }
+  .card { @apply bg-white rounded-2xl shadow-sm ring-1 ring-gray-100; }
+  .card-header { @apply border-b border-gray-100 px-4 py-3; }
+  .card-body { @apply px-4 py-3; }
+
+  /* -------- inputs -------- */
+  .input    { @apply w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200; }
+  .select   { @apply input; }
+  .textarea { @apply input h-auto py-2; }
+
+  /* -------- buttons (unified) -------- */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg px-4 h-9 text-sm font-medium
+           transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1;
+  }
+  .btn-primary {
+    @apply btn bg-customRed text-white hover:brightness-95 active:brightness-90
+           focus-visible:ring-customRed/30;
+  }
+  .btn-outline {
+    @apply btn border border-customRed text-customRed bg-white
+           hover:bg-customRed/10 active:bg-customRed/15
+           focus-visible:ring-customRed/25;
+  }
+  .btn-chip {
+    @apply inline-flex items-center justify-center rounded-lg border border-gray-300
+           px-3 h-9 text-sm bg-white text-gray-700 hover:bg-gray-50;
+  }
+  .btn-ghost { @apply btn text-gray-600 hover:bg-gray-50; }
+
+  /* disabled look (same as Employee) + very light hover tint */
+  .btn-outline:disabled,
+  .btn-outline[aria-disabled="true"] { @apply border-customRed/30 text-customRed/40 bg-white cursor-not-allowed opacity-100; }
+  .btn-outline:disabled:hover,
+  .btn-outline[aria-disabled="true"]:hover { @apply bg-customRed/5; }
+  .btn-outline:disabled:focus,
+  .btn-outline[aria-disabled="true"]:focus { @apply bg-customRed/5 shadow-none; }
+
+  .btn-primary:disabled,
+  .btn-primary[aria-disabled="true"] { @apply bg-customRed/40 text-white/80 cursor-not-allowed; }
+  .btn-primary:disabled:hover,
+  .btn-primary:disabled:focus,
+  .btn-primary[aria-disabled="true"]:hover,
+  .btn-primary[aria-disabled="true"]:focus { @apply shadow-none; }
+
+  /* -------- sidebar bits (unchanged) -------- */
+  .sidebar         { @apply w-60 shrink-0; }
+  .sidebar-card    { @apply bg-white rounded-2xl shadow-sm ring-1 ring-gray-100; }
+  .sidebar-heading { @apply px-5 pt-4 pb-3 text-xs font-semibold tracking-wide text-gray-500; }
+  .sidebar-list    { @apply px-2 pb-4; }
+  .sidebar-item    { @apply relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50; }
+  .sidebar-icon    { @apply h-4 w-4 text-gray-400; }
+  .sidebar-active  { @apply bg-customRed/10 text-customRed; }
+  .sidebar-active .sidebar-icon { @apply text-customRed; }
+  .sidebar-strip   { @apply absolute left-0 top-0 h-full w-1 rounded-l; background-color: theme('colors.customRed'); }
+
+  /* -------- labels -------- */
+  .form-label { @apply block text-[13px] leading-5 font-normal text-gray-600 mb-1; }
+
+  /* -------- tables (match Employee) -------- */
+  /* collapse so the header divider is one clean line like Employee */
+  .table { @apply w-full border-collapse; }
+
+  /* header style + subtle divider using customLightGrey */
+  .thead { @apply text-sm font-semibold text-gray-800 border-b border-customLightGrey/40; }
+  .th    { @apply text-left py-3 px-4 text-sm font-semibold text-gray-800; }
+
+  /* body rows */
+  .tr    { @apply border-b border-gray-100 last:border-b-0; }
+  .td    { @apply py-4 px-4 align-top text-sm text-gray-700; }
+
+  /* soft hover to match Employee feel */
+  .row:hover > .td { background-color: theme('colors.gray.50'); }
+
+  /* badges */
+  .badge       { @apply inline-flex items-center rounded-full px-2.5 h-6 text-xs font-medium; }
+  .badge-red   { @apply badge bg-customRed/10 text-customRed; }
+  .badge-green { @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200; }
+  .badge-gray  { @apply badge bg-gray-100 text-gray-700; }
+
+  /* kebab */
+  .kebab { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-customRed text-customRed hover:bg-customRed/10; }
+}
+
 @tailwind utilities;
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
-}

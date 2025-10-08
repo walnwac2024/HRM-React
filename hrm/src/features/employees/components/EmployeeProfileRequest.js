@@ -218,10 +218,10 @@ export default function EmployeeProfileRequest() {
 
         {/* TABLE */}
         <div className="border-t">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
+          <div>
+            <table className="w-full table-fixed text-[13px]">
               <thead className="bg-slate-50 text-slate-600">
-                <tr className="[&>th]:py-3 [&>th]:px-4 [&>th]:text-left">
+                <tr className="[&>th]:py-2 [&>th]:px-3 [&>th]:text-left [&>th]:whitespace-normal [&>th]:break-words">
                   <th><input type="checkbox" className="accent-customRed" /></th>
                   <th>S#</th>
                   <th>Employee</th>
@@ -238,7 +238,7 @@ export default function EmployeeProfileRequest() {
 
               <tbody className="divide-y">
                 {rows.map((r, idx) => (
-                  <tr key={r.id} className="[&>td]:py-3 [&>td]:px-4 align-top">
+                  <tr key={r.id} className="[&>td]:py-2 [&>td]:px-3 [&>td]:whitespace-normal [&>td]:break-words align-top">
                     <td><input type="checkbox" className="accent-customRed" /></td>
                     <td>{idx + 1}</td>
 
