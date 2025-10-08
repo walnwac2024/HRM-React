@@ -1,0 +1,29 @@
+/* src/styles/ui.css */
+@layer components {
+  /* Cards */
+  .card { @apply bg-white rounded-md shadow-sm ring-1 ring-gray-200; }
+  .card-header { @apply border-b border-gray-200 px-4 py-3; }
+  .card-body { @apply p-4; }
+
+  /* Inputs */
+  .input { @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-200; }
+  .select { @apply input; }
+  .textarea { @apply input; }
+
+  /* Buttons */
+  .btn { @apply inline-flex items-center justify-center rounded-md px-4 h-9 text-sm font-medium; }
+  .btn-primary { @apply bg-customRed text-white; }
+  .btn-outline { @apply border border-gray-300 text-gray-700 bg-white hover:bg-gray-50; }
+  .btn-ghost { @apply text-gray-600 hover:bg-gray-50; }
+  .btn-chip { @apply inline-flex items-center justify-center rounded-md border border-gray-300 px-3 h-9 text-sm; }
+
+  /* Badge */
+  .badge { @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white; }
+
+  /* Sidebar */
+  .sidebar { @apply w-64 shrink-0; }
+  .sidebar-card { @apply card p-2; }
+  .sidebar-link { @apply flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left text-gray-800 hover:bg-gray-50; }
+  .sidebar-active { @apply bg-customRed text-white; }
+  .sidebar-dot { @apply inline-block h-2 w-2 rounded-full; }
+}
