@@ -11,7 +11,7 @@ dotenv.config();
 
 const app = express();
 const routes = require("./Routes/Route");
-const empRouter=require('./Routes/EmpRoutes')
+
 const isProd = process.env.NODE_ENV === "production";
 
 // 1) Security headers FIRST
@@ -85,7 +85,6 @@ app.get("/api/v1/csrf", (req, res) => {
 
 // 9) Your application routes
 app.use("/api/v1", routes);
-app.use("/api/v1", empRouter);
 
 // 10) Centralized error handler (handles CSRF errors cleanly)
 app.use((err, req, res, next) => {
