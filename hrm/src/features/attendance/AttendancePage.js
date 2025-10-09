@@ -3,7 +3,12 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Filters from './components/Filters';
 import RequestTable from './components/RequestTable';
+import ExemptionTable from './components/ExemptionTable';
+import WorkSheetTable from './components/WorkSheetTable';      // <-- NEW
+
 import AddRequestModal from './components/AddRequestModal';
+import AddExemptionModal from './components/AddExemptionModal';
+import AddWorkSheetModal from './components/AddWorkSheetModal'; // <-- NEW
 
 import useAttendanceRequests from './hooks/useAttendanceRequests';
 import { ATTENDANCE_NAV } from './constants';
@@ -17,35 +22,66 @@ function ComingSoon({ label }) {
   );
 }
 
-/** Very light “Exemption Request” page using the same Filters + table shell */
-function ExemptionRequestPage({
-  perPage, onPerPageChange, onUploadExcel, onAddNew, onAddIrregular, onApply,
-}) {
+function ExemptionRequestPage({ perPage, onPerPageChange, onAddNew, onApply }) {
+  const [page, setPage] = useState(1);
+  const pageCount = 1;
+  const rows = []; // TODO: hook to your exemption data
+
   return (
     <>
       <Filters
+        mode="exemption"
         title="Exemption Request"
         perPage={perPage}
         onPerPageChange={onPerPageChange}
-        onUploadExcel={onUploadExcel}
         onAddNew={onAddNew}
-        onAddIrregular={onAddIrregular}
         onApply={onApply}
       />
-      {/* You can replace rows with exemption data later */}
-      <RequestTable rows={[]} page={1} pageCount={1} />
+      <ExemptionTable
+        rows={rows}
+        page={page}
+        pageCount={pageCount}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+      />
+    </>
+  );
+}
+
+function WorkSheetSection({ perPage, onPerPageChange, onAddNew }) {
+  const [page, setPage] = useState(1);
+  const pageCount = 1;
+  const [rows, setRows] = useState([]); // local table rows for now
+
+  return (
+    <>
+      <Filters
+        mode="worksheet"
+        title="WorkSheet"
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
+        onUploadExcel={() => {}}
+        onAddNew={onAddNew} // open modal
+        onApply={() => {}}
+      />
+      <WorkSheetTable
+        rows={rows}
+        page={page}
+        pageCount={pageCount}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+      />
     </>
   );
 }
 
 export default function AttendancePage() {
   const [nav, setNav] = useState(ATTENDANCE_NAV);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet'
   const { rows, applyFilters } = useAttendanceRequests({});
   const [perPage, setPerPage] = useState(10);
 
   const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
-
   const handleNavigate = (id) =>
     setNav((prev) => prev.map((it) => ({ ...it, active: it.id === id })));
 
@@ -55,35 +91,44 @@ export default function AttendancePage() {
         <Sidebar items={nav} onNavigate={handleNavigate} />
 
         <div className="flex flex-col gap-4">
+          {/* Attendance */}
           {activeId === 'attendance-request' && (
             <>
               <Filters
+                mode="attendance"
                 title="Attendance Request"
                 onApply={applyFilters}
                 perPage={perPage}
                 onPerPageChange={setPerPage}
                 onUploadExcel={() => {}}
-                onAddNew={() => setIsFormOpen(true)}
+                onAddNew={() => setModal('attendance')}
                 onAddIrregular={() => {}}
               />
               <RequestTable rows={rows} />
             </>
           )}
 
+          {/* Exemption */}
           {activeId === 'exemption-request' && (
             <ExemptionRequestPage
               perPage={perPage}
               onPerPageChange={setPerPage}
-              onUploadExcel={() => {}}
-              onAddNew={() => setIsFormOpen(true)}
-              onAddIrregular={() => {}}
-              onApply={applyFilters}
+              onAddNew={() => setModal('exemption')}
+              onApply={() => {}}
             />
           )}
 
-          {/* For the rest of the sidebar items we can show a placeholder for now */}
+          {/* WorkSheet */}
+          {activeId === 'worksheet' && (
+            <WorkSheetSection
+              perPage={perPage}
+              onPerPageChange={setPerPage}
+              onAddNew={() => setModal('worksheet')}
+            />
+          )}
+
+          {/* Others */}
           {[
-            'worksheet',
             'remote-work',
             'shift-request',
             'amend-attendance',
@@ -97,7 +142,17 @@ export default function AttendancePage() {
         </div>
       </main>
 
-      <AddRequestModal open={isFormOpen} onClose={() => setIsFormOpen(false)} />
+      {/* Modals */}
+      <AddRequestModal open={modal === 'attendance'} onClose={() => setModal(null)} />
+      <AddExemptionModal open={modal === 'exemption'} onClose={() => setModal(null)} />
+      <AddWorkSheetModal
+        open={modal === 'worksheet'}
+        onClose={() => setModal(null)}
+        onSaved={(payload) => {
+          // hook in a refresh of worksheet table if needed
+          console.log("worksheet saved", payload);
+        }}
+      />
     </div>
   );
 }
