@@ -17,7 +17,7 @@ function Field({ label, children }) {
 
 /**
  * Reusable filters for:
- * mode: 'attendance' | 'exemption' | 'worksheet' | 'remote'
+ * mode: 'attendance' | 'exemption' | 'worksheet' | 'remote' | 'shift'
  */
 export default function Filters({
   mode = 'attendance',
@@ -32,6 +32,7 @@ export default function Filters({
   const isExemption = mode === 'exemption';
   const isWorksheet = mode === 'worksheet';
   const isRemote = mode === 'remote';
+  const isShift = mode === 'shift';
 
   const [vals, setVals] = useState({
     station: '--ALL--',
@@ -39,7 +40,7 @@ export default function Filters({
     subDepartment: '--ALL--',
     employeeGroup: '--ALL--',
     employee: '--ALL--',
-    date: '', // attendance / exemption / remote date
+    date: '', // attendance / exemption / remote / shift date
     status: '--ALL--',
     employeeCode: '',
     employeeName: '',
@@ -121,16 +122,15 @@ export default function Filters({
             </select>
           </Field>
 
-          {/* Attendance/Exemption/Remote show date; Worksheet has its own fields */}
+          {/* Attendance/Exemption/Remote/Shift show date; Worksheet has its own fields */}
           {!isWorksheet && (
             <>
               <Field
                 label={
-                  isExemption
-                    ? 'Exemption Date'
-                    : isRemote
-                    ? 'Remote Work Date'
-                    : 'Attendance Date'
+                  isExemption ? 'Exemption Date'
+                  : isRemote   ? 'Remote Work Date'
+                  : isShift    ? 'Shift Date'
+                  : 'Attendance Date'
                 }
               >
                 <input type="date" className="input" value={vals.date} onChange={set('date')} />
@@ -149,8 +149,8 @@ export default function Filters({
                   </select>
                 </Field>
               ) : (
-                // Employee Code only for Attendance (hide for Remote + Exemption)
-                !isRemote && (
+                // Show Employee Code for Attendance AND Shift; hide for Exemption/Remote
+                (mode === 'attendance' || isShift) && (
                   <Field label="Employee Code">
                     <input
                       className="input"
@@ -215,7 +215,7 @@ export default function Filters({
           </Field>
 
           {/* Attendance-only control */}
-          {!isExemption && !isWorksheet && !isRemote && (
+          {!isExemption && !isWorksheet && !isRemote && !isShift && (
             <Field label="Is Mark From Dashboard">
               <select
                 className="select"
@@ -236,8 +236,8 @@ export default function Filters({
           )}
         </div>
 
-        {/* Row 4 (attendance/exemption types) */}
-        {!isWorksheet && !isRemote && (
+        {/* Row 4 (attendance/exemption types only) */}
+        {!isWorksheet && !isRemote && !isShift && (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
             <Field label={isExemption ? 'Exemption Type' : 'Attendance Type'}>
               <select className="select" value={vals.type} onChange={set('type')}>
@@ -269,8 +269,8 @@ export default function Filters({
             </select>
             <span className="text-sm text-gray-700">Records</span>
 
-            {/* Upload Excel: Attendance + WorkSheet only */}
-            {!isExemption && !isRemote && (
+            {/* Upload Excel: Attendance + Worksheet only */}
+            {!isExemption && !isRemote && !isShift && (
               <button onClick={onUploadExcel} className="btn-outline">Upload Excel</button>
             )}
 
@@ -278,8 +278,16 @@ export default function Filters({
               {isWorksheet ? '+ Add New WorkSheet' : '+ Add New Request'}
             </button>
 
-            {/* Irregular Attendance button: Attendance only */}
-            {!isExemption && !isWorksheet && !isRemote && (
+            {/* Irregular button:
+               - Attendance -> Irregular Attendance
+               - Shift      -> Irregular Shift
+               - Otherwise hidden */}
+            {!isWorksheet && !isRemote && !isExemption && isShift && (
+              <button onClick={onAddIrregular} className="btn-outline">
+                + Add Irregular Shift Request
+              </button>
+            )}
+            {!isWorksheet && !isRemote && !isExemption && !isShift && (
               <button onClick={onAddIrregular} className="btn-outline">
                 + Add Irregular Attendance Request
               </button>

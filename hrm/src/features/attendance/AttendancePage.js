@@ -5,12 +5,14 @@ import Filters from './components/Filters';
 import RequestTable from './components/RequestTable';
 import ExemptionTable from './components/ExemptionTable';
 import WorkSheetTable from './components/WorkSheetTable';
-import RemoteWorkTable from './components/RemoteWorkTable';          // NEW
+import RemoteWorkTable from './components/RemoteWorkTable';
+import ShiftTable from './components/ShiftTable';                 // NEW
 
 import AddRequestModal from './components/AddRequestModal';
 import AddExemptionModal from './components/AddExemptionModal';
 import AddWorkSheetModal from './components/AddWorkSheetModal';
-import AddRemoteWorkModal from './components/AddRemoteWorkModal';    // NEW
+import AddRemoteWorkModal from './components/AddRemoteWorkModal';
+import AddShiftModal from './components/AddShiftModal';           // NEW
 
 import useAttendanceRequests from './hooks/useAttendanceRequests';
 import { ATTENDANCE_NAV } from './constants';
@@ -106,14 +108,41 @@ function RemoteWorkSection({ perPage, onPerPageChange, onAddNew, rows }) {
   );
 }
 
+function ShiftSection({ perPage, onPerPageChange, onAddNew, onAddIrregular, rows }) {
+  const [page, setPage] = useState(1);
+  const pageCount = 1;
+
+  return (
+    <>
+      <Filters
+        mode="shift"
+        title="Shift Request"
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
+        onAddNew={onAddNew}                 // opens regular shift modal
+        onAddIrregular={onAddIrregular}     // opens irregular shift modal
+        onApply={() => {}}
+      />
+      <ShiftTable
+        rows={rows}
+        page={page}
+        pageCount={pageCount}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+      />
+    </>
+  );
+}
+
 export default function AttendancePage() {
   const [nav, setNav] = useState(ATTENDANCE_NAV);
-  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet' | 'remote'
+  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet' | 'remote' | 'shift' | 'shift-irregular'
   const [perPage, setPerPage] = useState(10);
   const { rows, applyFilters } = useAttendanceRequests({});
 
-  // store local Remote Work rows
+  // local rows for sections that don't have APIs hooked yet
   const [remoteRows, setRemoteRows] = useState([]);
+  const [shiftRows, setShiftRows] = useState([]);
 
   const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
   const handleNavigate = (id) =>
@@ -171,9 +200,19 @@ export default function AttendancePage() {
             />
           )}
 
+          {/* Shift Request */}
+          {activeId === 'shift-request' && (
+            <ShiftSection
+              perPage={perPage}
+              onPerPageChange={setPerPage}
+              onAddNew={() => setModal('shift')}
+              onAddIrregular={() => setModal('shift-irregular')}
+              rows={shiftRows}
+            />
+          )}
+
           {/* Other placeholders */}
           {[
-            'shift-request',
             'amend-attendance',
             'amend-employee-shift',
             'attendance-approval',
@@ -208,9 +247,52 @@ export default function AttendancePage() {
             {
               id: Date.now(),
               employee: { name: payload.employee },
-              remoteDate: payload.date,
+              remoteDate: payload.remoteDate,     // UPDATED
+              inDate: payload.inDate,
+              outDate: payload.outDate,
+              inTime: payload.inTime,
+              outTime: payload.outTime,
               details: payload.details,
               status: 'Pending',
+              addedOn: payload.addedOn,
+              approvals: '—',
+            },
+            ...prev,
+          ]);
+        }}
+      />
+
+      {/* Shift Modals */}
+      <AddShiftModal
+        open={modal === 'shift'}
+        onClose={() => setModal(null)}
+        onSaved={(payload) => {
+          setShiftRows((prev) => [
+            {
+              id: Date.now(),
+              employee: { name: payload.employee },
+              shiftDate: payload.shiftDate,
+              details: payload.details,
+              status: payload.status,
+              addedOn: payload.addedOn,
+              approvals: '—',
+            },
+            ...prev,
+          ]);
+        }}
+      />
+      <AddShiftModal
+        irregular
+        open={modal === 'shift-irregular'}
+        onClose={() => setModal(null)}
+        onSaved={(payload) => {
+          setShiftRows((prev) => [
+            {
+              id: Date.now(),
+              employee: { name: payload.employee },
+              shiftDate: payload.shiftDate,
+              details: payload.details,        // required in irregular modal
+              status: payload.status,
               addedOn: payload.addedOn,
               approvals: '—',
             },
