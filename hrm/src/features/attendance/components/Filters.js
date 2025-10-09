@@ -16,8 +16,8 @@ function Field({ label, children }) {
 }
 
 /**
- * Reusable filters for Attendance | Exemption | WorkSheet
- * mode: 'attendance' | 'exemption' | 'worksheet'
+ * Reusable filters for:
+ * mode: 'attendance' | 'exemption' | 'worksheet' | 'remote'
  */
 export default function Filters({
   mode = 'attendance',
@@ -31,6 +31,7 @@ export default function Filters({
 }) {
   const isExemption = mode === 'exemption';
   const isWorksheet = mode === 'worksheet';
+  const isRemote = mode === 'remote';
 
   const [vals, setVals] = useState({
     station: '--ALL--',
@@ -38,7 +39,7 @@ export default function Filters({
     subDepartment: '--ALL--',
     employeeGroup: '--ALL--',
     employee: '--ALL--',
-    date: '',                       // attendance/exemption/worksheet date
+    date: '', // attendance / exemption / remote date
     status: '--ALL--',
     employeeCode: '',
     employeeName: '',
@@ -120,10 +121,18 @@ export default function Filters({
             </select>
           </Field>
 
-          {/* Attendance/Exemption show date; Worksheet uses date + title/year/month */}
+          {/* Attendance/Exemption/Remote show date; Worksheet has its own fields */}
           {!isWorksheet && (
             <>
-              <Field label={isExemption ? 'Exemption Date' : 'Attendance Date'}>
+              <Field
+                label={
+                  isExemption
+                    ? 'Exemption Date'
+                    : isRemote
+                    ? 'Remote Work Date'
+                    : 'Attendance Date'
+                }
+              >
                 <input type="date" className="input" value={vals.date} onChange={set('date')} />
               </Field>
 
@@ -140,9 +149,17 @@ export default function Filters({
                   </select>
                 </Field>
               ) : (
-                <Field label="Employee Code">
-                  <input className="input" placeholder="Employee Code" value={vals.employeeCode} onChange={set('employeeCode')} />
-                </Field>
+                // Employee Code only for Attendance (hide for Remote + Exemption)
+                !isRemote && (
+                  <Field label="Employee Code">
+                    <input
+                      className="input"
+                      placeholder="Employee Code"
+                      value={vals.employeeCode}
+                      onChange={set('employeeCode')}
+                    />
+                  </Field>
+                )
               )}
             </>
           )}
@@ -151,7 +168,12 @@ export default function Filters({
           {isWorksheet && (
             <>
               <Field label="Title">
-                <input className="input" placeholder="Type something" value={vals.titleText} onChange={set('titleText')} />
+                <input
+                  className="input"
+                  placeholder="Type something"
+                  value={vals.titleText}
+                  onChange={set('titleText')}
+                />
               </Field>
 
               <Field label="Year">
@@ -172,7 +194,12 @@ export default function Filters({
         {/* Row 3 */}
         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
           <Field label="Employee Name">
-            <input className="input" placeholder="Employee Name" value={vals.employeeName} onChange={set('employeeName')} />
+            <input
+              className="input"
+              placeholder="Employee Name"
+              value={vals.employeeName}
+              onChange={set('employeeName')}
+            />
           </Field>
 
           <Field label="Request Type">
@@ -187,9 +214,14 @@ export default function Filters({
             </select>
           </Field>
 
-          {!isExemption && !isWorksheet && (
+          {/* Attendance-only control */}
+          {!isExemption && !isWorksheet && !isRemote && (
             <Field label="Is Mark From Dashboard">
-              <select className="select" value={vals.isMarkFromDashboard} onChange={set('isMarkFromDashboard')}>
+              <select
+                className="select"
+                value={vals.isMarkFromDashboard}
+                onChange={set('isMarkFromDashboard')}
+              >
                 {MARK_FROM_DASHBOARD.map((x) => <option key={x}>{x}</option>)}
               </select>
             </Field>
@@ -205,11 +237,13 @@ export default function Filters({
         </div>
 
         {/* Row 4 (attendance/exemption types) */}
-        {!isWorksheet && (
+        {!isWorksheet && !isRemote && (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
             <Field label={isExemption ? 'Exemption Type' : 'Attendance Type'}>
               <select className="select" value={vals.type} onChange={set('type')}>
-                {(isExemption ? EXEMPTION_TYPES : ATTENDANCE_TYPES).map((x) => <option key={x}>{x}</option>)}
+                {(isExemption ? EXEMPTION_TYPES : ATTENDANCE_TYPES).map((x) => (
+                  <option key={x}>{x}</option>
+                ))}
               </select>
             </Field>
           </div>
@@ -224,13 +258,19 @@ export default function Filters({
 
           <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
             <span className="text-sm text-gray-700">Show</span>
-            <select className="btn-chip !px-2" value={perPage} onChange={(e) => onPerPageChange?.(Number(e.target.value))}>
-              {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
+            <select
+              className="btn-chip !px-2"
+              value={perPage}
+              onChange={(e) => onPerPageChange?.(Number(e.target.value))}
+            >
+              {[10, 25, 50, 100].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
             </select>
             <span className="text-sm text-gray-700">Records</span>
 
-            {/* Upload Excel only for WorkSheet and Attendance (NOT Exemption) */}
-            {!isExemption && (
+            {/* Upload Excel: Attendance + WorkSheet only */}
+            {!isExemption && !isRemote && (
               <button onClick={onUploadExcel} className="btn-outline">Upload Excel</button>
             )}
 
@@ -238,7 +278,8 @@ export default function Filters({
               {isWorksheet ? '+ Add New WorkSheet' : '+ Add New Request'}
             </button>
 
-            {!isExemption && !isWorksheet && (
+            {/* Irregular Attendance button: Attendance only */}
+            {!isExemption && !isWorksheet && !isRemote && (
               <button onClick={onAddIrregular} className="btn-outline">
                 + Add Irregular Attendance Request
               </button>

@@ -4,11 +4,13 @@ import Sidebar from './components/Sidebar';
 import Filters from './components/Filters';
 import RequestTable from './components/RequestTable';
 import ExemptionTable from './components/ExemptionTable';
-import WorkSheetTable from './components/WorkSheetTable';      // <-- NEW
+import WorkSheetTable from './components/WorkSheetTable';
+import RemoteWorkTable from './components/RemoteWorkTable';          // NEW
 
 import AddRequestModal from './components/AddRequestModal';
 import AddExemptionModal from './components/AddExemptionModal';
-import AddWorkSheetModal from './components/AddWorkSheetModal'; // <-- NEW
+import AddWorkSheetModal from './components/AddWorkSheetModal';
+import AddRemoteWorkModal from './components/AddRemoteWorkModal';    // NEW
 
 import useAttendanceRequests from './hooks/useAttendanceRequests';
 import { ATTENDANCE_NAV } from './constants';
@@ -16,8 +18,12 @@ import { ATTENDANCE_NAV } from './constants';
 function ComingSoon({ label }) {
   return (
     <div className="card">
-      <div className="card-header"><h3 className="text-base font-semibold text-gray-900">{label}</h3></div>
-      <div className="card-body text-sm text-gray-600">This section is coming soon.</div>
+      <div className="card-header">
+        <h3 className="text-base font-semibold text-gray-900">{label}</h3>
+      </div>
+      <div className="card-body text-sm text-gray-600">
+        This section is coming soon.
+      </div>
     </div>
   );
 }
@@ -25,7 +31,7 @@ function ComingSoon({ label }) {
 function ExemptionRequestPage({ perPage, onPerPageChange, onAddNew, onApply }) {
   const [page, setPage] = useState(1);
   const pageCount = 1;
-  const rows = []; // TODO: hook to your exemption data
+  const rows = []; // placeholder for exemption data
 
   return (
     <>
@@ -50,8 +56,8 @@ function ExemptionRequestPage({ perPage, onPerPageChange, onAddNew, onApply }) {
 
 function WorkSheetSection({ perPage, onPerPageChange, onAddNew }) {
   const [page, setPage] = useState(1);
+  const [rows, setRows] = useState([]);
   const pageCount = 1;
-  const [rows, setRows] = useState([]); // local table rows for now
 
   return (
     <>
@@ -61,7 +67,7 @@ function WorkSheetSection({ perPage, onPerPageChange, onAddNew }) {
         perPage={perPage}
         onPerPageChange={onPerPageChange}
         onUploadExcel={() => {}}
-        onAddNew={onAddNew} // open modal
+        onAddNew={onAddNew}
         onApply={() => {}}
       />
       <WorkSheetTable
@@ -75,11 +81,39 @@ function WorkSheetSection({ perPage, onPerPageChange, onAddNew }) {
   );
 }
 
+function RemoteWorkSection({ perPage, onPerPageChange, onAddNew, rows }) {
+  const [page, setPage] = useState(1);
+  const pageCount = 1;
+
+  return (
+    <>
+      <Filters
+        mode="remote"
+        title="Remote Work Request"
+        perPage={perPage}
+        onPerPageChange={onPerPageChange}
+        onAddNew={onAddNew}
+        onApply={() => {}}
+      />
+      <RemoteWorkTable
+        rows={rows}
+        page={page}
+        pageCount={pageCount}
+        onPrev={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => Math.min(pageCount, p + 1))}
+      />
+    </>
+  );
+}
+
 export default function AttendancePage() {
   const [nav, setNav] = useState(ATTENDANCE_NAV);
-  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet'
-  const { rows, applyFilters } = useAttendanceRequests({});
+  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet' | 'remote'
   const [perPage, setPerPage] = useState(10);
+  const { rows, applyFilters } = useAttendanceRequests({});
+
+  // store local Remote Work rows
+  const [remoteRows, setRemoteRows] = useState([]);
 
   const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
   const handleNavigate = (id) =>
@@ -127,9 +161,18 @@ export default function AttendancePage() {
             />
           )}
 
-          {/* Others */}
+          {/* Remote Work Request */}
+          {activeId === 'remote-work' && (
+            <RemoteWorkSection
+              perPage={perPage}
+              onPerPageChange={setPerPage}
+              onAddNew={() => setModal('remote')}
+              rows={remoteRows}
+            />
+          )}
+
+          {/* Other placeholders */}
           {[
-            'remote-work',
             'shift-request',
             'amend-attendance',
             'amend-employee-shift',
@@ -137,20 +180,42 @@ export default function AttendancePage() {
             'schedule',
             'attendance-settings',
           ].includes(activeId) && (
-            <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />
+            <ComingSoon
+              label={nav.find((n) => n.id === activeId)?.label || ''}
+            />
           )}
         </div>
       </main>
 
       {/* Modals */}
       <AddRequestModal open={modal === 'attendance'} onClose={() => setModal(null)} />
+
       <AddExemptionModal open={modal === 'exemption'} onClose={() => setModal(null)} />
+
       <AddWorkSheetModal
         open={modal === 'worksheet'}
         onClose={() => setModal(null)}
         onSaved={(payload) => {
-          // hook in a refresh of worksheet table if needed
-          console.log("worksheet saved", payload);
+          console.log('worksheet saved', payload);
+        }}
+      />
+
+      <AddRemoteWorkModal
+        open={modal === 'remote'}
+        onClose={() => setModal(null)}
+        onSaved={(payload) => {
+          setRemoteRows((prev) => [
+            {
+              id: Date.now(),
+              employee: { name: payload.employee },
+              remoteDate: payload.date,
+              details: payload.details,
+              status: 'Pending',
+              addedOn: payload.addedOn,
+              approvals: '—',
+            },
+            ...prev,
+          ]);
         }}
       />
     </div>
