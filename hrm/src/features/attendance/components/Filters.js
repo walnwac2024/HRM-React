@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
 import {
-  STATIONS,
-  DEPARTMENTS,
-  SUB_DEPARTMENTS,
-  EMPLOYEE_GROUPS,
-  EMPLOYEES,
-  STATUSES,
-  REQUEST_TYPES,
-  FLAGS,
-  MARK_FROM_DASHBOARD,
-  ATTENDANCE_TYPES,
+  STATIONS, DEPARTMENTS, SUB_DEPARTMENTS, EMPLOYEE_GROUPS, EMPLOYEES,
+  STATUSES, REQUEST_TYPES, FLAGS, MARK_FROM_DASHBOARD,
+  ATTENDANCE_TYPES, EXEMPTION_TYPES, FLAG_TYPES,
+  WORKSHEET_ACTIONS, WORKSHEET_YEARS, WORKSHEET_MONTHS,
 } from '../constants';
 
 function Field({ label, children }) {
@@ -21,8 +15,13 @@ function Field({ label, children }) {
   );
 }
 
+/**
+ * Reusable filters for Attendance | Exemption | WorkSheet
+ * mode: 'attendance' | 'exemption' | 'worksheet'
+ */
 export default function Filters({
-  title = 'Attendance Request',          // <— NEW (lets us reuse on Exemption page)
+  mode = 'attendance',
+  title = 'Attendance Request',
   onApply,
   perPage = 10,
   onPerPageChange = () => {},
@@ -30,23 +29,54 @@ export default function Filters({
   onAddNew = () => {},
   onAddIrregular = () => {},
 }) {
+  const isExemption = mode === 'exemption';
+  const isWorksheet = mode === 'worksheet';
+
   const [vals, setVals] = useState({
     station: '--ALL--',
     department: '--ALL--',
     subDepartment: '--ALL--',
     employeeGroup: '--ALL--',
     employee: '--ALL--',
-    attendanceDate: '',
+    date: '',                       // attendance/exemption/worksheet date
     status: '--ALL--',
     employeeCode: '',
     employeeName: '',
     requestType: 'My Requests',
+    flagType: '--ALL--',            // exemption only
     flag: '--ALL--',
-    isMarkFromDashboard: '--ALL--',
-    attendanceType: '--ALL--',
+    isMarkFromDashboard: '--ALL--', // attendance only
+    type: '--ALL--',                // attendance/exemption type
+    // worksheet-only
+    titleText: '',
+    year: '--ALL--',
+    month: '--ALL--',
+    action: 'ALL',
   });
 
   const set = (k) => (e) => setVals((v) => ({ ...v, [k]: e.target.value }));
+
+  const resetVals = () =>
+    setVals({
+      station: '--ALL--',
+      department: '--ALL--',
+      subDepartment: '--ALL--',
+      employeeGroup: '--ALL--',
+      employee: '--ALL--',
+      date: '',
+      status: '--ALL--',
+      employeeCode: '',
+      employeeName: '',
+      requestType: 'My Requests',
+      flagType: '--ALL--',
+      flag: '--ALL--',
+      isMarkFromDashboard: '--ALL--',
+      type: '--ALL--',
+      titleText: '',
+      year: '--ALL--',
+      month: '--ALL--',
+      action: 'ALL',
+    });
 
   return (
     <div className="card">
@@ -55,7 +85,7 @@ export default function Filters({
       </div>
 
       <div className="card-body">
-        {/* Row 1 */}
+        {/* Row 1 (shared) */}
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <Field label="Station">
             <select className="select" value={vals.station} onChange={set('station')}>
@@ -90,19 +120,53 @@ export default function Filters({
             </select>
           </Field>
 
-          <Field label="Attendance Date">
-            <input type="date" className="input" value={vals.attendanceDate} onChange={set('attendanceDate')} />
-          </Field>
+          {/* Attendance/Exemption show date; Worksheet uses date + title/year/month */}
+          {!isWorksheet && (
+            <>
+              <Field label={isExemption ? 'Exemption Date' : 'Attendance Date'}>
+                <input type="date" className="input" value={vals.date} onChange={set('date')} />
+              </Field>
 
-          <Field label="Status">
-            <select className="select" value={vals.status} onChange={set('status')}>
-              {STATUSES.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+              <Field label="Status">
+                <select className="select" value={vals.status} onChange={set('status')}>
+                  {STATUSES.map((x) => <option key={x}>{x}</option>)}
+                </select>
+              </Field>
 
-          <Field label="Employee Code">
-            <input className="input" placeholder="Employee Code" value={vals.employeeCode} onChange={set('employeeCode')} />
-          </Field>
+              {isExemption ? (
+                <Field label="Flag Type">
+                  <select className="select" value={vals.flagType} onChange={set('flagType')}>
+                    {FLAG_TYPES.map((x) => <option key={x}>{x}</option>)}
+                  </select>
+                </Field>
+              ) : (
+                <Field label="Employee Code">
+                  <input className="input" placeholder="Employee Code" value={vals.employeeCode} onChange={set('employeeCode')} />
+                </Field>
+              )}
+            </>
+          )}
+
+          {/* Worksheet-specific Row 2 right side */}
+          {isWorksheet && (
+            <>
+              <Field label="Title">
+                <input className="input" placeholder="Type something" value={vals.titleText} onChange={set('titleText')} />
+              </Field>
+
+              <Field label="Year">
+                <select className="select" value={vals.year} onChange={set('year')}>
+                  {WORKSHEET_YEARS.map((x) => <option key={x}>{x}</option>)}
+                </select>
+              </Field>
+
+              <Field label="Month">
+                <select className="select" value={vals.month} onChange={set('month')}>
+                  {WORKSHEET_MONTHS.map((x) => <option key={x}>{x}</option>)}
+                </select>
+              </Field>
+            </>
+          )}
         </div>
 
         {/* Row 3 */}
@@ -123,66 +187,62 @@ export default function Filters({
             </select>
           </Field>
 
-          <Field label="Is Mark From Dashboard">
-            <select className="select" value={vals.isMarkFromDashboard} onChange={set('isMarkFromDashboard')}>
-              {MARK_FROM_DASHBOARD.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          {!isExemption && !isWorksheet && (
+            <Field label="Is Mark From Dashboard">
+              <select className="select" value={vals.isMarkFromDashboard} onChange={set('isMarkFromDashboard')}>
+                {MARK_FROM_DASHBOARD.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </Field>
+          )}
+
+          {isWorksheet && (
+            <Field label="Action">
+              <select className="select" value={vals.action} onChange={set('action')}>
+                {WORKSHEET_ACTIONS.map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </Field>
+          )}
         </div>
 
-        {/* Row 4 */}
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <Field label="Attendance Type">
-            <select className="select" value={vals.attendanceType} onChange={set('attendanceType')}>
-              {ATTENDANCE_TYPES.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
-        </div>
+        {/* Row 4 (attendance/exemption types) */}
+        {!isWorksheet && (
+          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
+            <Field label={isExemption ? 'Exemption Type' : 'Attendance Type'}>
+              <select className="select" value={vals.type} onChange={set('type')}>
+                {(isExemption ? EXEMPTION_TYPES : ATTENDANCE_TYPES).map((x) => <option key={x}>{x}</option>)}
+              </select>
+            </Field>
+          </div>
+        )}
 
-        {/* Actions row */}
+        {/* Actions */}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button className="btn-primary" onClick={() => onApply?.(vals)}>Apply</button>
-            <button
-              className="btn-outline"
-              onClick={() =>
-                setVals({
-                  station: '--ALL--',
-                  department: '--ALL--',
-                  subDepartment: '--ALL--',
-                  employeeGroup: '--ALL--',
-                  employee: '--ALL--',
-                  attendanceDate: '',
-                  status: '--ALL--',
-                  employeeCode: '',
-                  employeeName: '',
-                  requestType: 'My Requests',
-                  flag: '--ALL--',
-                  isMarkFromDashboard: '--ALL--',
-                  attendanceType: '--ALL--',
-                })
-              }
-            >
-              Clear Filters
-            </button>
+            <button className="btn-outline" onClick={resetVals}>Clear Filters</button>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
             <span className="text-sm text-gray-700">Show</span>
-            <select
-              className="btn-chip !px-2"
-              value={perPage}
-              onChange={(e) => onPerPageChange?.(Number(e.target.value))}
-            >
-              {[10, 25, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
+            <select className="btn-chip !px-2" value={perPage} onChange={(e) => onPerPageChange?.(Number(e.target.value))}>
+              {[10, 25, 50, 100].map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
             <span className="text-sm text-gray-700">Records</span>
 
-            <button onClick={onUploadExcel} className="btn-outline">Upload Excel</button>
-            <button onClick={onAddNew} className="btn-primary">+ Add New Request</button>
-            <button onClick={onAddIrregular} className="btn-outline">+ Add Irregular Attendance Request</button>
+            {/* Upload Excel only for WorkSheet and Attendance (NOT Exemption) */}
+            {!isExemption && (
+              <button onClick={onUploadExcel} className="btn-outline">Upload Excel</button>
+            )}
+
+            <button onClick={onAddNew} className="btn-primary">
+              {isWorksheet ? '+ Add New WorkSheet' : '+ Add New Request'}
+            </button>
+
+            {!isExemption && !isWorksheet && (
+              <button onClick={onAddIrregular} className="btn-outline">
+                + Add Irregular Attendance Request
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,4 @@
-// src/features/attendance/constants.js
-
-/** Sidebar items */
+// Sidebar items
 export const ATTENDANCE_NAV = [
   { id: 'attendance-request', label: 'Attendance Request', active: true },
   { id: 'exemption-request',  label: 'Exemption Request' },
@@ -14,7 +12,7 @@ export const ATTENDANCE_NAV = [
   { id: 'attendance-settings', label: 'Attendance Settings' },
 ];
 
-/** Route mapping used by the Sidebar (NavLink targets) */
+// (optional) routes if you use them elsewhere
 export const ATTENDANCE_ROUTES = {
   'attendance-request'   : '/attendance',
   'exemption-request'    : '/attendance/exemption',
@@ -28,40 +26,31 @@ export const ATTENDANCE_ROUTES = {
   'attendance-settings'  : '/attendance/settings',
 };
 
-/** Filter option sets (strings are fine for <option>) */
+// Filter option sets
 export const STATIONS = ['--ALL--', 'Karachi', 'Lahore', 'Islamabad'];
-
 export const DEPARTMENTS = ['--ALL--', 'HR', 'Engineering', 'Finance'];
-
-export const SUB_DEPARTMENTS = [
-  '--ALL--',
-  'Recruitment',
-  'Payroll',
-  'Backend',
-  'Frontend',
-];
-
+export const SUB_DEPARTMENTS = ['--ALL--', 'Recruitment', 'Payroll', 'Backend', 'Frontend'];
 export const EMPLOYEE_GROUPS = ['--ALL--', 'A', 'B', 'C'];
-
-export const EMPLOYEES = [
-  '--ALL--',
-  'Sumitha Thomas',
-  'Ahmed Khan',
-  'Sara Malik',
-];
-
+export const EMPLOYEES = ['--ALL--', 'Sumitha Thomas', 'Ahmed Khan', 'Sara Malik'];
 export const STATUSES = ['--ALL--', 'Pending', 'Approved', 'Rejected'];
-
 export const REQUEST_TYPES = ['My Requests', 'Pending Approvals', 'All Requests'];
-
 export const FLAGS = ['--ALL--', 'Flagged', 'Unflagged'];
-
 export const MARK_FROM_DASHBOARD = ['--ALL--', 'Yes', 'No'];
 
-export const ATTENDANCE_TYPES = [
+// Attendance-only
+export const ATTENDANCE_TYPES = ['--ALL--', 'In/Out Adjust', 'Work From Home', 'Remote', 'On Site'];
+
+// Exemption-only
+export const EXEMPTION_TYPES = ['--ALL--', 'Official Duty', 'Medical', 'Personal', 'Other'];
+export const FLAG_TYPES = ['--ALL--', 'Normal', 'Critical'];
+
+
+export const WORKSHEET_ACTIONS = ['ALL', 'Created', 'Updated', 'Deleted'];
+export const WORKSHEET_YEARS = [
   '--ALL--',
-  'In/Out Adjust',
-  'Work From Home',
-  'Remote',
-  'On Site',
+  '2025','2024','2023','2022','2021'
+];
+export const WORKSHEET_MONTHS = [
+  '--ALL--','January','February','March','April','May','June',
+  'July','August','September','October','November','December'
 ];

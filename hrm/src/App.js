@@ -7,8 +7,11 @@ import Login from "./userdetails/Login";
 import Layout from "./components/pages/Layout/Layout";
 import Dashboard from "./Dashbord/Dashbord";
 import DashboardTabsLayout from "./components/pages/DashboardTabsLayout";
-import EmployeesPage from "./features/employees";
+import EmployeesPage from "./features/employees/EmployeesPage";
 import { initCsrf } from "./utils/api";
+
+// ✅ If your files differ, adjust these paths accordingly
+
 
 // ✅ Updated import path for AttendancePage
 import { AttendancePage } from "./features/attendance";
@@ -61,9 +64,18 @@ export default function App() {
             <Route path="organcogram" element={<Organcogram />} />
           </Route>
 
+          {/* Employee routes (nested) */}
+          {/* in your app router
+              <Route path="/employee" element={<EmployeePage />}>
+                <Route path="list" element={<EmployeeListPage />} />
+                ...
+              </Route>
+          */}
+          
+
           {/* Other top-level pages */}
           <Route path="/employees" element={<EmployeesPage />} />
-          {/* ✅ New Attendance route */}
+          {/* ✅ Attendance route */}
           <Route path="/attendance" element={<AttendancePage />} />
           <Route path="/organization" element={<div className="p-4">Organization</div>} />
           <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
