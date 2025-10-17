@@ -1,7 +1,5 @@
-// src/features/employees/components/EmployeeSidebar.js
 import React, { useEffect, useState } from "react";
 
-/** Uniform menu icon (Attendance uses the same icon for all items) */
 function MenuIcon({ className = "" }) {
   return (
     <svg viewBox="0 0 24 24" className={`h-[14px] w-[14px] ${className}`} fill="currentColor">
@@ -14,7 +12,6 @@ const MENU = [
   { key: "employee-list", label: "Employee List" },
   { key: "employee-profile-request", label: "Employee Profile Request" },
   { key: "employee-transfer", label: "Employee Transfer" },
-  // Employee Role is below as a collapsible section
   { key: "employee-info-request", label: "Employee Info Request" },
   { key: "employee-approvals", label: "Employee Approvals" },
   { key: "employee-settings", label: "Employee Settings" },
@@ -41,19 +38,17 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
 
   return (
     <aside className="w-60 shrink-0 ml-4">
-      <div className="sticky top-20">
-        <div className="min-h-[500px] max-h-[650px] rounded-2xl overflow-hidden border border-slate-200 bg-white shadow">
-          {/* Header (matches Attendance) */}
+      {/* reduced offset */}
+      <div className="sticky top-5">
+        <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow">
           <div className="px-4 pt-3 pb-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
               Employee
             </span>
           </div>
 
-          {/* List */}
           <nav className="px-2 pb-3">
             <ul className="space-y-1.5">
-              {/* top 3 items */}
               {MENU.slice(0, 3).map((item) => {
                 const isActive = activeKey === item.key;
                 return (
@@ -84,7 +79,7 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
                 );
               })}
 
-              {/* Employee Role (collapsible), matches Attendance item with chevron */}
+              {/* Employee Role (collapsible) */}
               <li>
                 <button
                   type="button"
@@ -147,7 +142,6 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
                 )}
               </li>
 
-              {/* rest of items */}
               {MENU.slice(3).map((item) => {
                 const isActive = activeKey === item.key;
                 return (

@@ -6,13 +6,18 @@ import RequestTable from './components/RequestTable';
 import ExemptionTable from './components/ExemptionTable';
 import WorkSheetTable from './components/WorkSheetTable';
 import RemoteWorkTable from './components/RemoteWorkTable';
-import ShiftTable from './components/ShiftTable';                 // NEW
+import ShiftTable from './components/ShiftTable';
 
 import AddRequestModal from './components/AddRequestModal';
 import AddExemptionModal from './components/AddExemptionModal';
 import AddWorkSheetModal from './components/AddWorkSheetModal';
 import AddRemoteWorkModal from './components/AddRemoteWorkModal';
-import AddShiftModal from './components/AddShiftModal';           // NEW
+import AddShiftModal from './components/AddShiftModal';
+
+// NEW: approval UI (import concrete files, not from an index)
+import ApprovalFilters from './components/ApprovalFilters';
+import AttendanceApprovalTable from './components/AttendanceApprovalTable';
+import ApprovalViewModal from './components/ApprovalViewModal';
 
 import useAttendanceRequests from './hooks/useAttendanceRequests';
 import { ATTENDANCE_NAV } from './constants';
@@ -119,8 +124,8 @@ function ShiftSection({ perPage, onPerPageChange, onAddNew, onAddIrregular, rows
         title="Shift Request"
         perPage={perPage}
         onPerPageChange={onPerPageChange}
-        onAddNew={onAddNew}                 // opens regular shift modal
-        onAddIrregular={onAddIrregular}     // opens irregular shift modal
+        onAddNew={onAddNew}
+        onAddIrregular={onAddIrregular}
         onApply={() => {}}
       />
       <ShiftTable
@@ -144,9 +149,83 @@ export default function AttendancePage() {
   const [remoteRows, setRemoteRows] = useState([]);
   const [shiftRows, setShiftRows] = useState([]);
 
+  // ---- NEW: approvals state ----
+  const initialApprovalFilters = {
+    station: '',
+    department: '',
+    subDepartment: '',
+    employeeGroup: '',
+    employee: '',
+    employeeCode: '',
+    employeeName: '',
+    action: 'Pending',
+    approvalType: 'Other Approval',
+    requestDate: '',
+    fromDashboard: '',
+    flag: '',
+  };
+  const [approvalFilters, setApprovalFilters] = useState(initialApprovalFilters);
+
+  const [approvalRows, setApprovalRows] = useState([
+    {
+      id: 1,
+      employee: { name: 'Usama Test', code: '1235456' },
+      employeeDetails: 'Stn :HeadOffice\nDept :Finance\nSub Dept :–\nGrp :Head Group',
+      requestDate: '14-Jun-2021 (Monday)',
+      requestType: 'Attendance Request',
+      status: 'Pending',
+      forwardedOn: '14-Jun-2021 05:48 PM',
+      isFromDashboard: false,
+      details: '—',
+      approvals: '—',
+    },
+  ]);
+
+  const [viewRow, setViewRow] = useState(null);
+
   const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
   const handleNavigate = (id) =>
     setNav((prev) => prev.map((it) => ({ ...it, active: it.id === id })));
+
+  // unified handler for all approval actions
+  const handleApprovalAction = (action, row) => {
+    if (action === 'view') {
+      setViewRow(row);
+      return;
+    }
+    if (action === 'download') {
+      const blob = new Blob([JSON.stringify(row, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `request-${row.id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      return;
+    }
+    // optimistic status update (replace with API)
+    setApprovalRows((prev) =>
+      prev.map((r) =>
+        r.id === row.id
+          ? {
+              ...r,
+              status:
+                action === 'approve'
+                  ? 'Approved'
+                  : action === 'reject'
+                  ? 'Rejected'
+                  : action === 'force'
+                  ? 'Forcefully Approved'
+                  : action === 'cancel'
+                  ? 'Cancelled'
+                  : r.status,
+            }
+          : r
+      )
+    );
+  };
 
   return (
     <div className="bg-gray-50">
@@ -211,18 +290,38 @@ export default function AttendancePage() {
             />
           )}
 
-          {/* Other placeholders */}
-          {[
-            'amend-attendance',
-            'amend-employee-shift',
-            'attendance-approval',
-            'schedule',
-            'attendance-settings',
-          ].includes(activeId) && (
-            <ComingSoon
-              label={nav.find((n) => n.id === activeId)?.label || ''}
-            />
+          {/* Attendance Approval */}
+          {activeId === 'attendance-approval' && (
+            <>
+              <ApprovalFilters
+                value={approvalFilters}
+                onChange={setApprovalFilters}
+                onApply={() => {
+                  // hook to API/filter logic with approvalFilters
+                  console.log('apply approval filters', approvalFilters);
+                }}
+                onClear={() => setApprovalFilters(initialApprovalFilters)}
+              />
+              <AttendanceApprovalTable
+                rows={approvalRows.map((r) => ({
+                  id: r.id,
+                  employeeName: `${r.employee.name} (${r.employee.code})`,
+                  employeeCode: r.employee.code,
+                  requestDate: r.requestDate,
+                  requestType: r.requestType,
+                  status: r.status,
+                }))}
+                onView={(row) => handleApprovalAction('view', row)}
+                onForceApprove={(row) => handleApprovalAction('force', row)}
+                onDownload={(row) => handleApprovalAction('download', row)}
+              />
+            </>
           )}
+
+          {/* Other placeholders */}
+          {['amend-attendance', 'amend-employee-shift', 'schedule', 'attendance-settings'].includes(
+            activeId
+          ) && <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />}
         </div>
       </main>
 
@@ -247,7 +346,7 @@ export default function AttendancePage() {
             {
               id: Date.now(),
               employee: { name: payload.employee },
-              remoteDate: payload.remoteDate,     // UPDATED
+              remoteDate: payload.remoteDate,
               inDate: payload.inDate,
               outDate: payload.outDate,
               inTime: payload.inTime,
@@ -291,13 +390,28 @@ export default function AttendancePage() {
               id: Date.now(),
               employee: { name: payload.employee },
               shiftDate: payload.shiftDate,
-              details: payload.details,        // required in irregular modal
+              details: payload.details,
               status: payload.status,
               addedOn: payload.addedOn,
               approvals: '—',
             },
             ...prev,
           ]);
+        }}
+      />
+
+      {/* View modal for approvals */}
+      <ApprovalViewModal
+        open={!!viewRow}
+        data={viewRow}
+        onClose={() => setViewRow(null)}
+        onApprove={(row) => {
+          handleApprovalAction('approve', row);
+          setViewRow(null);
+        }}
+        onReject={(row) => {
+          handleApprovalAction('reject', row);
+          setViewRow(null);
         }}
       />
     </div>

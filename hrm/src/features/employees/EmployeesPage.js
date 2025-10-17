@@ -14,7 +14,7 @@ import EmployeeSidebar from "./components/EmployeeSidebar";
 import EmployeeProfileRequest from "./components/EmployeeProfileRequest";
 import EmployeeTransfer from "./components/EmployeeTransfer";
 import EmployeeInfoRequest from "./components/EmployeeInfoRequest";
-import EmployeeApprovals from "./components/EmployeeApprovals"; // ✅ NEW
+import EmployeeApprovals from "./components/EmployeeApprovals";
 
 // Employee Role screens
 import EmployeeRoleMainView from "./components/EmployeeRoleMainView";
@@ -22,18 +22,27 @@ import CopyRoleView from "./components/CopyRoleView";
 import RoleTemplatesView from "./components/RoleTemplatesView";
 
 // Employee Settings Screen
-import EmployeeSettings from "./components/EmployeeSettings"; // ✅ Added the Employee Settings screen
+import EmployeeSettings from "./components/EmployeeSettings";
 
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
 
   const {
-    filters, setFilter, resetFilters,
-    perPage, setPerPage,
-    page, setPage, totalPages, firstItem,
-    rows, total,
-    openExport, setOpenExport,
-    apply, exportData,
+    filters,
+    setFilter,
+    resetFilters,
+    perPage,
+    setPerPage,
+    page,
+    setPage,
+    totalPages,
+    firstItem,
+    rows,
+    total,
+    openExport,
+    setOpenExport,
+    apply,
+    exportData,
   } = useEmployees();
 
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -42,9 +51,8 @@ export default function EmployeesPage() {
 
   const renderMain = () => {
     // Employee Role routes
-    if (active === "employee-role" || active === "employee-role/main") {
+    if (active === "employee-role" || active === "employee-role/main")
       return <EmployeeRoleMainView />;
-    }
     if (active === "employee-role/copy") return <CopyRoleView />;
     if (active === "employee-role/templates") return <RoleTemplatesView />;
 
@@ -52,39 +60,25 @@ export default function EmployeesPage() {
     if (active === "employee-profile-request") return <EmployeeProfileRequest />;
     if (active === "employee-transfer") return <EmployeeTransfer />;
     if (active === "employee-info-request") return <EmployeeInfoRequest />;
-    if (active === "employee-approvals") return <EmployeeApprovals />; // ✅ Renders real page
+    if (active === "employee-approvals") return <EmployeeApprovals />;
 
     // Employee Settings Route
-    if (active === "employee-settings") {
-      return <EmployeeSettings />; // ✅ Added Employee Settings Page
-    }
-
-    // Placeholder only for sections without UI yet
-    if (active !== "employee-list") {
-      const labelMap = {
-        "employee-settings": "Employee Settings",
-      };
-      return (
-        <div className="pt-6 pr-6 pb-6">
-          <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 p-8">
-            <h2 className="text-lg font-semibold mb-2">{labelMap[active] ?? "Section"}</h2>
-            <p className="text-slate-600">
-              This section is a placeholder. Hook up its UI here when ready.
-            </p>
-          </div>
-        </div>
-      );
-    }
+    if (active === "employee-settings") return <EmployeeSettings />;
 
     // Employee List (Filters + Table)
     return (
       <div className="pr-6 pb-6">
         {/* Filters Card */}
-        <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200 mt-[2px]">
+        <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-medium">Filters</div>
             <button className="text-customRed hover:text-customRed/80" title="Toggle">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
                 <path d="M3 5h18v2H3zM7 11h10v2H7zM10 17h4v2h-4z" />
               </svg>
             </button>
@@ -120,7 +114,9 @@ export default function EmployeesPage() {
         <div className="mt-4 bg-white rounded-lg overflow-hidden shadow border border-slate-200">
           <EmployeesTable rows={rows} firstItem={firstItem} />
           <div className="px-4 py-3 flex items-center justify-between text-sm">
-            <div>Page {page} of {totalPages}</div>
+            <div>
+              Page {page} of {totalPages}
+            </div>
             <div className="space-x-2">
               <button
                 type="button"
@@ -163,15 +159,14 @@ export default function EmployeesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-[1600px] pt-14 pb-6">
-        <div className="flex gap-6 items-stretch">
-          <div className="w-[15rem] shrink-0 flex">
+      {/* reduced top padding to tighten header gap */}
+      <div className="mx-auto max-w-[1600px] pt-5 pb-6">
+        <div className="flex gap-6 items-start">
+          <div className="w-[15rem] shrink-0">
             <EmployeeSidebar activeKey={active} onNavigate={setActive} />
           </div>
 
-          <main className="flex-1 min-w-0 flex flex-col">
-            {renderMain()}
-          </main>
+          <main className="flex-1 min-w-0">{renderMain()}</main>
         </div>
       </div>
     </div>
