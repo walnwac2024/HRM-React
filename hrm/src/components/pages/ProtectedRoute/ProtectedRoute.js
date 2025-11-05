@@ -1,17 +1,50 @@
-import { Navigate } from "react-router-dom";
-import { useEffect, useState } from "react";
-import axios from "axios";
-import apiService from "../../../utils/apiService";
+// src/components/pages/ProtectedRoute/ProtectedRoute.js
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../../../context/AuthContext";
 
-export default function ProtectedRoute({ children }) {
-  const [state, setState] = useState({ loading: true, user: null });
+/**
+ * ProtectedRoute
+ * - Blocks access while auth state is loading
+ * - Redirects unauthenticated users to /login (configurable via redirectTo)
+ * - (Optional) Role guard via `requireRoles` array
+ *
+ * Usage:
+ * <Route element={<ProtectedRoute />}>
+ *   <Route path="/dashboard" element={<Dashboard />} />
+ * </Route>
+ *
+ * With roles:
+ * <Route element={<ProtectedRoute requireRoles={['admin','super_admin']} />}>
+ *   <Route path="/admin" element={<Admin />} />
+ * </Route>
+ */
+export default function ProtectedRoute({
+  children,
+  redirectTo = "/login",
+  requireRoles, // optional: e.g., ['admin', 'super_admin']
+}) {
+  const { loading, isAuthenticated, user } = useAuth();
+  const location = useLocation();
 
-  useEffect(() => {
-    apiService.get("/me", { withCredentials: true })
-      .then(r => setState({ loading: false, user: r.data.user }))
-      .catch(() => setState({ loading: false, user: null }));
-  }, []);
+  // Don’t render protected UI until we know the session state
+  if (loading) return null; // or your spinner component
 
-  if (state.loading) return <div className="p-6 text-gray-600">Loading…</div>;
-  return state.user ? children : <Navigate to="/login" replace />;
+  // Bounce unauthenticated users
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to={redirectTo}
+        replace
+        state={{ from: location }} // so you can return after login if desired
+      />
+    );
+  }
+
+  // Optional: role-based guard
+  if (requireRoles?.length && !requireRoles.includes(user?.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // Render nested route (Outlet) or provided children
+  return children ?? <Outlet />;
 }
