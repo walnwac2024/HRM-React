@@ -1,75 +1,146 @@
-// // src/routes/app.routes.js
-// const express = require('express');
-// const router = express.Router();
-
-// // split controllers correctly
-// const { register, login, me, logout } = require('../Controller/UserDeatils/Login');
-// const { getDashboard, listAllUsers }   = require('../Controller/UserDeatils/Role');
-
-// // correct middleware path
-// const { isAuthenticated, requireRole } = require('../middlewares/middleware');
-
-// // sanity checks: will tell you *exactly* which import is wrong
-// const assertFn = (fn, name) => {
-//   if (typeof fn !== 'function') throw new TypeError(`${name} must be a function (check its import/export)`);
-// };
-// assertFn(register, 'register');
-// assertFn(login, 'login');
-// assertFn(me, 'me');
-// assertFn(logout, 'logout');
-// assertFn(getDashboard, 'getDashboard');
-// assertFn(listAllUsers, 'listAllUsers');
-// assertFn(isAuthenticated, 'isAuthenticated');
-// assertFn(requireRole, 'requireRole'); // factory itself must be a function
-
-// router.post('/register', register);
-// router.post('/login', login);
-// router.get('/me', isAuthenticated, me);
-// router.post('/logout', isAuthenticated, logout);
-// router.get('/dashboard', isAuthenticated, getDashboard);
-// router.get('/admin/users', isAuthenticated, requireRole('admin'), listAllUsers);
-
-// module.exports = router;
-
-
-// Routes/Routes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
 
-// Controllers
-const { register, login, me, logout } = require('../Controller/UserDeatils/Login');
-const { getMenu, getDashboard, listAllUsers } = require('../Controller/UserDeatils/Role');
+// ---------- AUTH CONTROLLERS ----------
+const {
+  register,
+  login,
+  me,
+  logout,
+} = require("../Controller/UserDeatils/Login");
 
-// Middleware
-const { isAuthenticated, requireRole, requireFeatures } = require('../middlewares/middleware');
+// ---------- MENU / DASHBOARD CONTROLLERS ----------
+const {
+  getMenu,
+  getDashboard,
+  listAllUsers,
+} = require("../Controller/UserDeatils/Role");
 
-// (Optional) sanity checks to catch bad imports early
-const assertFn = (fn, name) => {
-  if (typeof fn !== 'function') throw new TypeError(`${name} must be a function (check its import/export)`);
-};
-assertFn(register, 'register');
-assertFn(login, 'login');
-assertFn(me, 'me');
-assertFn(logout, 'logout');
-assertFn(getMenu, 'getMenu');
-assertFn(getDashboard, 'getDashboard');
-assertFn(listAllUsers, 'listAllUsers');
-assertFn(isAuthenticated, 'isAuthenticated');
-assertFn(requireRole, 'requireRole');
+// ---------- EMPLOYEE CONTROLLERS ----------
+const {
+  listEmployees,
+  getEmployeeById,
+  lookupStations,
+  lookupDepartments,
+  lookupGroups,
+  lookupDesignations,
+  lookupStatuses,
+  lookupRoleTemplates,
+} = require("../Controller/Employees/Employees");
 
-// Auth routes
-router.post('/register', register);
-router.post('/login', login);
-router.get('/me', isAuthenticated, me);
-router.post('/logout', isAuthenticated, logout);
+// ---------- MIDDLEWARE ----------
+const {
+  isAuthenticated,
+  requireRole,
+  requireFeatures,
+} = require("../middlewares/middleware");
 
-// NEW: menu from features
-router.get('/me/menu', isAuthenticated, getMenu);
+/*
+|--------------------------------------------------------------------------
+| AUTH ROUTES
+|--------------------------------------------------------------------------
+*/
 
-// Dashboard requires feature 'dashboard_view'
-router.get('/dashboard', isAuthenticated, requireFeatures('dashboard_view'), getDashboard);
+router.post("/auth/login", login);
+router.get("/auth/me", isAuthenticated, me);
+router.post("/auth/logout", isAuthenticated, logout);
 
-// Admin list — role guard (super_admin bypass applies in middleware)
-router.get('/admin/users', isAuthenticated, requireRole('admin'), listAllUsers);
+// Legacy aliases
+router.post("/login", login);
+router.get("/me", isAuthenticated, me);
+router.post("/logout", isAuthenticated, logout);
+
+/*
+|--------------------------------------------------------------------------
+| MENU / DASHBOARD ROUTES
+|--------------------------------------------------------------------------
+*/
+
+router.get("/me/menu", isAuthenticated, getMenu);
+
+router.get(
+  "/dashboard",
+  isAuthenticated,
+  requireFeatures("dashboard_view"),
+  getDashboard
+);
+
+/*
+|--------------------------------------------------------------------------
+| ADMIN ROUTES
+|--------------------------------------------------------------------------
+*/
+
+router.get(
+  "/admin/users",
+  isAuthenticated,
+  requireRole("admin"),
+  listAllUsers
+);
+
+/*
+|--------------------------------------------------------------------------
+| EMPLOYEE ROUTES
+|--------------------------------------------------------------------------
+*/
+
+// MAIN LIST
+router.get(
+  "/employees",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  listEmployees
+);
+
+// LOOKUPS
+router.get(
+  "/employees/lookups/stations",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupStations
+);
+
+router.get(
+  "/employees/lookups/departments",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupDepartments
+);
+
+router.get(
+  "/employees/lookups/groups",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupGroups
+);
+
+router.get(
+  "/employees/lookups/designations",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupDesignations
+);
+
+router.get(
+  "/employees/lookups/statuses",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupStatuses
+);
+
+router.get(
+  "/employees/lookups/role-templates",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupRoleTemplates
+);
+
+// VIEW EMPLOYEE (must be after lookups)
+router.get(
+  "/employees/:id",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  getEmployeeById
+);
 
 module.exports = router;

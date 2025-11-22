@@ -114,8 +114,9 @@ const csurf = require("csurf");
 dotenv.config();
 
 const app = express();
-// NOTE: ensure this matches your filename: Routes/Routes.js
-const routes = require("./Routes/Route");
+
+// ⬇️ IMPORTANT: if your file is Routes/Routes.js then use "./Routes/Routes"
+const routes = require("./Routes/Route"); // <- make sure this matches the real filename
 
 const isProd = process.env.NODE_ENV === "production";
 
@@ -179,7 +180,7 @@ app.get("/api/v1/csrf", (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
-// 9) App routes
+// 9) App routes (baseURL in frontend = http://localhost:5000/api/v1)
 app.use("/api/v1", routes);
 
 // 10) Error handler (CSRF included)
@@ -196,3 +197,4 @@ const port = Number(process.env.PORT || 5000);
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
 });
+
