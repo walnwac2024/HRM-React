@@ -1,5 +1,5 @@
-// src/features/employees/EmployeesPage.js
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Filters from "./components/Filters";
 import ActionsBar from "./components/ActionsBar";
 import ExportModal from "./components/ExportModal";
@@ -8,6 +8,7 @@ import UploadExcelModal from "./components/UploadExcelModal";
 import SendCredentialsModal from "./components/SendCredentialsModal";
 import AddEmployeeModal from "./components/AddEmployeeModal";
 import useEmployees from "./hooks/useEmployees";
+import useEmployeeFilterOptions from "./hooks/useEmployeeFilterOptions";
 import EmployeeSidebar from "./components/EmployeeSidebar";
 
 // Screens
@@ -26,6 +27,7 @@ import EmployeeSettings from "./components/EmployeeSettings";
 
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
+  const navigate = useNavigate();
 
   const {
     filters,
@@ -43,29 +45,38 @@ export default function EmployeesPage() {
     setOpenExport,
     apply,
     exportData,
+    loading,
+    error,
   } = useEmployees();
+
+  const {
+    options: filterOptions,
+    error: filterOptionsError,
+  } = useEmployeeFilterOptions();
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
 
+  const handleViewEmployee = (row) => {
+    if (!row?.id) return;
+    navigate(`/employees/${row.id}`);
+  };
+
   const renderMain = () => {
-    // Employee Role routes
     if (active === "employee-role" || active === "employee-role/main")
       return <EmployeeRoleMainView />;
     if (active === "employee-role/copy") return <CopyRoleView />;
     if (active === "employee-role/templates") return <RoleTemplatesView />;
 
-    // Other routes
     if (active === "employee-profile-request") return <EmployeeProfileRequest />;
     if (active === "employee-transfer") return <EmployeeTransfer />;
     if (active === "employee-info-request") return <EmployeeInfoRequest />;
     if (active === "employee-approvals") return <EmployeeApprovals />;
 
-    // Employee Settings Route
     if (active === "employee-settings") return <EmployeeSettings />;
 
-    // Employee List (Filters + Table)
+    // Employee List
     return (
       <div className="pr-6 pb-6">
         {/* Filters Card */}
@@ -85,7 +96,17 @@ export default function EmployeesPage() {
           </div>
 
           <form onSubmit={apply} className="p-4">
-            <Filters filters={filters} onChange={setFilter} />
+            {filterOptionsError && (
+              <div className="mb-3 text-sm text-red-600">
+                {filterOptionsError}
+              </div>
+            )}
+
+            <Filters
+              filters={filters}
+              onChange={setFilter}
+              options={filterOptions}
+            />
 
             <ActionsBar
               onClear={resetFilters}
@@ -112,10 +133,26 @@ export default function EmployeesPage() {
 
         {/* Results Card */}
         <div className="mt-4 bg-white rounded-lg overflow-hidden shadow border border-slate-200">
-          <EmployeesTable rows={rows} firstItem={firstItem} />
+          {loading && (
+            <div className="px-4 py-2 text-sm text-gray-500 border-b">
+              Loading employees…
+            </div>
+          )}
+          {error && !loading && (
+            <div className="px-4 py-2 text-sm text-red-600 border-b">
+              {error}
+            </div>
+          )}
+
+          <EmployeesTable
+            rows={rows}
+            firstItem={firstItem}
+            onViewEmployee={handleViewEmployee}
+          />
+
           <div className="px-4 py-3 flex items-center justify-between text-sm">
             <div>
-              Page {page} of {totalPages}
+              Page {total === 0 ? 0 : page} of {totalPages}
             </div>
             <div className="space-x-2">
               <button
@@ -159,7 +196,6 @@ export default function EmployeesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      {/* reduced top padding to tighten header gap */}
       <div className="mx-auto max-w-[1600px] pt-5 pb-6">
         <div className="flex gap-6 items-start">
           <div className="w-[15rem] shrink-0">

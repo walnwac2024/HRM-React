@@ -8,6 +8,7 @@ import Layout from "./components/pages/Layout/Layout";
 import Dashboard from "./Dashbord/Dashbord";
 import DashboardTabsLayout from "./components/pages/DashboardTabsLayout";
 import EmployeesPage from "./features/employees/EmployeesPage";
+import EmployeeViewPage from "./features/employees/components/EmployeeViewPage"; // 👈 NEW
 import { initCsrf } from "./utils/api";
 
 // Auth context
@@ -85,6 +86,7 @@ export default function App() {
 
             {/* Other top-level pages */}
             <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/employees/:id" element={<EmployeeViewPage />} /> {/* 👈 NEW */}
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/organization" element={<div className="p-4">Organization</div>} />
             <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
