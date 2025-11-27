@@ -8,7 +8,7 @@ import Layout from "./components/pages/Layout/Layout";
 import Dashboard from "./Dashbord/Dashbord";
 import DashboardTabsLayout from "./components/pages/DashboardTabsLayout";
 import EmployeesPage from "./features/employees/EmployeesPage";
-import EmployeeViewPage from "./features/employees/components/EmployeeViewPage"; // 👈 NEW
+import EmployeeViewPage from "./features/employees/components/EmployeeViewPage"; // 👈
 import { initCsrf } from "./utils/api";
 
 // Auth context
@@ -16,6 +16,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 
 // Updated import path for AttendancePage
 import { AttendancePage } from "./features/attendance";
+
+// 👇 NEW: profile page
+import ProfilePage from "./features/profile/ProfilePage";
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -86,7 +89,7 @@ export default function App() {
 
             {/* Other top-level pages */}
             <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/employees/:id" element={<EmployeeViewPage />} /> {/* 👈 NEW */}
+            <Route path="/employees/:id" element={<EmployeeViewPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
             <Route path="/organization" element={<div className="p-4">Organization</div>} />
             <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
@@ -95,6 +98,9 @@ export default function App() {
             <Route path="/performance" element={<div className="p-4">Performance</div>} />
             <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
             <Route path="/reports" element={<div className="p-4">Reports</div>} />
+
+            {/* 👇 NEW: profile route */}
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           {/* Unauthorized placeholder (used if you add role guards) */}

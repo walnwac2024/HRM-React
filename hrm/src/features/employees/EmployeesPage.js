@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+// src/features/employees/EmployeesPage.js
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Filters from "./components/Filters";
 import ActionsBar from "./components/ActionsBar";
@@ -25,13 +26,15 @@ import RoleTemplatesView from "./components/RoleTemplatesView";
 // Employee Settings Screen
 import EmployeeSettings from "./components/EmployeeSettings";
 
+import EditEmployeeModal from "./components/EditEmployeeModal";
+import api from "../../utils/api";
+
 export default function EmployeesPage() {
   const [active, setActive] = useState("employee-list");
   const navigate = useNavigate();
 
   const {
     filters,
-    setFilter,
     resetFilters,
     perPage,
     setPerPage,
@@ -40,6 +43,7 @@ export default function EmployeesPage() {
     totalPages,
     firstItem,
     rows,
+    list,
     total,
     openExport,
     setOpenExport,
@@ -47,7 +51,40 @@ export default function EmployeesPage() {
     exportData,
     loading,
     error,
+    refetch,
   } = useEmployees();
+
+  // 🔹 Local UI filters (what user is typing)
+  const [uiFilters, setUiFilters] = useState(filters);
+
+  // keep in sync when resetFilters changes hook's filters
+  useEffect(() => {
+    setUiFilters(filters);
+  }, [filters]);
+
+  const handleFilterChange = (name, value) => {
+    setUiFilters((prev) => ({
+      ...prev,
+      [name]: value ?? "",
+    }));
+  };
+
+  // 🔹 apply using the whole uiFilters object (for Filters card button)
+  const handleApply = () => {
+    apply(uiFilters);
+  };
+
+  const handleClear = () => {
+    resetFilters(); // resets hook filters
+    // uiFilters will sync from useEffect
+  };
+
+  // 🔹 NEW: instant search on typing in top-right search box
+  const handleSearchChange = (value) => {
+    const next = { ...uiFilters, search: value };
+    setUiFilters(next);
+    apply(next); // immediately call backend with search + filters
+  };
 
   const {
     options: filterOptions,
@@ -57,10 +94,34 @@ export default function EmployeesPage() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [editEmployeeId, setEditEmployeeId] = useState(null);
 
   const handleViewEmployee = (row) => {
     if (!row?.id) return;
     navigate(`/employees/${row.id}`);
+  };
+
+  const handleEditEmployee = (row) => {
+    if (!row?.id) return;
+    setEditEmployeeId(row.id);
+  };
+
+  const handleMarkInactive = async (row) => {
+    if (!row?.id) return;
+    try {
+      await api.patch(`/employees/${row.id}/status`, {
+        isActive: false,
+        status: "Left",
+      });
+      refetch();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleCloseEdit = (shouldRefresh = false) => {
+    setEditEmployeeId(null);
+    if (shouldRefresh) refetch();
   };
 
   const renderMain = () => {
@@ -69,7 +130,8 @@ export default function EmployeesPage() {
     if (active === "employee-role/copy") return <CopyRoleView />;
     if (active === "employee-role/templates") return <RoleTemplatesView />;
 
-    if (active === "employee-profile-request") return <EmployeeProfileRequest />;
+    if (active === "employee-profile-request")
+      return <EmployeeProfileRequest />;
     if (active === "employee-transfer") return <EmployeeTransfer />;
     if (active === "employee-info-request") return <EmployeeInfoRequest />;
     if (active === "employee-approvals") return <EmployeeApprovals />;
@@ -83,7 +145,11 @@ export default function EmployeesPage() {
         <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-medium">Filters</div>
-            <button className="text-customRed hover:text-customRed/80" title="Toggle">
+            <button
+              className="text-customRed hover:text-customRed/80"
+              title="Toggle"
+              type="button"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-5 w-5"
@@ -95,7 +161,7 @@ export default function EmployeesPage() {
             </button>
           </div>
 
-          <form onSubmit={apply} className="p-4">
+          <div className="p-4">
             {filterOptionsError && (
               <div className="mb-3 text-sm text-red-600">
                 {filterOptionsError}
@@ -103,13 +169,14 @@ export default function EmployeesPage() {
             )}
 
             <Filters
-              filters={filters}
-              onChange={setFilter}
+              filters={uiFilters}
+              onChange={handleFilterChange}
               options={filterOptions}
             />
 
             <ActionsBar
-              onClear={resetFilters}
+              onApply={handleApply}
+              onClear={handleClear}
               perPage={perPage}
               setPerPage={setPerPage}
               setOpenExport={setOpenExport}
@@ -128,11 +195,29 @@ export default function EmployeesPage() {
                 }}
               />
             )}
-          </form>
+          </div>
         </div>
 
         {/* Results Card */}
         <div className="mt-4 bg-white rounded-lg overflow-hidden shadow border border-slate-200">
+          {/* Header row: count + global search */}
+          <div className="px-4 py-3 flex items-center justify-between border-b bg-slate-50/70">
+            <div className="text-xs text-slate-500">
+              Showing {rows.length} of {total} employees
+            </div>
+            <div className="w-full max-w-xs">
+              <input
+                type="text"
+                placeholder="Search name, code, department..."
+                className="h-8 w-full rounded border border-slate-300 px-3 text-xs
+                           focus:outline-none focus:ring-2 focus:ring-customRed/50
+                           focus:border-customRed"
+                value={uiFilters.search || ""}
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
+          </div>
+
           {loading && (
             <div className="px-4 py-2 text-sm text-gray-500 border-b">
               Loading employees…
@@ -148,6 +233,8 @@ export default function EmployeesPage() {
             rows={rows}
             firstItem={firstItem}
             onViewEmployee={handleViewEmployee}
+            onEditEmployee={handleEditEmployee}
+            onMarkInactive={handleMarkInactive}
           />
 
           <div className="px-4 py-3 flex items-center justify-between text-sm">
@@ -176,7 +263,10 @@ export default function EmployeesPage() {
         </div>
 
         {/* Modals */}
-        <UploadExcelModal open={uploadOpen} onClose={() => setUploadOpen(false)} />
+        <UploadExcelModal
+          open={uploadOpen}
+          onClose={() => setUploadOpen(false)}
+        />
         <SendCredentialsModal
           open={sendOpen}
           onClose={() => setSendOpen(false)}
@@ -190,6 +280,13 @@ export default function EmployeesPage() {
           onClose={() => setAddOpen(false)}
           onSave={() => setAddOpen(false)}
         />
+
+        {editEmployeeId && (
+          <EditEmployeeModal
+            employeeId={editEmployeeId}
+            onClose={handleCloseEdit}
+          />
+        )}
       </div>
     );
   };

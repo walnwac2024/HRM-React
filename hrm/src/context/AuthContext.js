@@ -352,11 +352,26 @@ const AuthContext = createContext(null);
 
 // --- Inactivity config ---
 const IDLE_LIMIT_MS = 15 * 60 * 1000; // 15 minutes
-const WARNING_MS = 60 * 1000;         // 1 minute warning
+const WARNING_MS = 60 * 1000; // 1 minute warning
+
+// Normalize user from backend so frontend always gets consistent shape
+function normalizeUser(raw) {
+  if (!raw) return null;
+
+  return {
+    ...raw,
+    // always expose profile_img for UI
+    profile_img:
+      raw.profile_img ||
+      raw.profile_picture ||
+      raw.profileImage ||
+      null,
+  };
+}
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);   // { id, name, email, role, roles, features, flags }
-  const [tabs, setTabs] = useState([]);     // [{ key, label }]
+  const [user, setUser] = useState(null); // { id, name, email, role, roles, features, flags }
+  const [tabs, setTabs] = useState([]); // [{ key, label }]
   const [loading, setLoading] = useState(true);
 
   // idle tracking state/refs
@@ -371,7 +386,7 @@ export function AuthProvider({ children }) {
       await initCsrf();
       // NEW: use /auth/me instead of /me
       const meRes = await api.get("/auth/me"); // { user: {...} } or { user: null }
-      const meUser = meRes.data?.user || null;
+      const meUser = normalizeUser(meRes.data?.user || null);
       setUser(meUser);
 
       if (meUser) {
@@ -399,8 +414,12 @@ export function AuthProvider({ children }) {
     await initCsrf();
 
     // NEW: use /auth/login
-    const { data } = await api.post("/auth/login", { email, password, remember });
-    const loggedInUser = data?.user || null;
+    const { data } = await api.post("/auth/login", {
+      email,
+      password,
+      remember,
+    });
+    const loggedInUser = normalizeUser(data?.user || null);
     setUser(loggedInUser);
 
     if (loggedInUser) {
@@ -436,7 +455,7 @@ export function AuthProvider({ children }) {
 
   const refresh = async () => {
     const meRes = await api.get("/auth/me");
-    const meUser = meRes.data?.user || null;
+    const meUser = normalizeUser(meRes.data?.user || null);
     setUser(meUser);
     if (meUser) {
       const menuRes = await api.get("/me/menu");
@@ -450,7 +469,7 @@ export function AuthProvider({ children }) {
   // allow setUser to accept either {user: {...}} or {...}
   const setUserFlexible = (value) => {
     const u = value && value.user ? value.user : value;
-    setUser(u);
+    setUser(normalizeUser(u));
   };
 
   // ---------- inactivity handling ----------

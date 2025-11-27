@@ -15,6 +15,7 @@ export const emptyFilters = {
   role_template: "",
   cnic: "",
   flag: "ALL",
+  search: "", // 🔍 global search text
 };
 
 // Map UI filter keys -> backend query params
@@ -31,7 +32,9 @@ function toApiParams(filters) {
   if (filters.status) params.status = filters.status;
   if (filters.cnic) params.cnic = filters.cnic;
 
-  // the rest are UI-only for now
+  // send global search to backend as well (extra safety)
+  if (filters.search) params.search = filters.search;
+
   return params;
 }
 
@@ -57,11 +60,7 @@ export default function useEmployees() {
     [total, perPage]
   );
 
-  const rows = useMemo(
-    () => list.slice((page - 1) * perPage, page * perPage),
-    [list, page, perPage]
-  );
-
+  // ✅ Load from backend (filtered by station/department/etc + maybe search)
   const load = async (filtersToUse) => {
     const params = toApiParams(filtersToUse);
 
@@ -89,13 +88,15 @@ export default function useEmployees() {
       }));
 
       setList(items);
-      setTotal(items.length);
+      setTotal(items.length); // total employees loaded from DB
     } catch (err) {
       console.error("Failed to load employees", err);
       setList([]);
       setTotal(0);
       setError(
-        err?.response?.data?.message || err?.message || "Failed to load employees"
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to load employees"
       );
     } finally {
       setLoading(false);
@@ -107,10 +108,39 @@ export default function useEmployees() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appliedFilters]);
 
-  const apply = (e) => {
-    e?.preventDefault?.();
+  // ✅ EXTRA: full-table client-side search on top of what DB returns
+  const visibleList = useMemo(() => {
+    const q = (appliedFilters.search || "").trim().toLowerCase();
+    if (!q) return list;
+
+    return list.filter((emp) => {
+      const valuesToSearch = [
+        emp.employee_name,
+        emp.employee_code,
+        emp.user_name,
+        emp.department,
+        emp.station,
+        emp.designation,
+        emp.cnic,
+      ];
+
+      return valuesToSearch.some((val) =>
+        String(val || "").toLowerCase().includes(q)
+      );
+    });
+  }, [list, appliedFilters.search]);
+
+  // paginate AFTER search
+  const rows = useMemo(
+    () => visibleList.slice((page - 1) * perPage, page * perPage),
+    [visibleList, page, perPage]
+  );
+
+  const apply = (nextFilters) => {
+    const filtersToApply = nextFilters || filters;
+    setFilters(filtersToApply);
     setPage(1);
-    setAppliedFilters(filters);
+    setAppliedFilters(filtersToApply);
   };
 
   const resetFilters = () => {
@@ -133,9 +163,15 @@ export default function useEmployees() {
     } catch (err) {
       console.error("Failed to export employees", err);
       setError(
-        err?.response?.data?.message || err?.message || "Failed to export employees"
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to export employees"
       );
     }
+  };
+
+  const refetch = () => {
+    load(appliedFilters);
   };
 
   const uploadExcel = () => console.log("Upload Excel");
@@ -153,8 +189,9 @@ export default function useEmployees() {
     setPage,
     totalPages,
     firstItem,
-    rows,
-    total,
+    rows,       // 👈 already searched + paginated
+    list,       // full list from DB
+    total,      // total from DB (263 in your screenshot)
 
     openExport,
     setOpenExport,
@@ -167,5 +204,6 @@ export default function useEmployees() {
     uploadExcel,
     sendCreds,
     addNew,
+    refetch,
   };
 }
