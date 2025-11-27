@@ -1,4 +1,7 @@
+// backend/Routes/Route.js
 const express = require("express");
+const path = require("path");
+const multer = require("multer");
 const router = express.Router();
 
 // ---------- AUTH CONTROLLERS ----------
@@ -7,6 +10,8 @@ const {
   login,
   me,
   logout,
+  changePassword,
+  uploadAvatar,      // 👈 NEW
 } = require("../Controller/UserDeatils/Login");
 
 // ---------- MENU / DASHBOARD CONTROLLERS ----------
@@ -26,6 +31,10 @@ const {
   lookupDesignations,
   lookupStatuses,
   lookupRoleTemplates,
+  updateEmployee,
+  updateEmployeeLogin,
+  updateEmployeeStatus,
+  lookupUserTypes,
 } = require("../Controller/Employees/Employees");
 
 // ---------- MIDDLEWARE ----------
@@ -37,6 +46,30 @@ const {
 
 /*
 |--------------------------------------------------------------------------
+| MULTER CONFIG FOR AVATAR UPLOADS
+|--------------------------------------------------------------------------
+*/
+
+const uploadDir = path.join(__dirname, "..", "uploads");
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path
+      .basename(file.originalname, ext)
+      .replace(/\s+/g, "-")
+      .toLowerCase();
+    cb(null, `${Date.now()}-${base}${ext}`);
+  },
+});
+
+const upload = multer({ storage });
+
+/*
+|--------------------------------------------------------------------------
 | AUTH ROUTES
 |--------------------------------------------------------------------------
 */
@@ -44,6 +77,15 @@ const {
 router.post("/auth/login", login);
 router.get("/auth/me", isAuthenticated, me);
 router.post("/auth/logout", isAuthenticated, logout);
+router.post("/auth/change-password", isAuthenticated, changePassword);
+
+// ✅ NEW: avatar upload route
+router.post(
+  "/auth/me/avatar",
+  isAuthenticated,
+  upload.single("image"), // field name must match formData.append("image", file)
+  uploadAvatar
+);
 
 // Legacy aliases
 router.post("/login", login);
@@ -94,6 +136,12 @@ router.get(
 
 // LOOKUPS
 router.get(
+  "/employees/lookups/user-types",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  lookupUserTypes
+);
+router.get(
   "/employees/lookups/stations",
   isAuthenticated,
   requireFeatures("employee_view"),
@@ -135,12 +183,36 @@ router.get(
   lookupRoleTemplates
 );
 
-// VIEW EMPLOYEE (must be after lookups)
+// VIEW EMPLOYEE
 router.get(
   "/employees/:id",
   isAuthenticated,
   requireFeatures("employee_view"),
   getEmployeeById
+);
+
+// UPDATE EMPLOYEE (profile/general info)
+router.patch(
+  "/employees/:id",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  updateEmployee
+);
+
+// UPDATE EMPLOYEE LOGIN / VAULT (admin)
+router.put(
+  "/employees/:id/login",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  updateEmployeeLogin
+);
+
+// UPDATE EMPLOYEE STATUS
+router.patch(
+  "/employees/:id/status",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  updateEmployeeStatus
 );
 
 module.exports = router;

@@ -101,8 +101,7 @@
 //   console.log(`Server listening on http://localhost:${port}`);
 // });
 
-
-// server.js
+/// server.js
 const express = require("express");
 const session = require("express-session");
 const MySQLStoreFactory = require("express-mysql-session")(session);
@@ -110,6 +109,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const dotenv = require("dotenv");
 const csurf = require("csurf");
+const path = require("path"); // ✅ NEW: for static path resolution
 
 dotenv.config();
 
@@ -120,25 +120,67 @@ const routes = require("./Routes/Route"); // <- make sure this matches the real 
 
 const isProd = process.env.NODE_ENV === "production";
 
-// 1) Security headers
-app.use(helmet());
-
-// 2) CORS (credentials allowed)
+/*
+|--------------------------------------------------------------------------
+| 1) Security headers
+|--------------------------------------------------------------------------
+*/
 app.use(
-  cors({
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-// 3) JSON parser
+/*
+|--------------------------------------------------------------------------
+| 2) CORS (credentials allowed, PATCH/PUT enabled)
+|--------------------------------------------------------------------------
+*/
+const corsOptions = {
+  origin: "http://localhost:3000",
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "x-csrf-token",
+  ],
+};
+
+app.use(cors(corsOptions));
+// handle preflight explicitly for all routes
+// app.options("*", cors(corsOptions));
+
+/*
+|--------------------------------------------------------------------------
+| 3) JSON parser
+|--------------------------------------------------------------------------
+*/
 app.use(express.json());
 
-// 4) Trust proxy behind Nginx/Heroku/etc.
+/*
+|--------------------------------------------------------------------------
+| 3.5) Static files for uploaded images
+|--------------------------------------------------------------------------
+*/
+// ✅ NEW: serve /uploads/* as static files from backend/uploads
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+/*
+|--------------------------------------------------------------------------
+| 4) Trust proxy behind Nginx/Heroku/etc.
+|--------------------------------------------------------------------------
+*/
 app.set("trust proxy", 1);
 
-// 5) Session store (MySQL)
+/*
+|--------------------------------------------------------------------------
+| 5) Session store (MySQL)
+|--------------------------------------------------------------------------
+*/
 const sessionStore = new MySQLStoreFactory({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
@@ -155,7 +197,11 @@ const sessionStore = new MySQLStoreFactory({
   },
 });
 
-// 6) Session middleware
+/*
+|--------------------------------------------------------------------------
+| 6) Session middleware
+|--------------------------------------------------------------------------
+*/
 app.use(
   session({
     name: "sid",
@@ -172,18 +218,34 @@ app.use(
   })
 );
 
-// 7) CSRF (AFTER session, BEFORE routes)
+/*
+|--------------------------------------------------------------------------
+| 7) CSRF (AFTER session, BEFORE routes)
+|--------------------------------------------------------------------------
+*/
 app.use(csurf({ cookie: false }));
 
-// 8) Endpoint to fetch CSRF token
+/*
+|--------------------------------------------------------------------------
+| 8) Endpoint to fetch CSRF token
+|--------------------------------------------------------------------------
+*/
 app.get("/api/v1/csrf", (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
-// 9) App routes (baseURL in frontend = http://localhost:5000/api/v1)
+/*
+|--------------------------------------------------------------------------
+| 9) App routes (baseURL in frontend = http://localhost:5000/api/v1)
+|--------------------------------------------------------------------------
+*/
 app.use("/api/v1", routes);
 
-// 10) Error handler (CSRF included)
+/*
+|--------------------------------------------------------------------------
+| 10) Error handler (CSRF included)
+|--------------------------------------------------------------------------
+*/
 app.use((err, req, res, next) => {
   if (err.code === "EBADCSRFTOKEN") {
     return res.status(403).json({ message: "Invalid CSRF token" });
@@ -192,9 +254,12 @@ app.use((err, req, res, next) => {
   return res.status(500).json({ message: "Server error" });
 });
 
-// 11) Boot
+/*
+|--------------------------------------------------------------------------
+| 11) Boot
+|--------------------------------------------------------------------------
+*/
 const port = Number(process.env.PORT || 5000);
 app.listen(port, () => {
   console.log(`Server listening on http://localhost:${port}`);
 });
-
