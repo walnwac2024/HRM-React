@@ -1,6 +1,13 @@
-import React, { useState } from "react";
+// src/features/employees/components/EmployeesTable.js
+import React, { useState, memo } from "react";
 
-export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
+function EmployeesTable({
+  rows = [],
+  firstItem = 1,
+  onViewEmployee,
+  onEditEmployee,
+  onMarkInactive,
+}) {
   const [openRowId, setOpenRowId] = useState(null);
 
   const toggleMenu = (id) => {
@@ -9,10 +16,18 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
 
   const getInitials = (name) => {
     if (!name) return "";
-    const parts = name.trim().split(" ");
-    if (parts.length === 1) return parts[0][0] || "";
-    return `${parts[0][0] || ""}${parts[1][0] || ""}`;
+    const parts = name.trim().split(" ").filter(Boolean);
+    if (parts.length === 0) return "";
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || "";
+    return `${parts[0][0]?.toUpperCase() || ""}${
+      parts[1][0]?.toUpperCase() || ""
+    }`;
   };
+
+  // Use same base-url logic as profile/topbar
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
+  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -42,12 +57,27 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
             ) : (
               rows.map((row, idx) => {
                 const isOpen = openRowId === row.id;
-                const name = row.employee_name || row.name || "—";
-                const code = row.employee_code || row.employeeCode || "—";
+                const name =
+                  row.employee_name || row.Employee_Name || row.name || "—";
+                const code =
+                  row.employee_code ||
+                  row.employeeCode ||
+                  row.Employee_ID ||
+                  "—";
+                const department = row.department || row.Department || "—";
+                const station =
+                  row.station || row.Office_Location || row.location || "—";
+                const designation =
+                  row.designation || row.Designations || row.title || "—";
+
+                const avatarUrl = row.profile_picture
+                  ? `${FILE_BASE}${row.profile_picture}`
+                  : null;
+                const initials = getInitials(name);
 
                 return (
                   <tr
-                    key={row.id ?? idx}
+                    key={row.id ?? `${firstItem}-${idx}`}
                     className="hover:bg-slate-50/80 transition-colors"
                   >
                     <td className="px-4 py-3 align-top text-xs text-slate-500">
@@ -56,9 +86,19 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
 
                     <td className="px-4 py-3 align-top">
                       <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 uppercase">
-                          {getInitials(name)}
-                        </div>
+                        {/* Avatar / initials */}
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={name}
+                            className="mt-0.5 h-9 w-9 rounded-full object-cover border"
+                          />
+                        ) : (
+                          <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 uppercase">
+                            {initials}
+                          </div>
+                        )}
+
                         <div>
                           <div className="font-medium text-slate-800 leading-snug">
                             {name}
@@ -74,22 +114,22 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
                     </td>
 
                     <td className="px-4 py-3 align-top text-sm text-slate-700">
-                      {row.department || "—"}
+                      {department}
                     </td>
 
                     <td className="px-4 py-3 align-top text-sm text-slate-700">
-                      {row.station || "—"}
+                      {station}
                     </td>
 
                     <td className="px-4 py-3 align-top text-sm text-slate-700">
-                      {row.designation || "—"}
+                      {designation}
                     </td>
 
                     <td className="px-4 py-3 align-top text-right relative">
                       <button
                         type="button"
                         onClick={() => toggleMenu(row.id)}
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full border border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 focus:ring-offset-1 transition ${
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full border border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200 hover:bg-slate-50 transition ${
                           isOpen ? "bg-slate-100 text-slate-700" : ""
                         }`}
                         aria-haspopup="menu"
@@ -118,7 +158,7 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
                             className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
                             onClick={() => {
                               setOpenRowId(null);
-                              onViewEmployee && onViewEmployee(row);
+                              onViewEmployee?.(row);
                             }}
                           >
                             <span className="inline-flex h-4 w-4 items-center justify-center">
@@ -150,7 +190,10 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
                           <button
                             type="button"
                             className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                            onClick={() => setOpenRowId(null)}
+                            onClick={() => {
+                              setOpenRowId(null);
+                              onEditEmployee?.(row);
+                            }}
                           >
                             <span className="inline-flex h-4 w-4 items-center justify-center">
                               <svg
@@ -168,7 +211,7 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
                                 />
                               </svg>
                             </span>
-                            <span>Additional information</span>
+                            <span>Edit employee</span>
                           </button>
 
                           <div className="my-1 border-t border-slate-100" />
@@ -176,7 +219,10 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
                           <button
                             type="button"
                             className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-slate-50"
-                            onClick={() => setOpenRowId(null)}
+                            onClick={() => {
+                              setOpenRowId(null);
+                              onMarkInactive?.(row);
+                            }}
                           >
                             <span className="inline-flex h-4 w-4 items-center justify-center">
                               <svg
@@ -209,3 +255,5 @@ export default function EmployeesTable({ rows, firstItem, onViewEmployee }) {
     </div>
   );
 }
+
+export default memo(EmployeesTable);

@@ -1,29 +1,84 @@
 // src/features/employees/components/Filters.jsx
-import React from "react";
+import React, { useCallback } from "react";
 
-const Field = ({ label, children }) => (
-  <div>
-    <label className="text-sm text-slate-600">{label}</label>
-    {children}
-  </div>
-);
-
-export default function Filters({ filters, onChange, options }) {
-  const set = (name) => (e) => onChange(name, e.target.value);
-
-  const Select = (props) => (
-    <select
-      {...props}
-      className="w-full h-9 rounded border border-slate-300 focus:border-customRed focus:ring-customRed"
-    />
-  );
-  const Input = (props) => (
-    <input
-      {...props}
-      className="w-full h-9 rounded border border-slate-300 focus:border-customRed focus:ring-customRed"
-    />
+const LabeledInput = ({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder = "",
+  className = "",
+}) => {
+  const handleChange = useCallback(
+    (e) => {
+      onChange?.(name, e.target.value);
+    },
+    [name, onChange]
   );
 
+  const handleBlur = (e) => {
+    const active = document.activeElement;
+    const body = document.body;
+
+    // If some extension (e.g. ColorZilla) stole focus to BODY with this flag,
+    // immediately take it back so typing feels normal.
+    if (active === body && body?.getAttribute("cz-shortcut-listen") === "true") {
+      e.target.focus();
+      return;
+    }
+  };
+
+  return (
+    <label className={`block ${className}`}>
+      <div className="text-[12px] text-slate-600 mb-1">{label}</div>
+      <input
+        type="text"
+        name={name}
+        value={value ?? ""}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:ring-2 focus:ring-customRed/30 focus:border-customRed"
+      />
+    </label>
+  );
+};
+
+const LabeledSelect = ({
+  label,
+  name,
+  value,
+  onChange,
+  options = [],
+  className = "",
+}) => {
+  const handleChange = useCallback(
+    (e) => {
+      onChange?.(name, e.target.value);
+    },
+    [name, onChange]
+  );
+
+  return (
+    <label className={`block ${className}`}>
+      <div className="text-[12px] text-slate-600 mb-1">{label}</div>
+      <select
+        name={name}
+        value={value ?? ""}
+        onChange={handleChange}
+        className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:ring-2 focus:ring-customRed/30 focus:border-customRed"
+      >
+        {options.map((o) => (
+          <option key={o.value ?? o} value={o.value ?? o}>
+            {o.label ?? o}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+};
+
+function Filters({ filters, onChange, options }) {
   const {
     stations = [],
     departments = [],
@@ -33,135 +88,122 @@ export default function Filters({ filters, onChange, options }) {
     roleTemplates = [],
   } = options || {};
 
-  const renderOptions = (items) =>
-    items.map((v) => (
-      <option key={v} value={v}>
-        {v}
-      </option>
-    ));
+  // Helper to render simple string arrays
+  const asSimpleOptions = (arr) => arr.map((v) => ({ value: v, label: v }));
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="grid grid-cols-12 gap-4">
       {/* Row 1 */}
-      <Field label="Station">
-        <Select
-          name="station"
-          value={filters.station}
-          onChange={set("station")}
-        >
-          <option value=""></option>
-          {renderOptions(stations)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Station"
+        name="station"
+        value={filters.station}
+        onChange={onChange}
+        options={[{ value: "", label: "" }, ...asSimpleOptions(stations)]}
+      />
 
-      <Field label="Department">
-        <Select
-          name="department"
-          value={filters.department}
-          onChange={set("department")}
-        >
-          <option value=""></option>
-          {renderOptions(departments)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Department"
+        name="department"
+        value={filters.department}
+        onChange={onChange}
+        options={[{ value: "", label: "" }, ...asSimpleOptions(departments)]}
+      />
 
-      <Field label="Employee Group">
-        <Select
-          name="employee_group"
-          value={filters.employee_group}
-          onChange={set("employee_group")}
-        >
-          <option value=""></option>
-          {renderOptions(groups)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Employee Group"
+        name="employee_group"
+        value={filters.employee_group}
+        onChange={onChange}
+        options={[{ value: "", label: "" }, ...asSimpleOptions(groups)]}
+      />
 
-      <Field label="Designation">
-        <Select
-          name="designation"
-          value={filters.designation}
-          onChange={set("designation")}
-        >
-          <option value=""></option>
-          {renderOptions(designations)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Designation"
+        name="designation"
+        value={filters.designation}
+        onChange={onChange}
+        options={[{ value: "", label: "" }, ...asSimpleOptions(designations)]}
+      />
 
       {/* Row 2 */}
-      <Field label="Employee Code">
-        <Input
-          name="employee_code"
-          value={filters.employee_code}
-          onChange={set("employee_code")}
-        />
-      </Field>
+      <LabeledInput
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Employee Code"
+        name="employee_code"
+        value={filters.employee_code}
+        onChange={onChange}
+      />
 
-      <Field label="Employee Name">
-        <Input
-          name="employee_name"
-          value={filters.employee_name}
-          onChange={set("employee_name")}
-        />
-      </Field>
+      <LabeledInput
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Employee Name"
+        name="employee_name"
+        value={filters.employee_name}
+        onChange={onChange}
+      />
 
-      <Field label="User Name">
-        <Input
-          name="user_name"
-          value={filters.user_name}
-          onChange={set("user_name")}
-        />
-      </Field>
+      <LabeledInput
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="User Name"
+        name="user_name"
+        value={filters.user_name}
+        onChange={onChange}
+      />
 
-      <Field label="Status">
-        <Select
-          name="status"
-          value={filters.status}
-          onChange={set("status")}
-        >
-          <option value=""></option>
-          {renderOptions(statuses)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Status"
+        name="status"
+        value={filters.status}
+        onChange={onChange}
+        options={[{ value: "", label: "" }, ...asSimpleOptions(statuses)]}
+      />
 
       {/* Row 3 */}
-      <Field label="Documents Attached">
-        <Select
-          name="documents_attached"
-          value={filters.documents_attached}
-          onChange={set("documents_attached")}
-        >
-          {["ALL", "YES", "NO"].map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Documents Attached"
+        name="documents_attached"
+        value={filters.documents_attached}
+        onChange={onChange}
+        options={["ALL", "YES", "NO"].map((v) => ({ value: v, label: v }))}
+      />
 
-      <Field label="Roles Template">
-        <Select
-          name="role_template"
-          value={filters.role_template}
-          onChange={set("role_template")}
-        >
-          <option value=""></option>
-          {renderOptions(roleTemplates)}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Roles Template"
+        name="role_template"
+        value={filters.role_template}
+        onChange={onChange}
+        options={[
+          { value: "", label: "" },
+          ...asSimpleOptions(roleTemplates),
+        ]}
+      />
 
-      <Field label="Cnic #">
-        <Input name="cnic" value={filters.cnic} onChange={set("cnic")} />
-      </Field>
+      <LabeledInput
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Cnic #"
+        name="cnic"
+        value={filters.cnic}
+        onChange={onChange}
+      />
 
-      <Field label="Flag">
-        <Select name="flag" value={filters.flag} onChange={set("flag")}>
-          {["ALL", "YES", "NO"].map((v) => (
-            <option key={v} value={v}>
-              {v}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <LabeledSelect
+        className="col-span-12 md:col-span-6 lg:col-span-3"
+        label="Flag"
+        name="flag"
+        value={filters.flag}
+        onChange={onChange}
+        options={["ALL", "YES", "NO"].map((v) => ({ value: v, label: v }))}
+      />
     </div>
   );
 }
+
+export default React.memo(Filters);

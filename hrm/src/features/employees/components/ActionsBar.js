@@ -1,96 +1,80 @@
+// src/features/employees/components/ActionsBar.js
 import React from "react";
 
 export default function ActionsBar({
-  onApply,          // handled by the form submit; button stays type="submit"
+  onApply,
   onClear,
   perPage,
   setPerPage,
   setOpenExport,
-  onUploadExcel,    // legacy callback (kept as fallback)
+  onOpenUpload,
   onSendCreds,
   onAddNew,
   total,
-  onOpenUpload,     // preferred: opens the UploadExcel modal (UI only)
 }) {
-  const handleUploadClick = () => {
-    // prefer the new UI modal opener, otherwise fall back to legacy handler
-    if (onOpenUpload) onOpenUpload();
-    else if (onUploadExcel) onUploadExcel();
-  };
-
-  const handlePerPage = (e) => setPerPage?.(Number(e.target.value));
-
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2 w-full">
-      {/* Submit relies on form onSubmit=onApply to avoid calling it twice */}
-      <button
-        type="submit"
-        className="h-8 px-4 rounded bg-customRed text-white hover:bg-customRed/90 text-sm"
-      >
-        Apply
-      </button>
-
-      <button
-        type="button"
-        onClick={onClear}
-        className="h-8 px-4 inline-flex items-center rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 text-sm"
-      >
-        Clear Filters
-      </button>
-
-      <div className="ml-auto flex items-center gap-2">
-        <span className="text-sm text-slate-600">Show</span>
-
-        <label htmlFor="per-page" className="sr-only">Records per page</label>
-        <select
-          id="per-page"
-          value={perPage}
-          onChange={handlePerPage}
-          className="h-8 rounded border-slate-300 text-sm focus:border-customRed focus:ring-customRed"
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onApply}
+          className="h-9 px-4 rounded-md bg-customRed text-white text-sm font-medium hover:bg-customRed/90"
         >
-          {[10, 25, 50, 100].map((n) => (
-            <option key={n} value={n}>{n}</option>
-          ))}
-        </select>
+          Apply
+        </button>
+        <button
+          type="button"
+          onClick={onClear}
+          className="h-9 px-4 rounded-md border border-customRed text-customRed text-sm font-medium bg-white hover:bg-customRed/5"
+        >
+          Clear Filters
+        </button>
+      </div>
 
-        <span className="text-sm text-slate-600">
+      <div className="flex items-center gap-3 text-sm">
+        <span>
+          Show{" "}
+          <select
+            value={perPage}
+            onChange={(e) => setPerPage(Number(e.target.value))}
+            className="border border-slate-300 rounded px-2 py-1 text-sm"
+          >
+            {[10, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>{" "}
           Records ({total ?? 0})
         </span>
 
         <button
           type="button"
-          onClick={() => setOpenExport?.(true)}
-          className="h-8 px-3 inline-flex items-center gap-1 rounded bg-customRed text-white hover:bg-customRed/90 text-sm"
+          onClick={() => setOpenExport(true)}
+          className="h-9 px-4 rounded-md bg-customRed text-white text-sm font-medium hover:bg-customRed/90"
         >
-          <i className="fas fa-file-export text-[12px]" />
-          <span className="hidden sm:inline">Export Data</span>
+          Export Data
         </button>
-
         <button
           type="button"
-          onClick={handleUploadClick}
-          className="h-8 px-3 inline-flex items-center gap-1 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 text-sm"
+          onClick={onOpenUpload}
+          className="h-9 px-4 rounded-md bg-white border border-customRed text-customRed text-sm font-medium hover:bg-customRed/5"
         >
-          <i className="fas fa-file-upload text-[12px]" />
-          <span className="hidden sm:inline">Upload Excel</span>
+          Upload Excel
         </button>
-
         <button
           type="button"
           onClick={onSendCreds}
-          className="h-8 px-3 inline-flex items-center gap-1 rounded bg-customRed text-white hover:bg-customRed/90 text-sm"
+          className="h-9 px-4 rounded-md bg-customRed text-white text-sm font-medium hover:bg-customRed/90"
         >
-          <i className="fas fa-paper-plane text-[12px]" />
-          <span className="hidden sm:inline">Send Credentials</span>
+          Send Credentials
         </button>
-
         <button
           type="button"
           onClick={onAddNew}
-          className="h-8 px-3 inline-flex items-center gap-1 rounded bg-customRed text-white hover:bg-customRed/90 text-sm"
+          className="h-9 px-4 rounded-md bg-customRed text-white text-sm font-medium hover:bg-customRed/90"
         >
-          <i className="fas fa-user-plus text-[12px]" />
-          <span className="hidden sm:inline">+ Add New Employee</span>
+          + Add New Employee
         </button>
       </div>
     </div>

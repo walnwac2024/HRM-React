@@ -66,10 +66,18 @@ export default function EmployeeViewPage() {
   else if (statusLower === "left" || statusLower === "inactive")
     statusDotClass = "bg-red-500";
 
+  // 🔑 Build avatar URL from profile_picture
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
+  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
+
+  const avatarUrl = employee.profile_picture
+    ? `${FILE_BASE}${employee.profile_picture}`
+    : null;
+
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-10">
-
         {/* BACK BUTTON */}
         <button
           onClick={() => navigate(-1)}
@@ -80,18 +88,23 @@ export default function EmployeeViewPage() {
 
         {/* CARD */}
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-
           {/* TOP SECTION WITH RED-THEME BACKDROP */}
           <div className="relative px-6 pt-6 pb-5 border-b border-slate-200 bg-gradient-to-r from-customRed/10 via-rose-50 to-white">
-
             {/* HEADER */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
               {/* Avatar + Name */}
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md text-sm font-semibold text-slate-700 border border-slate-200">
-                  {initials || "—"}
-                </div>
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt={employee.name}
+                    className="h-14 w-14 rounded-full object-cover border border-slate-200 shadow-md bg-white"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-md text-sm font-semibold text-slate-700 border border-slate-200">
+                    {initials || "—"}
+                  </div>
+                )}
 
                 <div>
                   <div className="flex flex-wrap items-center gap-1">
@@ -122,15 +135,15 @@ export default function EmployeeViewPage() {
                     className={`mr-2 h-2 w-2 rounded-full ${statusDotClass}`}
                   />
                   Status:
-                  <span className="ml-1 text-slate-900">
-                    {statusText}
-                  </span>
+                  <span className="ml-1 text-slate-900">{statusText}</span>
                 </span>
 
                 {employee.cnic && (
                   <span className="inline-flex items-center rounded-full bg-white px-3 py-1 border border-slate-200 text-[11px] font-medium">
                     CNIC:
-                    <span className="ml-1 text-slate-900">{employee.cnic}</span>
+                    <span className="ml-1 text-slate-900">
+                      {employee.cnic}
+                    </span>
                   </span>
                 )}
               </div>
@@ -140,7 +153,6 @@ export default function EmployeeViewPage() {
           {/* BODY */}
           <div className="px-6 py-6">
             <div className="grid gap-6 lg:grid-cols-2">
-
               {/* PERSONAL INFO */}
               <section>
                 <h2 className="mb-3 text-xs font-semibold tracking-wide text-slate-700 uppercase">
@@ -149,9 +161,15 @@ export default function EmployeeViewPage() {
 
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm">
                   <div className="grid gap-2">
-                    <InfoRow label="Date of Birth" value={employee.dateOfBirth} />
+                    <InfoRow
+                      label="Date of Birth"
+                      value={employee.dateOfBirth}
+                    />
                     <InfoRow label="Gender" value={employee.gender} />
-                    <InfoRow label="Blood Group" value={employee.bloodGroup} />
+                    <InfoRow
+                      label="Blood Group"
+                      value={employee.bloodGroup}
+                    />
                     <InfoRow label="CNIC" value={employee.cnic} />
                     <InfoRow label="Address" value={employee.address} />
                   </div>
@@ -226,7 +244,6 @@ export default function EmployeeViewPage() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </div>
