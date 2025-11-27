@@ -272,7 +272,6 @@
 
 // module.exports = { register, login, me, logout };
 
-
 // backend/Controller/UserDeatils/Login.js
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -308,7 +307,8 @@ const login = async (req, res) => {
           e.Official_Email,
           e.password_hash,
           e.can_login,
-          e.is_active
+          e.is_active,
+          e.profile_img       -- avatar path
        FROM employee_records e
        WHERE e.can_login = 1
          AND e.is_active = 1
@@ -348,9 +348,7 @@ const login = async (req, res) => {
 
     let roles = roleRows.map((r) => r.type);
 
-    // 🔴 IMPORTANT: fallback so you actually see tabs
-    // If there are no employee_user_types rows yet, treat this user as super_admin for now.
-    // Later, you can remove this once employee_user_types is filled properly.
+    // fallback to super_admin so you see tabs when mapping not set yet
     if (!roles.length) {
       roles = ["super_admin"];
     }
@@ -380,20 +378,23 @@ const login = async (req, res) => {
 
     let features = permRows.map((r) => r.code);
 
-    // If we fell back to super_admin and there are no specific feature rows,
-    // it's fine – buildTabs will show all tabs for super_admin.
     if (!features.length && roles.includes("super_admin")) {
       features = []; // super_admin bypasses feature checks
     }
 
     // 4) build payload
+    const avatarPath = emp.profile_img || null;
+
     const payload = {
       id: emp.id,
       employeeCode: emp.Employee_ID,
       name: emp.Employee_Name,
       email: emp.Official_Email,
 
-      // 👉 primary role string + roles array
+      // expose avatar under both keys for frontend
+      profile_img: avatarPath,
+      profile_picture: avatarPath,
+
       role: roles[0] || null,
       roles,
 
@@ -465,5 +466,118 @@ async function logout(req, res) {
   }
 }
 
-module.exports = { register, login, me, logout };
+// POST /auth/change-password
+async function changePassword(req, res) {
+  try {
+    const sessionUser = req.session.user;
+    if (!sessionUser?.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const { currentPassword, newPassword } = req.body || {};
+
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Current password and new password are required" });
+    }
+
+    // Get current hash
+    const [rows] = await pool.execute(
+      `SELECT id, password_hash, can_login, is_active
+         FROM employee_records
+        WHERE id = ?
+        LIMIT 1`,
+      [sessionUser.id]
+    );
+
+    if (!rows.length || !rows[0].password_hash) {
+      return res
+        .status(400)
+        .json({ message: "Current password is incorrect" });
+    }
+
+    const emp = rows[0];
+
+    if (!emp.can_login || !emp.is_active) {
+      return res
+        .status(400)
+        .json({ message: "Account is not allowed to login" });
+    }
+
+    const ok = await bcrypt.compare(currentPassword, emp.password_hash);
+    if (!ok) {
+      return res
+        .status(400)
+        .json({ message: "Current password is incorrect" });
+    }
+
+    const hash = await bcrypt.hash(String(newPassword).trim(), 10);
+
+    await pool.execute(
+      `UPDATE employee_records
+          SET password_hash = ?, must_change_password = 0
+        WHERE id = ?`,
+      [hash, sessionUser.id]
+    );
+
+    return res.json({ message: "Password updated successfully" });
+  } catch (err) {
+    console.error("changePassword error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+// POST /auth/me/avatar  (multer already put file at req.file)
+async function uploadAvatar(req, res) {
+  try {
+    const sessionUser = req.session.user;
+    if (!sessionUser?.id) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    // multer saves file in /uploads with filename
+    const relPath = `/uploads/${req.file.filename}`;
+
+    // 1) update DB
+    await pool.execute(
+      `UPDATE employee_records
+         SET profile_img = ?
+       WHERE id = ?
+       LIMIT 1`,
+      [relPath, sessionUser.id]
+    );
+
+    // 2) update session user
+    const updatedUser = {
+      ...sessionUser,
+      profile_img: relPath,
+      profile_picture: relPath,
+    };
+    req.session.user = updatedUser;
+
+    return res.status(200).json({
+      message: "Avatar updated",
+      profile_img: relPath,
+      profile_picture: relPath,
+      user: updatedUser,
+    });
+  } catch (err) {
+    console.error("uploadAvatar error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+module.exports = {
+  register,
+  login,
+  me,
+  logout,
+  changePassword,
+  uploadAvatar, // 👈 new export
+};
 
