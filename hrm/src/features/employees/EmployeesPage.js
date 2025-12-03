@@ -54,10 +54,10 @@ export default function EmployeesPage() {
     refetch,
   } = useEmployees();
 
-  // 🔹 Local UI filters (what user is typing)
+  // Local UI filters (what user is typing/choosing)
   const [uiFilters, setUiFilters] = useState(filters);
 
-  // keep in sync when resetFilters changes hook's filters
+  // keep UI filters in sync when hook filters reset
   useEffect(() => {
     setUiFilters(filters);
   }, [filters]);
@@ -65,25 +65,25 @@ export default function EmployeesPage() {
   const handleFilterChange = (name, value) => {
     setUiFilters((prev) => ({
       ...prev,
-      [name]: value ?? "",
+      [name] : value ?? "",
     }));
   };
 
-  // 🔹 apply using the whole uiFilters object (for Filters card button)
   const handleApply = () => {
+    // send all current UI filters to the hook/backend
     apply(uiFilters);
   };
 
   const handleClear = () => {
-    resetFilters(); // resets hook filters
-    // uiFilters will sync from useEffect
+    resetFilters(); // hook resets its own filter state
+    // uiFilters will automatically sync from useEffect
   };
 
-  // 🔹 NEW: instant search on typing in top-right search box
+  // global search box (header of results card)
   const handleSearchChange = (value) => {
     const next = { ...uiFilters, search: value };
     setUiFilters(next);
-    apply(next); // immediately call backend with search + filters
+    apply(next); // instant search on type
   };
 
   const {

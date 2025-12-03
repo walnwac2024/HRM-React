@@ -72,7 +72,7 @@ export default function ProfilePage() {
     process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
   const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
-  // ✅ support img from both user + employee and both keys
+  // support img from both user + employee and both keys
   const rawAvatarPath =
     user?.profile_img ||
     user?.profile_picture ||
@@ -88,26 +88,31 @@ export default function ProfilePage() {
         }`
     : null;
 
-  // Load profile info
+  // ✅ Load profile info (fixed to work in new tab and avoid “hang”)
   useEffect(() => {
+    let isCancelled = false;
+
     const loadProfile = async () => {
       try {
         let sessionUser = user;
 
-        if (!sessionUser) {
+        // If we don't have a valid user id (new tab, refresh, etc.), hit /auth/me
+        if (!sessionUser?.id) {
           const { data } = await api.get("/auth/me");
           sessionUser = data.user;
           if (setUser && data.user) setUser(data.user);
         }
 
+        // Still no user? stop cleanly
         if (!sessionUser?.id) {
-          setLoading(false);
+          if (!isCancelled) setLoading(false);
           return;
         }
 
         const { data: emp } = await api.get(`/employees/${sessionUser.id}`);
-        setEmployee(emp);
+        if (isCancelled) return;
 
+        setEmployee(emp);
         setPersonalEmail(emp.emailPersonal || "");
         setContact(emp.contact || "");
         setAddress(emp.address || "");
@@ -115,12 +120,17 @@ export default function ProfilePage() {
       } catch (err) {
         console.error("Profile load error:", err);
       } finally {
-        setLoading(false);
+        if (!isCancelled) setLoading(false);
       }
     };
 
     loadProfile();
-  }, [user, setUser]);
+
+    return () => {
+      isCancelled = true;
+    };
+    // run once on mount; we handle fetching user ourselves
+  }, []); // <-- important: no deps, avoids re-fetch loops
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -137,7 +147,6 @@ export default function ProfilePage() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      // backend might return profile_img or profile_picture
       const newPath = data.profile_img || data.profile_picture;
 
       const updatedUser = {
@@ -227,9 +236,18 @@ export default function ProfilePage() {
     }
   };
 
-  if (loading || !employee) {
+  // ---------- RENDER STATES ----------
+  if (loading) {
     return (
       <div className="p-6 text-sm text-slate-600">Loading profile…</div>
+    );
+  }
+
+  if (!employee) {
+    return (
+      <div className="p-6 text-sm text-red-600">
+        Could not load your employee profile.
+      </div>
     );
   }
 
@@ -243,9 +261,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <div className="mx-auto max-w-5xl px-4 pt-6 pb-10">
-        <h1 className="text-xl font-bold text-slate-900 mb-6">
-          My Profile
-        </h1>
+        <h1 className="text-xl font-bold text-slate-900 mb-6">My Profile</h1>
 
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
           {/* HEADER */}

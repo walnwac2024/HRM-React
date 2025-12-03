@@ -1,5 +1,6 @@
+// backend/Controller/Employees/Employees.js
 const { pool } = require("../../Utils/db");
-const bcrypt = require("bcryptjs"); // ✅
+const bcrypt = require("bcryptjs");
 
 /**
  * Fields used for the main employees list
@@ -37,16 +38,34 @@ const EMP_LIST_FIELDS = `
 // GET /api/v1/employees
 async function listEmployees(req, res) {
   try {
+    // Accept BOTH camelCase and snake_case keys
     const {
-      station, // Office_Location
-      department, // Department
-      employeeCode, // Employee_ID
-      employeeName, // Employee_Name
-      userName, // login_email
-      status, // Status
-      cnic, // CNIC
-      search, // 🔍 global search
+      station,            // Office_Location
+      department,         // Department
+
+      employeeCode,
+      employee_code,
+
+      employeeName,
+      employee_name,
+
+      userName,
+      user_name,
+
+      employee_group,     // group derived from Department
+      designation,        // Designations
+
+      status,             // Status
+      cnic,               // CNIC
+      search,             // global search
     } = req.query;
+
+    // Normalize to single variables
+    const employeeCodeFilter  = employeeCode  || employee_code  || "";
+    const employeeNameFilter  = employeeName  || employee_name  || "";
+    const userNameFilter      = userName      || user_name      || "";
+    const employeeGroupFilter = employee_group || "";
+    const designationFilter   = designation   || "";
 
     const where = [];
     const params = [];
@@ -61,19 +80,30 @@ async function listEmployees(req, res) {
       params.push(department);
     }
 
-    if (employeeCode) {
+    // Employee group is the suffix after '-' in Department
+    if (employeeGroupFilter) {
+      where.push("TRIM(SUBSTRING_INDEX(Department, '-', -1)) = ?");
+      params.push(employeeGroupFilter);
+    }
+
+    if (designationFilter) {
+      where.push("Designations = ?");
+      params.push(designationFilter);
+    }
+
+    if (employeeCodeFilter) {
       where.push("Employee_ID LIKE ?");
-      params.push(`%${employeeCode}%`);
+      params.push(`%${employeeCodeFilter}%`);
     }
 
-    if (employeeName) {
+    if (employeeNameFilter) {
       where.push("Employee_Name LIKE ?");
-      params.push(`%${employeeName}%`);
+      params.push(`%${employeeNameFilter}%`);
     }
 
-    if (userName) {
+    if (userNameFilter) {
       where.push("login_email LIKE ?");
-      params.push(`%${userName}%`);
+      params.push(`%${userNameFilter}%`);
     }
 
     if (status) {
@@ -169,7 +199,6 @@ async function getEmployeeById(req, res) {
       canLogin: !!emp.can_login,
       isActive: !!emp.is_active,
 
-      // ✅ include image for view page too
       profile_picture: emp.profile_img || null,
     };
 
