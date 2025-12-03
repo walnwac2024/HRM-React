@@ -187,32 +187,35 @@ function EmployeesTable({
                             <span>View employee</span>
                           </button>
 
-                          <button
-                            type="button"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                            onClick={() => {
-                              setOpenRowId(null);
-                              onEditEmployee?.(row);
-                            }}
-                          >
-                            <span className="inline-flex h-4 w-4 items-center justify-center">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                className="h-4 w-4"
-                              >
-                                <path
-                                  d="M12 6.75v10.5M6.75 12h10.5"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </span>
-                            <span>Edit employee</span>
-                          </button>
+                         <button
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                          onClick={() => {
+                            setOpenRowId(null);
+                            onEditEmployee?.(row);
+                          }}
+                        >
+                          <span className="inline-flex h-4 w-4 items-center justify-center">
+                            {/* Pen Icon */}
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              className="h-4 w-4"
+                            >
+                              <path
+                                d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.121L15.621 4a1.5 1.5 0 0 0-2.121 0L4 13.879V20z"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </span>
+
+                          <span>Edit employee</span>
+                        </button>
+
 
                           <div className="my-1 border-t border-slate-100" />
 
