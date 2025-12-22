@@ -1,147 +1,70 @@
-// // src/middlewares/auth.middleware.js
-// const isAuthenticated=(req, res, next)=> {
-//   if (req.session?.user) return next();
-//   return res.status(401).json({ message: 'Unauthorized' });
-// }
-
-// const  requireRole=(role) =>{
-//   return (req, res, next) => {
-//     if (req.session?.user?.role === role) return next();
-//     return res.status(403).json({ message: 'Forbidden' });
-//   };
-// }
-
-// // Optional: allow multiple roles
-// const requireAnyRole=(...roles)=> {
-//   return (req, res, next) => {
-//     if (req.session?.user && roles.includes(req.session.user.role)) return next();
-//     return res.status(403).json({ message: 'Forbidden' });
-//   };
-// }
-
-// module.exports = { isAuthenticated, requireRole, requireAnyRole };
-
-// middlewares/middleware.js
-
-// Must be logged in (session-based)
-// const isAuthenticated = (req, res, next) => {
-//   if (req.session?.user?.id) return next();
-//   return res.status(401).json({ message: 'Unauthorized' });
-// };
-
-// // Require exactly a role (with super_admin bypass)
-// const requireRole = (role) => {
-//   return (req, res, next) => {
-//     const current = (req.session?.user?.role || '').toLowerCase();
-//     if (!current) return res.status(403).json({ message: 'Forbidden' });
-//     if (current === 'super_admin') return next(); // bypass
-//     if (current === String(role).toLowerCase()) return next();
-//     return res.status(403).json({ message: 'Forbidden' });
-//   };
-// };
-
-// // Require any of several roles (with super_admin bypass)
-// const requireAnyRole = (...roles) => {
-//   const need = roles.map(r => String(r).toLowerCase());
-//   return (req, res, next) => {
-//     const current = (req.session?.user?.role || '').toLowerCase();
-//     if (!current) return res.status(403).json({ message: 'Forbidden' });
-//     if (current === 'super_admin') return next(); // bypass
-//     if (need.includes(current)) return next();
-//     return res.status(403).json({ message: 'Forbidden' });
-//   };
-// };
-
-// // Require feature code(s) (e.g., 'reports_view', 'leave_approve') with super_admin bypass
-// const requireFeatures = (...codes) => {
-//   return (req, res, next) => {
-//     const current = (req.session?.user?.role || '').toLowerCase();
-//     if (current === 'super_admin') return next(); // bypass
-//     const have = new Set(req.session?.user?.features || []);
-//     const ok = codes.every(c => have.has(c));
-//     if (!ok) return res.status(403).json({ message: 'Missing permissions', needed: codes });
-//     next();
-//   };
-// };
-
-// module.exports = { isAuthenticated, requireRole, requireAnyRole, requireFeatures };
-
-
-// middlewares/middleware.js
-
-function getUser(req) {
-  return req.session && req.session.user ? req.session.user : null;
+// backend/middlewares/middleware.js
+function isAuthenticated(req, res, next) {
+  const user = req.session?.user;
+  if (!user) {
+    return res.status(401).json({ message: "Unauthenticated" });
+  }
+  next();
 }
 
-function getRoles(user) {
-  if (!user) return [];
-  if (Array.isArray(user.roles)) {
-    return user.roles.map((r) => String(r).toLowerCase());
-  }
-  if (user.role) {
-    return [String(user.role).toLowerCase()];
-  }
-  return [];
+function hasFullAccess(user) {
+  if (!user) return false;
+
+  const level = Number(user.flags?.level || 0);
+  if (level > 6) return true;
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  if (roles.includes("super_admin")) return true;
+
+  return false;
 }
 
-// Must be logged in (session-based)
-const isAuthenticated = (req, res, next) => {
-  const user = getUser(req);
-  if (user && user.id) return next();
-  return res.status(401).json({ message: "Unauthorized" });
-};
-
-// Require exactly a role (with super_admin bypass)
-const requireRole = (role) => {
-  const required = String(role).toLowerCase();
+function requireRole(...allowedRoles) {
   return (req, res, next) => {
-    const user = getUser(req);
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    const user = req.session?.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthenticated" });
+    }
 
-    const roles = getRoles(user);
-    if (roles.includes("super_admin") || roles.includes(required)) {
+    if (hasFullAccess(user)) {
       return next();
     }
-    return res.status(403).json({ message: "Forbidden" });
-  };
-};
 
-// Require any of several roles (with super_admin bypass)
-const requireAnyRole = (...rolesNeeded) => {
-  const need = rolesNeeded.map((r) => String(r).toLowerCase());
-  return (req, res, next) => {
-    const user = getUser(req);
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
+    const userRoles = Array.isArray(user.roles) ? user.roles : [];
+    const ok = allowedRoles.some((r) => userRoles.includes(r));
 
-    const roles = getRoles(user);
-    if (roles.includes("super_admin")) return next();
-    if (roles.some((r) => need.includes(r))) return next();
-
-    return res.status(403).json({ message: "Forbidden" });
-  };
-};
-
-// Require feature code(s) (e.g., 'reports_view', 'leave_approve') with super_admin bypass
-const requireFeatures = (...codes) => {
-  const needed = codes.map((c) => String(c).toLowerCase());
-  return (req, res, next) => {
-    const user = getUser(req);
-    if (!user) return res.status(401).json({ message: "Unauthorized" });
-
-    const roles = getRoles(user);
-    if (roles.includes("super_admin")) return next();
-
-    const have = new Set(
-      (user.features || []).map((f) => String(f).toLowerCase())
-    );
-    const ok = needed.every((c) => have.has(c));
     if (!ok) {
-      return res
-        .status(403)
-        .json({ message: "Missing permissions", needed: codes });
+      return res.status(403).json({ message: "Forbidden (insufficient role)" });
     }
+
     next();
   };
-};
+}
 
-module.exports = { isAuthenticated, requireRole, requireAnyRole, requireFeatures };
+function requireFeatures(...neededCodes) {
+  return (req, res, next) => {
+    const user = req.session?.user;
+    if (!user) {
+      return res.status(401).json({ message: "Unauthenticated" });
+    }
+
+    if (hasFullAccess(user)) {
+      return next();
+    }
+
+    const feats = new Set(user.features || []);
+    const ok = neededCodes.every((code) => feats.has(code));
+
+    if (!ok) {
+      return res.status(403).json({ message: "Forbidden (missing feature)" });
+    }
+
+    next();
+  };
+}
+
+module.exports = {
+  isAuthenticated,
+  requireRole,
+  requireFeatures,
+};

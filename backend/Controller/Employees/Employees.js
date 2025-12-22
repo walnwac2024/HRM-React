@@ -1,47 +1,329 @@
 // backend/Controller/Employees/Employees.js
 const { pool } = require("../../Utils/db");
 const bcrypt = require("bcryptjs");
+const path = require("path");
+const fs = require("fs");
 
 /**
- * Fields used for the main employees list
- * NOTE: profile_img exposed as profile_picture
+ * Columns for employees list
  */
 const EMP_LIST_FIELDS = `
   id,
-
   profile_img       AS profile_picture,
-
   Employee_ID       AS employeeCode,
   Employee_Name     AS name,
   CNIC              AS cnic,
   login_email       AS userName,
-
   Office_Location   AS station,
   Department        AS department,
   Designations      AS designation,
   Status            AS employmentStatus,
-
   Official_Email    AS officialEmail,
   Email             AS personalEmail,
   Contact           AS contact,
   Gender            AS gender,
-
   is_active         AS isActive,
   can_login         AS canLogin,
-
   Date_of_Joining   AS dateOfJoining,
   Date_of_Birth     AS dateOfBirth
 `;
 
-// ---------- EMPLOYEE LIST (filters + table) ----------
+/* ------------------------------------------------------------------
+ * Helper: full access check (admin/super_admin OR permission level)
+ * ------------------------------------------------------------------ */
+function hasFullAccess(user) {
+  if (!user) return false;
 
-// GET /api/v1/employees
+  const level = Number(user.flags?.level || 0);
+  if (level > 6) return true;
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  if (roles.includes("super_admin")) return true;
+  if (roles.includes("admin")) return true;
+
+  return false;
+}
+
+/* ------------------------------------------------------------------
+ * Helper: permission check to view employee
+ * ------------------------------------------------------------------ */
+function canViewEmployee(sessionUser, requestedId) {
+  if (!sessionUser?.id) return false;
+
+  const myId = Number(sessionUser.id);
+  const reqId = Number(requestedId);
+
+  const features = sessionUser.features || [];
+  const canViewEmployees =
+    hasFullAccess(sessionUser) || features.includes("employee_view");
+
+  // can always view self; others require employee_view/full access
+  if (reqId === myId) return true;
+  return !!canViewEmployees;
+}
+
+/* ------------------------------------------------------------------
+ * Helpers: file paths
+ * ------------------------------------------------------------------ */
+function backendRootDir() {
+  return path.join(__dirname, "..", ".."); // -> backend/
+}
+
+function resolveUploadedAbsPath(docPath) {
+  // docPath like "/uploads/documents/xxx.pdf"
+  const safeRel = String(docPath || "").replace(/^\//, "");
+  return path.join(backendRootDir(), safeRel);
+}
+
+function safeUnlink(absPath) {
+  try {
+    if (absPath && fs.existsSync(absPath)) fs.unlinkSync(absPath);
+  } catch (e) {
+    console.warn("Could not delete file:", absPath, e?.message);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * CREATE EMPLOYEE  (POST /api/v1/employees)
+ * ------------------------------------------------------------------ */
+async function createEmployee(req, res) {
+  const {
+    // employment
+    employeeCode,
+    fullName,
+    designation,
+    department,
+    station,
+    status,
+
+    // personal
+    dateOfBirth,
+    gender,
+    bloodGroup,
+    religion,
+    maritalStatus,
+    address,
+    cnic,
+
+    // job & contact
+    dateOfJoining,
+    personalContact,
+    officialContact,
+    emergencyContact,
+    emergencyRelation,
+    reportingTo,
+
+    // optional HR fields
+    offerLetter,
+    probation,
+
+    // login
+    officialEmail,
+    allowPortalLogin,
+    password,
+    userType,
+  } = req.body || {};
+
+  try {
+    // --- basic validation ---
+    if (!fullName || !designation || !department || !station || !status) {
+      return res
+        .status(400)
+        .json({ message: "Missing required employment fields." });
+    }
+
+    if (!dateOfJoining) {
+      return res.status(400).json({ message: "Date of joining is required." });
+    }
+
+    if (!officialEmail) {
+      return res.status(400).json({ message: "Official email is required." });
+    }
+
+    if (allowPortalLogin) {
+      if (!password || String(password).trim().length < 6) {
+        return res.status(400).json({
+          message:
+            "Password (min 6 characters) is required when portal login is allowed.",
+        });
+      }
+    }
+
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      // --- auto-generate Employee_ID if empty ---
+      let finalEmployeeCode = (employeeCode || "").trim();
+      if (!finalEmployeeCode) {
+        const [rows] = await conn.query(
+          "SELECT MAX(id) AS maxId FROM employee_records"
+        );
+        const next = (rows[0]?.maxId || 0) + 1;
+        finalEmployeeCode = `EM/${String(next).padStart(3, "0")}`;
+      }
+
+      // --- login-related fields ---
+      let passwordHash = null;
+      let canLogin = 0;
+      let mustChangePassword = 0;
+
+      if (allowPortalLogin) {
+        passwordHash = await bcrypt.hash(String(password).trim(), 10);
+        canLogin = 1;
+        mustChangePassword = 1;
+      }
+
+      // --- INSERT into employee_records ---
+      const sql = `
+        INSERT INTO employee_records (
+          Employee_ID,
+          Employee_Name,
+          Designations,
+          Department,
+          Status,
+          Office_Location,
+          Offer_Letter,
+          Date_of_Joining,
+          Probation,
+          \`Status.1\`,
+          Reporting,
+          Gender,
+          Date_of_Birth,
+          CNIC,
+          Email,
+          Contact,
+          Blood_Group,
+          Relagion,
+          \`Status.2\`,
+          Emergency_Contact,
+          Relation,
+          Address,
+          Official_Email,
+          password_hash,
+          can_login,
+          is_active,
+          last_login_at,
+          must_change_password,
+          Offical_Contact,
+          profile_img
+        ) VALUES (
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?
+        )
+      `;
+
+      const params = [
+        finalEmployeeCode,
+        fullName,
+        designation,
+        department,
+        status,
+        station,
+
+        offerLetter || "",
+        dateOfJoining || "",
+        probation || "",
+        "", // Status.1
+        reportingTo || "",
+        gender || "",
+        dateOfBirth || "",
+        cnic || "",
+        null, // Email (personal, not used here)
+        personalContact || "",
+        bloodGroup || "",
+        religion || "",
+        maritalStatus || "",
+        emergencyContact || "",
+        emergencyRelation || "",
+        address || "",
+        officialEmail || "",
+        passwordHash,
+        canLogin,
+        1, // is_active (ACTIVE by default)
+        null, // last_login_at
+        mustChangePassword,
+        officialContact || "",
+        null, // profile_img
+      ];
+
+      const [insertResult] = await conn.execute(sql, params);
+      const newEmployeeId = insertResult.insertId;
+
+      // --- link userType via employee_user_types ---
+      if (allowPortalLogin && userType) {
+        try {
+          const [types] = await conn.execute(
+            "SELECT id FROM users_types WHERE type = ? LIMIT 1",
+            [userType]
+          );
+          if (types.length) {
+            const userTypeId = types[0].id;
+
+            await conn.execute(
+              "DELETE FROM employee_user_types WHERE employee_id = ?",
+              [newEmployeeId]
+            );
+
+            await conn.execute(
+              `
+              INSERT INTO employee_user_types (employee_id, user_type_id, is_primary)
+              VALUES (?, ?, 1)
+              `,
+              [newEmployeeId, userTypeId]
+            );
+          }
+        } catch (linkErr) {
+          console.error(
+            "createEmployee: could not link userType (employee still created)",
+            linkErr
+          );
+        }
+      }
+
+      await conn.commit();
+
+      const [rows2] = await conn.execute(
+        "SELECT * FROM employee_records WHERE id = ? LIMIT 1",
+        [newEmployeeId]
+      );
+      const emp = rows2[0];
+
+      return res.status(201).json({
+        id: emp.id,
+        employeeCode: emp.Employee_ID,
+        name: emp.Employee_Name,
+      });
+    } catch (err) {
+      await conn.rollback();
+      console.error("createEmployee error:", err);
+      return res.status(500).json({ message: "Server error" });
+    } finally {
+      conn.release();
+    }
+  } catch (outerErr) {
+    console.error("createEmployee outer error:", outerErr);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * EMPLOYEE LIST (GET /api/v1/employees)
+ *  - Normal users: ONLY active
+ *  - Admin/Super Admin: can include inactive with ?include_inactive=1
+ * ------------------------------------------------------------------ */
 async function listEmployees(req, res) {
   try {
-    // Accept BOTH camelCase and snake_case keys
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
     const {
-      station,            // Office_Location
-      department,         // Department
+      station,
+      department,
 
       employeeCode,
       employee_code,
@@ -52,23 +334,35 @@ async function listEmployees(req, res) {
       userName,
       user_name,
 
-      employee_group,     // group derived from Department
-      designation,        // Designations
+      employee_group,
+      designation,
 
-      status,             // Status
-      cnic,               // CNIC
-      search,             // global search
+      status,
+      cnic,
+      search,
+
+      include_inactive, // ✅ NEW
     } = req.query;
 
-    // Normalize to single variables
-    const employeeCodeFilter  = employeeCode  || employee_code  || "";
-    const employeeNameFilter  = employeeName  || employee_name  || "";
-    const userNameFilter      = userName      || user_name      || "";
+    const employeeCodeFilter = employeeCode || employee_code || "";
+    const employeeNameFilter = employeeName || employee_name || "";
+    const userNameFilter = userName || user_name || "";
     const employeeGroupFilter = employee_group || "";
-    const designationFilter   = designation   || "";
+    const designationFilter = designation || "";
 
     const where = [];
     const params = [];
+
+    // ✅ default behavior: hide inactive
+    const wantsInactive =
+      String(include_inactive || "").trim() === "1" ||
+      String(include_inactive || "").trim().toLowerCase() === "true";
+
+    const allowSeeInactive = wantsInactive && hasFullAccess(sessionUser);
+
+    if (!allowSeeInactive) {
+      where.push("is_active = 1");
+    }
 
     if (station) {
       where.push("Office_Location = ?");
@@ -80,7 +374,6 @@ async function listEmployees(req, res) {
       params.push(department);
     }
 
-    // Employee group is the suffix after '-' in Department
     if (employeeGroupFilter) {
       where.push("TRIM(SUBSTRING_INDEX(Department, '-', -1)) = ?");
       params.push(employeeGroupFilter);
@@ -116,7 +409,6 @@ async function listEmployees(req, res) {
       params.push(`%${cnic}%`);
     }
 
-    // 🔍 GLOBAL SEARCH ACROSS MAIN COLUMNS
     if (search) {
       const s = `%${search}%`;
       where.push(
@@ -155,16 +447,27 @@ async function listEmployees(req, res) {
   }
 }
 
-// ---------- SINGLE EMPLOYEE (View / Edit) ----------
-
-// GET /api/v1/employees/:id
+/* ------------------------------------------------------------------
+ * SINGLE EMPLOYEE (GET /api/v1/employees/:id)
+ * ------------------------------------------------------------------ */
 async function getEmployeeById(req, res) {
   try {
-    const { id } = req.params;
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) {
+      return res.status(401).json({ message: "Unauthenticated" });
+    }
+
+    const requestedId = Number(req.params.id);
+
+    if (!canViewEmployee(sessionUser, requestedId)) {
+      return res
+        .status(403)
+        .json({ message: "Forbidden: cannot view other employees" });
+    }
 
     const [rows] = await pool.execute(
-      "SELECT * FROM employee_records WHERE id = ?",
-      [id]
+      "SELECT * FROM employee_records WHERE id = ? LIMIT 1",
+      [requestedId]
     );
 
     if (!rows.length) {
@@ -200,6 +503,7 @@ async function getEmployeeById(req, res) {
       isActive: !!emp.is_active,
 
       profile_picture: emp.profile_img || null,
+      profile_img: emp.profile_img || null,
     };
 
     return res.json(normalized);
@@ -209,9 +513,9 @@ async function getEmployeeById(req, res) {
   }
 }
 
-// ---------- UPDATE EMPLOYEE (profile/general) ----------
-
-// PATCH /api/v1/employees/:id
+/* ------------------------------------------------------------------
+ * UPDATE EMPLOYEE (PATCH /api/v1/employees/:id)
+ * ------------------------------------------------------------------ */
 async function updateEmployee(req, res) {
   try {
     const { id } = req.params;
@@ -321,71 +625,128 @@ async function updateEmployee(req, res) {
   }
 }
 
-// ---------- UPDATE EMPLOYEE LOGIN / VAULT ----------
-
-// PUT /api/v1/employees/:id/login
+/* ------------------------------------------------------------------
+ * UPDATE EMPLOYEE LOGIN (PUT /api/v1/employees/:id/login)
+ * ------------------------------------------------------------------ */
 async function updateEmployeeLogin(req, res) {
   try {
     const { id } = req.params;
     const { officialEmail, canLogin, password, userType } = req.body || {};
 
-    const fields = [];
-    const params = [];
+    const conn = await pool.getConnection();
 
-    if (officialEmail !== undefined) {
-      fields.push("Official_Email = ?");
-      params.push(officialEmail);
+    try {
+      await conn.beginTransaction();
+
+      const fields = [];
+      const params = [];
+
+      if (officialEmail !== undefined) {
+        fields.push("Official_Email = ?");
+        params.push(officialEmail);
+      }
+      if (typeof canLogin === "boolean") {
+        fields.push("can_login = ?");
+        params.push(canLogin ? 1 : 0);
+      }
+
+      if (password && String(password).trim().length > 0) {
+        const hash = await bcrypt.hash(String(password).trim(), 10);
+        fields.push("password_hash = ?");
+        params.push(hash);
+        fields.push("must_change_password = 1");
+      }
+
+      if (fields.length) {
+        const sql = `
+          UPDATE employee_records
+          SET ${fields.join(", ")}
+          WHERE id = ?
+        `;
+        params.push(id);
+        await conn.execute(sql, params);
+      }
+
+      if (userType) {
+        try {
+          const [types] = await conn.execute(
+            "SELECT id FROM users_types WHERE type = ? LIMIT 1",
+            [userType]
+          );
+
+          if (types.length) {
+            const userTypeId = types[0].id;
+
+            await conn.execute(
+              "DELETE FROM employee_user_types WHERE employee_id = ?",
+              [id]
+            );
+
+            await conn.execute(
+              `
+              INSERT INTO employee_user_types (employee_id, user_type_id, is_primary)
+              VALUES (?, ?, 1)
+              `,
+              [id, userTypeId]
+            );
+          }
+        } catch (linkErr) {
+          console.error("updateEmployeeLogin: could not link userType", linkErr);
+        }
+      }
+
+      await conn.commit();
+      return res.json({ message: "Employee login updated successfully" });
+    } catch (err) {
+      await conn.rollback();
+      console.error("updateEmployeeLogin error:", err);
+      return res.status(500).json({ message: "Server error" });
+    } finally {
+      conn.release();
     }
-    if (userType !== undefined) {
-      fields.push("user_type = ?");
-      params.push(userType);
-    }
-
-    if (typeof canLogin === "boolean") {
-      fields.push("can_login = ?");
-      params.push(canLogin ? 1 : 0);
-    }
-
-    if (password && String(password).trim().length > 0) {
-      const hash = await bcrypt.hash(String(password).trim(), 10);
-      fields.push("password_hash = ?");
-      params.push(hash);
-      fields.push("must_change_password = 1");
-    }
-
-    if (!fields.length) {
-      return res.status(400).json({ message: "No login fields to update" });
-    }
-
-    const sql = `
-      UPDATE employee_records
-      SET ${fields.join(", ")}
-      WHERE id = ?
-    `;
-    params.push(id);
-
-    await pool.execute(sql, params);
-    return res.json({ message: "Employee login updated successfully" });
-  } catch (err) {
-    console.error("updateEmployeeLogin error:", err);
+  } catch (outerErr) {
+    console.error("updateEmployeeLogin outer error:", outerErr);
     return res.status(500).json({ message: "Server error" });
   }
 }
 
-// ---------- UPDATE EMPLOYEE STATUS ----------
-
-// PATCH /api/v1/employees/:id/status
+/* ------------------------------------------------------------------
+ * UPDATE EMPLOYEE STATUS (PATCH /api/v1/employees/:id/status)
+ *  Supports:
+ *   - { is_active: 0/1 }
+ *   - { isActive: true/false } (backward compatible)
+ *   - { is_active: "y"/"n" } (optional)
+ * ------------------------------------------------------------------ */
 async function updateEmployeeStatus(req, res) {
   try {
     const { id } = req.params;
-    const { isActive, status } = req.body || {};
+    const { is_active, isActive, status } = req.body || {};
 
     const fields = [];
     const params = [];
 
-    if (typeof isActive === "boolean") {
+    // normalize active flag
+    let nextActive = undefined;
+
+    if (is_active !== undefined) {
+      if (typeof is_active === "string") {
+        const v = is_active.trim().toLowerCase();
+        if (v === "y") nextActive = 1;
+        else if (v === "n") nextActive = 0;
+        else nextActive = Number(is_active);
+      } else {
+        nextActive = Number(is_active);
+      }
+    } else if (typeof isActive === "boolean") {
+      nextActive = isActive ? 1 : 0;
+    }
+
+    if (nextActive !== undefined) {
+      if (![0, 1].includes(nextActive)) {
+        return res.status(400).json({ message: "is_active must be 0 or 1" });
+      }
       fields.push("is_active = ?");
-      params.push(isActive ? 1 : 0);
+      params.push(nextActive);
     }
 
     if (status !== undefined) {
@@ -404,20 +765,430 @@ async function updateEmployeeStatus(req, res) {
     `;
     params.push(id);
 
-    await pool.execute(sql, params);
-    return res.json({ message: "Employee status updated successfully" });
+    const [result] = await pool.execute(sql, params);
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    return res.json({
+      message: "Employee status updated successfully",
+      id: Number(id),
+      is_active: nextActive,
+    });
   } catch (err) {
     console.error("updateEmployeeStatus error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 }
 
-// ---------- LOOKUP ENDPOINTS (dropdowns) ----------
+/* ------------------------------------------------------------------
+ * ADD EMPLOYEE DOCUMENTS (POST /api/v1/employees/:id/documents)
+ * ------------------------------------------------------------------ */
+async function addEmployeeDocuments(req, res) {
+  try {
+    const employeeId = Number(req.params.id);
 
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+
+    const files = req.files || [];
+    if (!files.length) {
+      return res
+        .status(400)
+        .json({ message: "No documents uploaded (max 10 allowed)." });
+    }
+
+    // Normalize values: form-data may send string OR array
+    const normArr = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+
+    const titles = normArr(req.body?.titles);
+    const types = normArr(req.body?.types);
+    const issued_at = normArr(req.body?.issued_at);
+    const expires_at = normArr(req.body?.expires_at);
+
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
+        const title = titles[i] || file.originalname;
+        const type = types[i] || "";
+        const issuedAt = issued_at[i] || null;
+        const expiresAt = expires_at[i] || null;
+
+        // stored path for static serving
+        const relPath = `/uploads/documents/${file.filename}`;
+
+        await conn.execute(
+          `
+          INSERT INTO employee_documents 
+            (employee_id, title, type, path, issued_at, expires_at, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+          `,
+          [employeeId, title, type, relPath, issuedAt, expiresAt]
+        );
+      }
+
+      await conn.commit();
+
+      return res.status(201).json({
+        message: "Documents uploaded successfully",
+        count: files.length,
+      });
+    } catch (err) {
+      await conn.rollback();
+      console.error("addEmployeeDocuments error:", err);
+      return res.status(500).json({ message: "Server error" });
+    } finally {
+      conn.release();
+    }
+  } catch (outerErr) {
+    console.error("addEmployeeDocuments outer error:", outerErr);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * LIST EMPLOYEE DOCUMENTS (GET /api/v1/employees/:id/documents)
+ * ------------------------------------------------------------------ */
+async function listEmployeeDocuments(req, res) {
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) {
+      return res.status(401).json({ message: "Unauthenticated" });
+    }
+
+    const employeeId = Number(req.params.id);
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+
+    if (!canViewEmployee(sessionUser, employeeId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const [rows] = await pool.execute(
+      `
+      SELECT 
+        id,
+        employee_id,
+        title,
+        type,
+        path,
+        issued_at AS issuedAt,
+        expires_at AS expiresAt,
+        created_at AS createdAt
+      FROM employee_documents
+      WHERE employee_id = ?
+      ORDER BY id DESC
+      `,
+      [employeeId]
+    );
+
+    const docs = rows.map((d) => ({
+      ...d,
+      fileName: d.path ? path.basename(d.path) : null,
+    }));
+
+    return res.json(docs);
+  } catch (err) {
+    console.error("listEmployeeDocuments error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * UPDATE DOCUMENT META (PATCH /api/v1/employees/:id/documents/:docId)
+ * ------------------------------------------------------------------ */
+async function updateEmployeeDocument(req, res) {
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    const employeeId = Number(req.params.id);
+    const docId = Number(req.params.docId);
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+    if (!docId || Number.isNaN(docId)) {
+      return res.status(400).json({ message: "Invalid document id" });
+    }
+
+    if (!canViewEmployee(sessionUser, employeeId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const { title, type, issuedAt, expiresAt } = req.body || {};
+
+    const fields = [];
+    const params = [];
+
+    if (title !== undefined) {
+      fields.push("title = ?");
+      params.push(title || "");
+    }
+    if (type !== undefined) {
+      fields.push("type = ?");
+      params.push(type || "");
+    }
+    if (issuedAt !== undefined) {
+      fields.push("issued_at = ?");
+      params.push(issuedAt || null);
+    }
+    if (expiresAt !== undefined) {
+      fields.push("expires_at = ?");
+      params.push(expiresAt || null);
+    }
+
+    if (!fields.length) {
+      return res.status(400).json({ message: "No fields to update" });
+    }
+
+    fields.push("updated_at = NOW()");
+
+    const [result] = await pool.execute(
+      `
+      UPDATE employee_documents
+      SET ${fields.join(", ")}
+      WHERE id = ? AND employee_id = ?
+      `,
+      [...params, docId, employeeId]
+    );
+
+    if (!result.affectedRows) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    return res.json({ message: "Document updated successfully" });
+  } catch (err) {
+    console.error("updateEmployeeDocument error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * DELETE DOCUMENT (DELETE /api/v1/employees/:id/documents/:docId)
+ * ------------------------------------------------------------------ */
+async function deleteEmployeeDocument(req, res) {
+  let conn;
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    const employeeId = Number(req.params.id);
+    const docId = Number(req.params.docId);
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+    if (!docId || Number.isNaN(docId)) {
+      return res.status(400).json({ message: "Invalid document id" });
+    }
+
+    if (!canViewEmployee(sessionUser, employeeId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [rows] = await conn.execute(
+      `
+      SELECT id, employee_id, path
+      FROM employee_documents
+      WHERE id = ? AND employee_id = ?
+      LIMIT 1
+      `,
+      [docId, employeeId]
+    );
+
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const doc = rows[0];
+
+    await conn.execute(
+      `DELETE FROM employee_documents WHERE id = ? AND employee_id = ?`,
+      [docId, employeeId]
+    );
+
+    await conn.commit();
+
+    if (doc.path) {
+      const absPath = resolveUploadedAbsPath(doc.path);
+      safeUnlink(absPath);
+    }
+
+    return res.json({ message: "Document deleted successfully" });
+  } catch (err) {
+    try {
+      if (conn) await conn.rollback();
+    } catch {}
+    console.error("deleteEmployeeDocument error:", err);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    try {
+      if (conn) conn.release();
+    } catch {}
+  }
+}
+
+/* ------------------------------------------------------------------
+ * REPLACE DOCUMENT FILE (PUT /api/v1/employees/:id/documents/:docId/file)
+ * ------------------------------------------------------------------ */
+async function replaceEmployeeDocumentFile(req, res) {
+  let conn;
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    const employeeId = Number(req.params.id);
+    const docId = Number(req.params.docId);
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+    if (!docId || Number.isNaN(docId)) {
+      return res.status(400).json({ message: "Invalid document id" });
+    }
+
+    if (!canViewEmployee(sessionUser, employeeId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const file = req.file;
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    const [rows] = await conn.execute(
+      `
+      SELECT id, employee_id, path
+      FROM employee_documents
+      WHERE id = ? AND employee_id = ?
+      LIMIT 1
+      `,
+      [docId, employeeId]
+    );
+
+    if (!rows.length) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const old = rows[0];
+    const newRelPath = `/uploads/documents/${file.filename}`;
+
+    await conn.execute(
+      `
+      UPDATE employee_documents
+      SET path = ?, updated_at = NOW()
+      WHERE id = ? AND employee_id = ?
+      `,
+      [newRelPath, docId, employeeId]
+    );
+
+    await conn.commit();
+
+    if (old.path) {
+      const absOld = resolveUploadedAbsPath(old.path);
+      safeUnlink(absOld);
+    }
+
+    return res.json({ message: "Document file replaced successfully", path: newRelPath });
+  } catch (err) {
+    try {
+      if (conn) await conn.rollback();
+    } catch {}
+    console.error("replaceEmployeeDocumentFile error:", err);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    try {
+      if (conn) conn.release();
+    } catch {}
+  }
+}
+
+/* ------------------------------------------------------------------
+ * DOWNLOAD DOCUMENT (GET /api/v1/employees/:id/documents/:docId/download)
+ * ------------------------------------------------------------------ */
+async function downloadEmployeeDocument(req, res) {
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) {
+      return res.status(401).json({ message: "Unauthenticated" });
+    }
+
+    const employeeId = Number(req.params.id);
+    const docId = Number(req.params.docId);
+
+    if (!employeeId || Number.isNaN(employeeId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+    if (!docId || Number.isNaN(docId)) {
+      return res.status(400).json({ message: "Invalid document id" });
+    }
+
+    if (!canViewEmployee(sessionUser, employeeId)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const [rows] = await pool.execute(
+      `
+      SELECT id, employee_id, title, type, path
+      FROM employee_documents
+      WHERE id = ? AND employee_id = ?
+      LIMIT 1
+      `,
+      [docId, employeeId]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    const doc = rows[0];
+
+    const absPath = resolveUploadedAbsPath(doc.path);
+
+    if (!fs.existsSync(absPath)) {
+      return res.status(404).json({ message: "File missing on server" });
+    }
+
+    const ext = path.extname(absPath) || "";
+    const base = (doc.title || "document")
+      .toString()
+      .trim()
+      .replace(/[^\w\- ]+/g, "");
+    const fileName = `${base || "document"}${ext}`;
+
+    return res.download(absPath, fileName);
+  } catch (err) {
+    console.error("downloadEmployeeDocument error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * LOOKUPS
+ * ------------------------------------------------------------------ */
 async function lookupUserTypes(req, res) {
   try {
     const [rows] = await pool.execute(
-      `SELECT type AS value FROM users_types ORDER BY type`
+      `
+      SELECT type AS value
+      FROM users_types
+      WHERE del = 'N'
+      ORDER BY type
+      `
     );
     res.json(rows.map((r) => r.value));
   } catch (err) {
@@ -515,7 +1286,7 @@ async function lookupStatuses(req, res) {
 
 async function lookupRoleTemplates(req, res) {
   try {
-    res.json(["Admin", "HR", "Employee"]);
+    res.json(["admin", "HR", "manager", "standard"]);
   } catch (err) {
     console.error("lookupRoleTemplates error:", err);
     res.status(500).json({ message: "Server error" });
@@ -523,6 +1294,7 @@ async function lookupRoleTemplates(req, res) {
 }
 
 module.exports = {
+  createEmployee,
   listEmployees,
   getEmployeeById,
   lookupStations,
@@ -535,4 +1307,12 @@ module.exports = {
   updateEmployeeLogin,
   updateEmployeeStatus,
   lookupUserTypes,
+  addEmployeeDocuments,
+
+  // ✅ documents
+  listEmployeeDocuments,
+  downloadEmployeeDocument,
+  updateEmployeeDocument,
+  deleteEmployeeDocument,
+  replaceEmployeeDocumentFile,
 };
