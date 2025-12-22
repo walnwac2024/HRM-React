@@ -2,6 +2,7 @@
 const express = require("express");
 const path = require("path");
 const multer = require("multer");
+const fs = require("fs");
 const router = express.Router();
 
 // ---------- AUTH CONTROLLERS ----------
@@ -11,7 +12,7 @@ const {
   me,
   logout,
   changePassword,
-  uploadAvatar,      // 👈 NEW
+  uploadAvatar,
 } = require("../Controller/UserDeatils/Login");
 
 // ---------- MENU / DASHBOARD CONTROLLERS ----------
@@ -23,6 +24,7 @@ const {
 
 // ---------- EMPLOYEE CONTROLLERS ----------
 const {
+  createEmployee,
   listEmployees,
   getEmployeeById,
   lookupStations,
@@ -35,7 +37,30 @@ const {
   updateEmployeeLogin,
   updateEmployeeStatus,
   lookupUserTypes,
+  addEmployeeDocuments,
+
+  listEmployeeDocuments,
+  downloadEmployeeDocument,
+  updateEmployeeDocument,
+  deleteEmployeeDocument,
+  replaceEmployeeDocumentFile,
 } = require("../Controller/Employees/Employees");
+
+// ✅ NEW: Attendance core
+const {
+  listOffices,
+  getToday,
+  punch,
+  adminMissing,
+} = require("../Controller/Attendance/Attendance");
+
+// ✅ NEW: Attendance settings
+const {
+  getShifts,
+  updateShift,
+  getRules,
+  updateActiveRule,
+} = require("../Controller/Attendance/AttendanceSettings");
 
 // ---------- MIDDLEWARE ----------
 const {
@@ -45,17 +70,24 @@ const {
 } = require("../middlewares/middleware");
 
 /*
-|--------------------------------------------------------------------------
-| MULTER CONFIG FOR AVATAR UPLOADS
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
+| CSRF TOKEN ROUTE                                                         |
+|--------------------------------------------------------------------------|
 */
+router.get("/csrf", (req, res) => {
+  return res.status(200).json({ csrfToken: req.csrfToken() });
+});
 
+/*
+|--------------------------------------------------------------------------|
+| MULTER CONFIG FOR UPLOADS                                                |
+|--------------------------------------------------------------------------|
+*/
 const uploadDir = path.join(__dirname, "..", "uploads");
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadDir);
-  },
+  destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
     const base = path
@@ -65,25 +97,38 @@ const storage = multer.diskStorage({
     cb(null, `${Date.now()}-${base}${ext}`);
   },
 });
-
 const upload = multer({ storage });
 
-/*
-|--------------------------------------------------------------------------
-| AUTH ROUTES
-|--------------------------------------------------------------------------
-*/
+const docsDir = path.join(uploadDir, "documents");
+if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
 
+const docsStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, docsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const base = path
+      .basename(file.originalname, ext)
+      .replace(/\s+/g, "-")
+      .toLowerCase();
+    cb(null, `${Date.now()}-${base}${ext}`);
+  },
+});
+const docsUpload = multer({ storage: docsStorage });
+
+/*
+|--------------------------------------------------------------------------|
+| AUTH ROUTES                                                              |
+|--------------------------------------------------------------------------|
+*/
 router.post("/auth/login", login);
 router.get("/auth/me", isAuthenticated, me);
 router.post("/auth/logout", isAuthenticated, logout);
 router.post("/auth/change-password", isAuthenticated, changePassword);
 
-// ✅ NEW: avatar upload route
 router.post(
   "/auth/me/avatar",
   isAuthenticated,
-  upload.single("image"), // field name must match formData.append("image", file)
+  upload.single("image"),
   uploadAvatar
 );
 
@@ -93,11 +138,10 @@ router.get("/me", isAuthenticated, me);
 router.post("/logout", isAuthenticated, logout);
 
 /*
-|--------------------------------------------------------------------------
-| MENU / DASHBOARD ROUTES
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
+| MENU / DASHBOARD ROUTES                                                  |
+|--------------------------------------------------------------------------|
 */
-
 router.get("/me/menu", isAuthenticated, getMenu);
 
 router.get(
@@ -108,25 +152,24 @@ router.get(
 );
 
 /*
-|--------------------------------------------------------------------------
-| ADMIN ROUTES
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
+| ADMIN ROUTES                                                             |
+|--------------------------------------------------------------------------|
 */
-
-router.get(
-  "/admin/users",
-  isAuthenticated,
-  requireRole("admin"),
-  listAllUsers
-);
+router.get("/admin/users", isAuthenticated, requireRole("admin"), listAllUsers);
 
 /*
-|--------------------------------------------------------------------------
-| EMPLOYEE ROUTES
-|--------------------------------------------------------------------------
+|--------------------------------------------------------------------------|
+| EMPLOYEE ROUTES                                                          |
+|--------------------------------------------------------------------------|
 */
+router.post(
+  "/employees",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  createEmployee
+);
 
-// MAIN LIST
 router.get(
   "/employees",
   isAuthenticated,
@@ -134,13 +177,13 @@ router.get(
   listEmployees
 );
 
-// LOOKUPS
 router.get(
   "/employees/lookups/user-types",
   isAuthenticated,
   requireFeatures("employee_view"),
   lookupUserTypes
 );
+
 router.get(
   "/employees/lookups/stations",
   isAuthenticated,
@@ -183,15 +226,56 @@ router.get(
   lookupRoleTemplates
 );
 
-// VIEW EMPLOYEE
+router.get("/employees/:id", isAuthenticated, getEmployeeById);
+
+/* -------------------- DOCUMENTS -------------------- */
+
 router.get(
-  "/employees/:id",
+  "/employees/:id/documents",
   isAuthenticated,
   requireFeatures("employee_view"),
-  getEmployeeById
+  listEmployeeDocuments
 );
 
-// UPDATE EMPLOYEE (profile/general info)
+router.get(
+  "/employees/:id/documents/:docId/download",
+  isAuthenticated,
+  requireFeatures("employee_view"),
+  downloadEmployeeDocument
+);
+
+router.patch(
+  "/employees/:id/documents/:docId",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  updateEmployeeDocument
+);
+
+router.delete(
+  "/employees/:id/documents/:docId",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  deleteEmployeeDocument
+);
+
+router.put(
+  "/employees/:id/documents/:docId/file",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  docsUpload.single("file"),
+  replaceEmployeeDocumentFile
+);
+
+router.post(
+  "/employees/:id/documents",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  docsUpload.array("files", 10),
+  addEmployeeDocuments
+);
+
+/* --------------------------------------------------- */
+
 router.patch(
   "/employees/:id",
   isAuthenticated,
@@ -199,7 +283,6 @@ router.patch(
   updateEmployee
 );
 
-// UPDATE EMPLOYEE LOGIN / VAULT (admin)
 router.put(
   "/employees/:id/login",
   isAuthenticated,
@@ -207,12 +290,60 @@ router.put(
   updateEmployeeLogin
 );
 
-// UPDATE EMPLOYEE STATUS
 router.patch(
   "/employees/:id/status",
   isAuthenticated,
   requireFeatures("employee_edit"),
   updateEmployeeStatus
+);
+
+/*
+|--------------------------------------------------------------------------|
+| ATTENDANCE (NEW)                                                         |
+|--------------------------------------------------------------------------|
+*/
+router.get("/attendance/offices", isAuthenticated, listOffices);
+router.get("/attendance/today", isAuthenticated, getToday);
+router.post("/attendance/punch", isAuthenticated, punch);
+
+router.get(
+  "/attendance/admin/missing",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  adminMissing
+);
+
+/*
+|--------------------------------------------------------------------------|
+| ATTENDANCE SETTINGS (Super Admin)                                         |
+|--------------------------------------------------------------------------|
+*/
+router.get(
+  "/attendance/settings/shifts",
+  isAuthenticated,
+  requireRole("super_admin", "admin", "hr"),
+  getShifts
+);
+
+router.put(
+  "/attendance/settings/shifts/:id",
+  isAuthenticated,
+  requireRole("super_admin", "admin", "hr"),
+  updateShift
+);
+
+router.get(
+  "/attendance/settings/rules",
+  isAuthenticated,
+  requireRole("super_admin", "admin", "hr"),
+  getRules
+);
+
+router.put(
+  "/attendance/settings/rules/active",
+  isAuthenticated,
+  requireRole("super_admin", "admin", "hr"),
+  updateActiveRule
 );
 
 module.exports = router;
