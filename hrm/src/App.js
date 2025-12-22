@@ -17,6 +17,9 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 // Updated import path for AttendancePage
 import { AttendancePage } from "./features/attendance";
 
+// ✅ NEW: Attendance Settings component (your real path)
+import AttendanceSettings from "./features/attendance/components/AttendanceSettings";
+
 // 👇 NEW: profile page
 import ProfilePage from "./features/profile/ProfilePage";
 
@@ -90,7 +93,13 @@ export default function App() {
             {/* Other top-level pages */}
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/employees/:id" element={<EmployeeViewPage />} />
+
+            {/* Attendance */}
             <Route path="/attendance" element={<AttendancePage />} />
+
+            {/* ✅ NEW: Attendance Settings route */}
+            <Route path="/attendance/settings" element={<AttendanceSettings />} />
+
             <Route path="/organization" element={<div className="p-4">Organization</div>} />
             <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
             <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />

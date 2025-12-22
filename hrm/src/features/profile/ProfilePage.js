@@ -47,11 +47,23 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
-  // editable basic profile fields
+  // editable basic profile fields (always editable for the owner)
   const [personalEmail, setPersonalEmail] = useState("");
   const [contact, setContact] = useState("");
   const [address, setAddress] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
+
+  // personal section fields (editable only for high-level users)
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("");
+  const [bloodGroup, setBloodGroup] = useState("");
+  const [cnic, setCnic] = useState("");
+
+  // job section fields (editable only for high-level users)
+  const [designation, setDesignation] = useState("");
+  const [department, setDepartment] = useState("");
+  const [station, setStation] = useState("");
+  const [employmentStatus, setEmploymentStatus] = useState("");
 
   // password fields
   const [pwCurrent, setPwCurrent] = useState("");
@@ -72,6 +84,11 @@ export default function ProfilePage() {
     process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
   const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
+  // figure out permission level & whether this user can edit everything
+  const level = Number(user?.flags?.level || 0);
+  // ✅ ONLY level > 6 (7, 8, 9, 10…) can edit ALL sections
+  const canEditAll = level > 6;
+
   // support img from both user + employee and both keys
   const rawAvatarPath =
     user?.profile_img ||
@@ -88,7 +105,7 @@ export default function ProfilePage() {
         }`
     : null;
 
-  // ✅ Load profile info (fixed to work in new tab and avoid “hang”)
+  // Load profile info
   useEffect(() => {
     let isCancelled = false;
 
@@ -96,14 +113,12 @@ export default function ProfilePage() {
       try {
         let sessionUser = user;
 
-        // If we don't have a valid user id (new tab, refresh, etc.), hit /auth/me
         if (!sessionUser?.id) {
           const { data } = await api.get("/auth/me");
           sessionUser = data.user;
           if (setUser && data.user) setUser(data.user);
         }
 
-        // Still no user? stop cleanly
         if (!sessionUser?.id) {
           if (!isCancelled) setLoading(false);
           return;
@@ -113,10 +128,24 @@ export default function ProfilePage() {
         if (isCancelled) return;
 
         setEmployee(emp);
+
+        // basic profile
         setPersonalEmail(emp.emailPersonal || "");
         setContact(emp.contact || "");
         setAddress(emp.address || "");
         setEmergencyContact(emp.emergencyContact || "");
+
+        // personal section
+        setDob(emp.dateOfBirth || "");
+        setGender(emp.gender || "");
+        setBloodGroup(emp.bloodGroup || "");
+        setCnic(emp.cnic || "");
+
+        // job section
+        setDesignation(emp.designation || "");
+        setDepartment(emp.department || "");
+        setStation(emp.station || "");
+        setEmploymentStatus(emp.status || "");
       } catch (err) {
         console.error("Profile load error:", err);
       } finally {
@@ -129,8 +158,7 @@ export default function ProfilePage() {
     return () => {
       isCancelled = true;
     };
-    // run once on mount; we handle fetching user ourselves
-  }, []); // <-- important: no deps, avoids re-fetch loops
+  }, []); // run once
 
   const handleUpload = async (e) => {
     const file = e.target.files[0];
@@ -181,15 +209,47 @@ export default function ProfilePage() {
     setMsg("");
 
     try {
-      await api.patch(`/employees/${employee.id}`, {
+      const payload = {
         emailPersonal: personalEmail,
         contact,
         address,
         emergencyContact,
-      });
+      };
+
+      // only high-level users are allowed to edit the "read only" sections
+      if (canEditAll) {
+        Object.assign(payload, {
+          dateOfBirth: dob,
+          gender,
+          bloodGroup,
+          cnic,
+          designation,
+          department,
+          station,
+          status: employmentStatus,
+        });
+      }
+
+      await api.patch(`/employees/${employee.id}`, payload);
 
       const { data: emp } = await api.get(`/employees/${employee.id}`);
       setEmployee(emp);
+
+      // refresh local state from latest server data
+      setPersonalEmail(emp.emailPersonal || "");
+      setContact(emp.contact || "");
+      setAddress(emp.address || "");
+      setEmergencyContact(emp.emergencyContact || "");
+
+      setDob(emp.dateOfBirth || "");
+      setGender(emp.gender || "");
+      setBloodGroup(emp.bloodGroup || "");
+      setCnic(emp.cnic || "");
+
+      setDesignation(emp.designation || "");
+      setDepartment(emp.department || "");
+      setStation(emp.station || "");
+      setEmploymentStatus(emp.status || "");
 
       setMsg("Profile updated successfully.");
     } catch (err) {
@@ -251,7 +311,7 @@ export default function ProfilePage() {
     );
   }
 
-  const statusText = employee.status || "—";
+  const statusText = employmentStatus || employee.status || "—";
   const statusLower = statusText.toLowerCase();
   let statusDotClass = "bg-amber-500";
   if (statusLower === "active") statusDotClass = "bg-emerald-500";
@@ -308,15 +368,17 @@ export default function ProfilePage() {
                   </div>
 
                   <p className="mt-0.5 text-xs md:text-sm text-slate-600">
-                    {employee.designation || "—"}
+                    {designation || employee.designation || "—"}
                     <span className="mx-1 text-slate-400">·</span>
-                    {employee.department || "—"}
+                    {department || employee.department || "—"}
                     <span className="mx-1 text-slate-400">·</span>
-                    {employee.station || "—"}
+                    {station || employee.station || "—"}
                   </p>
 
                   <p className="mt-0.5 text-[11px] text-slate-500">
-                    edit only your basic contact details here
+                    {canEditAll
+                      ? "You can edit all profile details here."
+                      : "Edit only your basic contact details here."}
                   </p>
                 </div>
               </div>
@@ -351,58 +413,74 @@ export default function ProfilePage() {
 
           {/* BODY */}
           <div className="px-6 py-6 space-y-6">
-            {/* READ-ONLY QUICK INFO */}
+            {/* PERSONAL + JOB SECTIONS */}
             <div className="grid gap-6 lg:grid-cols-2">
               <section>
                 <h2 className="mb-3 text-xs font-semibold tracking-wide text-slate-700 uppercase">
-                  Personal (read only)
+                  Personal {canEditAll ? "(editable)" : "(read only)"}
                 </h2>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm grid gap-3">
                   <Field
                     label="Date of Birth"
-                    value={employee.dateOfBirth}
-                    readOnly
+                    value={dob}
+                    onChange={setDob}
+                    readOnly={!canEditAll}
                   />
-                  <Field label="Gender" value={employee.gender} readOnly />
+                  <Field
+                    label="Gender"
+                    value={gender}
+                    onChange={setGender}
+                    readOnly={!canEditAll}
+                  />
                   <Field
                     label="Blood Group"
-                    value={employee.bloodGroup}
-                    readOnly
+                    value={bloodGroup}
+                    onChange={setBloodGroup}
+                    readOnly={!canEditAll}
                   />
-                  <Field label="CNIC" value={employee.cnic} readOnly />
+                  <Field
+                    label="CNIC"
+                    value={cnic}
+                    onChange={setCnic}
+                    readOnly={!canEditAll}
+                  />
                 </div>
               </section>
 
               <section>
                 <h2 className="mb-3 text-xs font-semibold tracking-wide text-slate-700 uppercase">
-                  Job (read only)
+                  Job {canEditAll ? "(editable)" : "(read only)"}
                 </h2>
                 <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 shadow-sm grid gap-3">
                   <Field
                     label="Designation"
-                    value={employee.designation}
-                    readOnly
+                    value={designation}
+                    onChange={setDesignation}
+                    readOnly={!canEditAll}
                   />
                   <Field
                     label="Department"
-                    value={employee.department}
-                    readOnly
+                    value={department}
+                    onChange={setDepartment}
+                    readOnly={!canEditAll}
                   />
                   <Field
                     label="Station"
-                    value={employee.station}
-                    readOnly
+                    value={station}
+                    onChange={setStation}
+                    readOnly={!canEditAll}
                   />
                   <Field
                     label="Employment Status"
-                    value={statusText}
-                    readOnly
+                    value={employmentStatus}
+                    onChange={setEmploymentStatus}
+                    readOnly={!canEditAll}
                   />
                 </div>
               </section>
             </div>
 
-            {/* BASIC PROFILE (EDITABLE) */}
+            {/* BASIC PROFILE (always editable for the user) */}
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
@@ -440,10 +518,20 @@ export default function ProfilePage() {
                     type="button"
                     className="px-3 py-1.5 text-xs rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                     onClick={() => {
+                      // reset from current employee snapshot
                       setPersonalEmail(employee.emailPersonal || "");
                       setContact(employee.contact || "");
                       setAddress(employee.address || "");
                       setEmergencyContact(employee.emergencyContact || "");
+
+                      setDob(employee.dateOfBirth || "");
+                      setGender(employee.gender || "");
+                      setBloodGroup(employee.bloodGroup || "");
+                      setCnic(employee.cnic || "");
+                      setDesignation(employee.designation || "");
+                      setDepartment(employee.department || "");
+                      setStation(employee.station || "");
+                      setEmploymentStatus(employee.status || "");
                       setMsg("");
                     }}
                     disabled={saving}

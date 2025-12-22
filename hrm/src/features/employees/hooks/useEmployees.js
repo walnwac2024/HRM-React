@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../../utils/api";
+import { useAuth } from "../../../context/AuthContext";
 
 // UI filter state (must match Filters)
 export const emptyFilters = {
@@ -19,7 +20,7 @@ export const emptyFilters = {
 };
 
 // Map UI filter keys -> backend query params
-function toApiParams(filters) {
+function toApiParams(filters, { includeInactive } = {}) {
   const params = {};
 
   if (filters.station) params.station = filters.station;
@@ -32,13 +33,19 @@ function toApiParams(filters) {
   if (filters.status) params.status = filters.status;
   if (filters.cnic) params.cnic = filters.cnic;
 
-  // send global search to backend as well (extra safety)
   if (filters.search) params.search = filters.search;
+
+  // ✅ only admins will send this; backend also enforces permission
+  if (includeInactive) params.include_inactive = 1;
 
   return params;
 }
 
 export default function useEmployees() {
+  const { user } = useAuth();
+  const role = user?.role;
+  const canSeeInactive = role === "admin" || role === "super_admin";
+
   const [filters, setFilters] = useState(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
 
@@ -60,9 +67,9 @@ export default function useEmployees() {
     [total, perPage]
   );
 
-  // ✅ Load from backend (filtered by station/department/etc + maybe search)
+  // ✅ Load from backend
   const load = async (filtersToUse) => {
-    const params = toApiParams(filtersToUse);
+    const params = toApiParams(filtersToUse, { includeInactive: canSeeInactive });
 
     setLoading(true);
     setError("");
@@ -85,10 +92,18 @@ export default function useEmployees() {
         designation: emp.designation ?? emp.Designations ?? "",
 
         cnic: emp.cnic ?? emp.CNIC ?? "",
+
+        // ✅ normalize active
+        isActive:
+          emp.isActive === true
+            ? true
+            : emp.isActive === false
+            ? false
+            : Number(emp.isActive) === 1,
       }));
 
       setList(items);
-      setTotal(items.length); // total employees loaded from DB
+      setTotal(items.length);
     } catch (err) {
       console.error("Failed to load employees", err);
       setList([]);
@@ -106,9 +121,9 @@ export default function useEmployees() {
   useEffect(() => {
     load(appliedFilters);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appliedFilters]);
+  }, [appliedFilters, canSeeInactive]);
 
-  // ✅ EXTRA: full-table client-side search on top of what DB returns
+  // ✅ EXTRA: full-table client-side search
   const visibleList = useMemo(() => {
     const q = (appliedFilters.search || "").trim().toLowerCase();
     if (!q) return list;
@@ -157,7 +172,7 @@ export default function useEmployees() {
 
   const exportData = async () => {
     try {
-      const params = toApiParams(appliedFilters);
+      const params = toApiParams(appliedFilters, { includeInactive: canSeeInactive });
       const { data } = await api.get("/employees", { params });
       console.log("Export employees:", data);
     } catch (err) {
@@ -189,9 +204,9 @@ export default function useEmployees() {
     setPage,
     totalPages,
     firstItem,
-    rows,       // 👈 already searched + paginated
-    list,       // full list from DB
-    total,      // total from DB (263 in your screenshot)
+    rows,
+    list,
+    total,
 
     openExport,
     setOpenExport,

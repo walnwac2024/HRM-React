@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../../context/AuthContext'; // ✅ add this (path may be ../.. depending where AttendancePage is)
 
 import Sidebar from './components/Sidebar';
 import Filters from './components/Filters';
@@ -22,6 +23,9 @@ import ApprovalViewModal from './components/ApprovalViewModal';
 import useAttendanceRequests from './hooks/useAttendanceRequests';
 import { ATTENDANCE_NAV } from './constants';
 
+// ✅ Real settings UI
+import AttendanceSettings from './components/AttendanceSettings';
+
 function ComingSoon({ label }) {
   return (
     <div className="card">
@@ -35,10 +39,23 @@ function ComingSoon({ label }) {
   );
 }
 
+function UnauthorizedBox() {
+  return (
+    <div className="card">
+      <div className="card-header">
+        <h3 className="text-base font-semibold text-gray-900">Unauthorized</h3>
+      </div>
+      <div className="card-body text-sm text-gray-600">
+        You don’t have permission to view this page.
+      </div>
+    </div>
+  );
+}
+
 function ExemptionRequestPage({ perPage, onPerPageChange, onAddNew, onApply }) {
   const [page, setPage] = useState(1);
   const pageCount = 1;
-  const rows = []; // placeholder for exemption data
+  const rows = [];
 
   return (
     <>
@@ -73,9 +90,9 @@ function WorkSheetSection({ perPage, onPerPageChange, onAddNew }) {
         title="WorkSheet"
         perPage={perPage}
         onPerPageChange={onPerPageChange}
-        onUploadExcel={() => {}}
+        onUploadExcel={() => { }}
         onAddNew={onAddNew}
-        onApply={() => {}}
+        onApply={() => { }}
       />
       <WorkSheetTable
         rows={rows}
@@ -100,7 +117,7 @@ function RemoteWorkSection({ perPage, onPerPageChange, onAddNew, rows }) {
         perPage={perPage}
         onPerPageChange={onPerPageChange}
         onAddNew={onAddNew}
-        onApply={() => {}}
+        onApply={() => { }}
       />
       <RemoteWorkTable
         rows={rows}
@@ -126,7 +143,7 @@ function ShiftSection({ perPage, onPerPageChange, onAddNew, onAddIrregular, rows
         onPerPageChange={onPerPageChange}
         onAddNew={onAddNew}
         onAddIrregular={onAddIrregular}
-        onApply={() => {}}
+        onApply={() => { }}
       />
       <ShiftTable
         rows={rows}
@@ -140,16 +157,41 @@ function ShiftSection({ perPage, onPerPageChange, onAddNew, onAddIrregular, rows
 }
 
 export default function AttendancePage() {
-  const [nav, setNav] = useState(ATTENDANCE_NAV);
-  const [modal, setModal] = useState(null); // 'attendance' | 'exemption' | 'worksheet' | 'remote' | 'shift' | 'shift-irregular'
+  const { user } = useAuth();
+
+  // ✅ Upper-level check (adjust roles as you want)
+  const canSeeSettings = useMemo(() => {
+    const roles = Array.isArray(user?.roles) ? user.roles : [];
+    return roles.includes('super_admin') || roles.includes('admin') || roles.includes('hr');
+  }, [user]);
+
+  // ✅ Build nav based on permissions
+  const safeNav = useMemo(() => {
+    const base = Array.isArray(ATTENDANCE_NAV) ? ATTENDANCE_NAV : [];
+    const filtered = canSeeSettings
+      ? base
+      : base.filter((i) => i.id !== 'attendance-settings');
+
+    // If after filtering nothing is active, force first active
+    if (!filtered.some((i) => i.active) && filtered.length) {
+      return filtered.map((i, idx) => ({ ...i, active: idx === 0 }));
+    }
+    return filtered;
+  }, [canSeeSettings]);
+
+  const [nav, setNav] = useState(safeNav);
+  const [modal, setModal] = useState(null);
   const [perPage, setPerPage] = useState(10);
   const { rows, applyFilters } = useAttendanceRequests({});
 
-  // local rows for sections that don't have APIs hooked yet
   const [remoteRows, setRemoteRows] = useState([]);
   const [shiftRows, setShiftRows] = useState([]);
 
-  // ---- NEW: approvals state ----
+  // ✅ keep nav synced if permissions change or on first render
+  useEffect(() => {
+    setNav(safeNav);
+  }, [safeNav]);
+
   const initialApprovalFilters = {
     station: '',
     department: '',
@@ -184,10 +226,13 @@ export default function AttendancePage() {
   const [viewRow, setViewRow] = useState(null);
 
   const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
-  const handleNavigate = (id) =>
-    setNav((prev) => prev.map((it) => ({ ...it, active: it.id === id })));
 
-  // unified handler for all approval actions
+  const handleNavigate = (id) => {
+    // ✅ Block navigation to settings if user isn’t allowed
+    if (id === 'attendance-settings' && !canSeeSettings) return;
+    setNav((prev) => prev.map((it) => ({ ...it, active: it.id === id })));
+  };
+
   const handleApprovalAction = (action, row) => {
     if (action === 'view') {
       setViewRow(row);
@@ -205,23 +250,23 @@ export default function AttendancePage() {
       URL.revokeObjectURL(url);
       return;
     }
-    // optimistic status update (replace with API)
+
     setApprovalRows((prev) =>
       prev.map((r) =>
         r.id === row.id
           ? {
-              ...r,
-              status:
-                action === 'approve'
-                  ? 'Approved'
-                  : action === 'reject'
+            ...r,
+            status:
+              action === 'approve'
+                ? 'Approved'
+                : action === 'reject'
                   ? 'Rejected'
                   : action === 'force'
-                  ? 'Forcefully Approved'
-                  : action === 'cancel'
-                  ? 'Cancelled'
-                  : r.status,
-            }
+                    ? 'Forcefully Approved'
+                    : action === 'cancel'
+                      ? 'Cancelled'
+                      : r.status,
+          }
           : r
       )
     );
@@ -233,7 +278,6 @@ export default function AttendancePage() {
         <Sidebar items={nav} onNavigate={handleNavigate} />
 
         <div className="flex flex-col gap-4">
-          {/* Attendance */}
           {activeId === 'attendance-request' && (
             <>
               <Filters
@@ -242,25 +286,23 @@ export default function AttendancePage() {
                 onApply={applyFilters}
                 perPage={perPage}
                 onPerPageChange={setPerPage}
-                onUploadExcel={() => {}}
+                onUploadExcel={() => { }}
                 onAddNew={() => setModal('attendance')}
-                onAddIrregular={() => {}}
+                onAddIrregular={() => { }}
               />
               <RequestTable rows={rows} />
             </>
           )}
 
-          {/* Exemption */}
           {activeId === 'exemption-request' && (
             <ExemptionRequestPage
               perPage={perPage}
               onPerPageChange={setPerPage}
               onAddNew={() => setModal('exemption')}
-              onApply={() => {}}
+              onApply={() => { }}
             />
           )}
 
-          {/* WorkSheet */}
           {activeId === 'worksheet' && (
             <WorkSheetSection
               perPage={perPage}
@@ -269,7 +311,6 @@ export default function AttendancePage() {
             />
           )}
 
-          {/* Remote Work Request */}
           {activeId === 'remote-work' && (
             <RemoteWorkSection
               perPage={perPage}
@@ -279,7 +320,6 @@ export default function AttendancePage() {
             />
           )}
 
-          {/* Shift Request */}
           {activeId === 'shift-request' && (
             <ShiftSection
               perPage={perPage}
@@ -290,16 +330,12 @@ export default function AttendancePage() {
             />
           )}
 
-          {/* Attendance Approval */}
           {activeId === 'attendance-approval' && (
             <>
               <ApprovalFilters
                 value={approvalFilters}
                 onChange={setApprovalFilters}
-                onApply={() => {
-                  // hook to API/filter logic with approvalFilters
-                  console.log('apply approval filters', approvalFilters);
-                }}
+                onApply={() => console.log('apply approval filters', approvalFilters)}
                 onClear={() => setApprovalFilters(initialApprovalFilters)}
               />
               <AttendanceApprovalTable
@@ -318,24 +354,26 @@ export default function AttendancePage() {
             </>
           )}
 
+          {/* ✅ Settings: only upper level */}
+          {activeId === 'attendance-settings' && (
+            canSeeSettings ? <AttendanceSettings /> : <UnauthorizedBox />
+          )}
+
           {/* Other placeholders */}
-          {['amend-attendance', 'amend-employee-shift', 'schedule', 'attendance-settings'].includes(
-            activeId
-          ) && <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />}
+          {['amend-attendance', 'amend-employee-shift', 'schedule'].includes(activeId) && (
+            <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />
+          )}
         </div>
       </main>
 
       {/* Modals */}
       <AddRequestModal open={modal === 'attendance'} onClose={() => setModal(null)} />
-
       <AddExemptionModal open={modal === 'exemption'} onClose={() => setModal(null)} />
 
       <AddWorkSheetModal
         open={modal === 'worksheet'}
         onClose={() => setModal(null)}
-        onSaved={(payload) => {
-          console.log('worksheet saved', payload);
-        }}
+        onSaved={(payload) => console.log('worksheet saved', payload)}
       />
 
       <AddRemoteWorkModal
@@ -361,7 +399,6 @@ export default function AttendancePage() {
         }}
       />
 
-      {/* Shift Modals */}
       <AddShiftModal
         open={modal === 'shift'}
         onClose={() => setModal(null)}
@@ -380,6 +417,7 @@ export default function AttendancePage() {
           ]);
         }}
       />
+
       <AddShiftModal
         irregular
         open={modal === 'shift-irregular'}
@@ -400,7 +438,6 @@ export default function AttendancePage() {
         }}
       />
 
-      {/* View modal for approvals */}
       <ApprovalViewModal
         open={!!viewRow}
         data={viewRow}

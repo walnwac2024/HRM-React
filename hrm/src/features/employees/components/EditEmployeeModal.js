@@ -1,8 +1,21 @@
 // src/features/employees/components/EditEmployeeModal.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../../../utils/api";
 import useEmployee from "../hooks/useEmployee";
 import { useAuth } from "../../../context/AuthContext";
+
+const DOC_TYPES = [
+  "CNIC",
+  "Passport",
+  "Offer Letter",
+  "Appointment Letter",
+  "Contract",
+  "Degree",
+  "Certification",
+  "Experience Letter",
+  "NDA",
+  "Other",
+];
 
 function Field({ label, children, required, error }) {
   return (
@@ -11,13 +24,16 @@ function Field({ label, children, required, error }) {
         {label} {required && <span className="text-customRed">*</span>}
       </label>
       {children}
-      {error && (
-        <p className="mt-1 text-[11px] text-customRed">
-          {error}
-        </p>
-      )}
+      {error && <p className="mt-1 text-[11px] text-customRed">{error}</p>}
     </div>
   );
+}
+
+function toDateInputValue(val) {
+  if (!val) return "";
+  // supports "2025-12-15T..." or "2025-12-15"
+  const s = String(val);
+  return s.slice(0, 10);
 }
 
 export default function EditEmployeeModal({ employeeId, onClose }) {
@@ -58,15 +74,52 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
 
   const [userTypes, setUserTypes] = useState([]);
 
+  // ---------------- DOCUMENTS STATE (NEW) ----------------
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [docsError, setDocsError] = useState("");
+  const [docs, setDocs] = useState([]); // existing docs from backend
+  const [docSavingId, setDocSavingId] = useState(null);
+  const [docReplacingId, setDocReplacingId] = useState(null);
+  const [docDeletingId, setDocDeletingId] = useState(null);
+
+  // new docs upload rows
+  const [newDocs, setNewDocs] = useState([]);
+  const canAddMoreNewDocs = newDocs.length < 10;
+
+  const API_BASE =
+    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
+  const FILE_BASE = useMemo(
+    () => API_BASE.replace(/\/api\/v1\/?$/, ""),
+    [API_BASE]
+  );
+
+  const loadDocuments = async () => {
+    setDocsLoading(true);
+    setDocsError("");
+    try {
+      const { data } = await api.get(`/employees/${employeeId}/documents`);
+      setDocs(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error("Failed to load documents", e);
+      setDocsError(
+        e?.response?.data?.message || e?.message || "Failed to load documents"
+      );
+      setDocs([]);
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Fetch user types for dropdown
-    api.get("/employees/lookups/user-types").then(res => {
-      setUserTypes(res.data || []);
-    }).catch(() => setUserTypes([]));
+    api
+      .get("/employees/lookups/user-types")
+      .then((res) => setUserTypes(res.data || []))
+      .catch(() => setUserTypes([]));
   }, []);
 
   useEffect(() => {
     if (!employee) return;
+
     setProfileForm({
       name: employee.name || "",
       employeeCode: employee.employeeCode || "",
@@ -92,7 +145,12 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       password: "",
       userType: employee.userType || "",
     });
-  }, [employee]);
+
+    // load docs whenever modal opens/employee loads
+    loadDocuments();
+    // reset new doc rows
+    setNewDocs([]);
+  }, [employee]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onProfileChange = (e) => {
     const { name, value } = e.target;
@@ -147,6 +205,135 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     setVaultForm((prev) => ({ ...prev, password: random }));
     setShowPassword(true);
   };
+
+  // ---------------- DOCUMENTS ACTIONS (NEW) ----------------
+  const updateDocLocal = (docId, patch) => {
+    setDocs((prev) =>
+      prev.map((d) => (d.id === docId ? { ...d, ...patch } : d))
+    );
+  };
+
+  const handleSaveDocMeta = async (doc) => {
+    setDocSavingId(doc.id);
+    try {
+      await api.patch(`/employees/${employeeId}/documents/${doc.id}`, {
+        title: doc.title || "",
+        type: doc.type || "",
+        issuedAt: doc.issuedAt || null,
+        expiresAt: doc.expiresAt || null,
+      });
+      await loadDocuments();
+    } catch (e) {
+      console.error("Update doc failed", e);
+      alert(
+        e?.response?.data?.message || e?.message || "Failed to update document"
+      );
+    } finally {
+      setDocSavingId(null);
+    }
+  };
+
+  const handleReplaceDocFile = async (docId, file) => {
+    if (!file) return;
+    setDocReplacingId(docId);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      await api.put(`/employees/${employeeId}/documents/${docId}/file`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await loadDocuments();
+    } catch (e) {
+      console.error("Replace doc file failed", e);
+      alert(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Failed to replace document file"
+      );
+    } finally {
+      setDocReplacingId(null);
+    }
+  };
+
+  const handleDeleteDoc = async (docId) => {
+    const ok = window.confirm("Delete this document?");
+    if (!ok) return;
+
+    setDocDeletingId(docId);
+    try {
+      await api.delete(`/employees/${employeeId}/documents/${docId}`);
+      await loadDocuments();
+    } catch (e) {
+      console.error("Delete doc failed", e);
+      alert(
+        e?.response?.data?.message || e?.message || "Failed to delete document"
+      );
+    } finally {
+      setDocDeletingId(null);
+    }
+  };
+
+  const addNewDocRow = () => {
+    if (!canAddMoreNewDocs) return;
+    setNewDocs((prev) => [
+      ...prev,
+      { title: "", type: "", file: null, issuedAt: "", expiresAt: "" },
+    ]);
+  };
+
+  const removeNewDocRow = (idx) => {
+    setNewDocs((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateNewDocField = (idx, field, value) => {
+    setNewDocs((prev) =>
+      prev.map((d, i) => (i === idx ? { ...d, [field]: value } : d))
+    );
+  };
+
+  const handleUploadNewDocs = async () => {
+    const docsToUpload = newDocs.filter((d) => d.file);
+    if (!docsToUpload.length) {
+      alert("Select at least 1 file to upload.");
+      return;
+    }
+
+    const fd = new FormData();
+    docsToUpload.forEach((d) => {
+      fd.append("files", d.file);
+      fd.append("titles", (d.title || "").trim());
+      fd.append("types", d.type || "");
+      fd.append("issued_at", d.issuedAt || "");
+      fd.append("expires_at", d.expiresAt || "");
+    });
+
+    try {
+      setDocsLoading(true);
+      await api.post(`/employees/${employeeId}/documents`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setNewDocs([]);
+      await loadDocuments();
+    } catch (e) {
+      console.error("Upload docs failed", e);
+      alert(e?.response?.data?.message || e?.message || "Upload failed");
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
+  // --- UI helpers for NEW DOCS upload rows (only this part is improved) ---
+  const MiniLabel = ({ children }) => (
+    <div className="mb-1 flex items-center justify-between">
+      <span className="block text-[11px] font-semibold text-slate-700">
+        {children}
+      </span>
+    </div>
+  );
+
+  const InputBase =
+    "w-full h-9 rounded-lg border border-slate-300 bg-white px-3 text-xs text-slate-800 shadow-sm " +
+    "focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed";
 
   if (loading) {
     return (
@@ -382,6 +569,317 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
               />
             </Field>
 
+            {/* ---------------- DOCUMENTS SECTION (NEW) ---------------- */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
+                  Documents
+                </h3>
+                <button
+                  type="button"
+                  onClick={addNewDocRow}
+                  disabled={!canAddMoreNewDocs}
+                  className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 disabled:opacity-50"
+                >
+                  + Add Document
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                {docsLoading ? (
+                  <div className="text-xs text-slate-600">Loading documents…</div>
+                ) : docsError ? (
+                  <div className="text-xs text-red-600">{docsError}</div>
+                ) : docs.length === 0 ? (
+                  <div className="text-xs text-slate-500">No documents uploaded.</div>
+                ) : (
+                  <div className="space-y-3">
+                    {docs.map((doc) => {
+                      const viewUrl = doc.path ? `${FILE_BASE}${doc.path}` : "#";
+                      const busy =
+                        docSavingId === doc.id ||
+                        docReplacingId === doc.id ||
+                        docDeletingId === doc.id;
+
+                      return (
+                        <div
+                          key={doc.id}
+                          className="rounded-xl border border-slate-200 bg-white p-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0 flex-1">
+                              <div className="grid gap-3 md:grid-cols-2">
+                                <Field label="Title">
+                                  <input
+                                    type="text"
+                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                    value={doc.title || ""}
+                                    onChange={(e) =>
+                                      updateDocLocal(doc.id, { title: e.target.value })
+                                    }
+                                  />
+                                </Field>
+
+                                <Field label="Type">
+                                  <select
+                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                    value={doc.type || ""}
+                                    onChange={(e) =>
+                                      updateDocLocal(doc.id, { type: e.target.value })
+                                    }
+                                  >
+                                    <option value="">Select</option>
+                                    {DOC_TYPES.map((t) => (
+                                      <option key={t} value={t}>
+                                        {t}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </Field>
+
+                                <Field label="Issued At">
+                                  <input
+                                    type="date"
+                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                    value={toDateInputValue(doc.issuedAt)}
+                                    onChange={(e) =>
+                                      updateDocLocal(doc.id, { issuedAt: e.target.value })
+                                    }
+                                  />
+                                </Field>
+
+                                <Field label="Expires At">
+                                  <input
+                                    type="date"
+                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                    value={toDateInputValue(doc.expiresAt)}
+                                    onChange={(e) =>
+                                      updateDocLocal(doc.id, { expiresAt: e.target.value })
+                                    }
+                                  />
+                                </Field>
+                              </div>
+
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <a
+                                  href={viewUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50"
+                                >
+                                  View
+                                </a>
+
+                                <a
+                                  href={`${API_BASE}/employees/${employeeId}/documents/${doc.id}/download`}
+                                  className="inline-flex h-8 px-3 items-center justify-center rounded border border-customRed text-customRed text-[11px] font-medium hover:bg-customRed/10"
+                                >
+                                  Download
+                                </a>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0 flex flex-col gap-2">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => handleSaveDocMeta(doc)}
+                                className="h-8 px-3 rounded bg-slate-900 text-white text-[11px] font-semibold hover:bg-black disabled:opacity-60"
+                              >
+                                {docSavingId === doc.id ? "Saving…" : "Save"}
+                              </button>
+
+                              <label className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center justify-center">
+                                {docReplacingId === doc.id ? "Replacing…" : "Replace file"}
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  disabled={busy}
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    e.target.value = "";
+                                    if (file) handleReplaceDocFile(doc.id, file);
+                                  }}
+                                />
+                              </label>
+
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => handleDeleteDoc(doc.id)}
+                                className="h-8 px-3 rounded border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 disabled:opacity-60"
+                              >
+                                {docDeletingId === doc.id ? "Deleting…" : "Delete"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* NEW DOCS UPLOAD (UI IMPROVED ONLY) */}
+                {newDocs.length > 0 ? (
+                  <div className="mt-5 border-t border-slate-200 pt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-semibold text-slate-700">
+                        Upload new document(s)
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleUploadNewDocs}
+                        disabled={docsLoading}
+                        className="h-8 px-3 rounded bg-customRed text-white text-[11px] font-semibold hover:bg-customRed/90 disabled:opacity-60"
+                      >
+                        {docsLoading ? "Uploading…" : "Upload"}
+                      </button>
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      {newDocs.map((d, idx) => {
+                        const fileName = d.file?.name || "";
+                        return (
+                          <div
+                            key={idx}
+                            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                          >
+                            {/* top row */}
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="text-[11px] font-semibold text-slate-700">
+                                  New document #{idx + 1}
+                                </div>
+                                <div className="mt-0.5 text-[11px] text-slate-500 truncate">
+                                  {fileName ? fileName : "No file selected"}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeNewDocRow(idx)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                                title="Remove row"
+                              >
+                                ✕
+                              </button>
+                            </div>
+
+                            {/* fields */}
+                            <div className="mt-3 grid gap-3 md:grid-cols-12">
+                              {/* Title */}
+                              <div className="md:col-span-4">
+                                <MiniLabel>Title</MiniLabel>
+                                <input
+                                  type="text"
+                                  value={d.title}
+                                  onChange={(e) =>
+                                    updateNewDocField(idx, "title", e.target.value)
+                                  }
+                                  className={InputBase}
+                                  placeholder="e.g. CNIC Front, Passport Bio Page"
+                                />
+                              </div>
+
+                              {/* Type */}
+                              <div className="md:col-span-3">
+                                <MiniLabel>Type</MiniLabel>
+                                <select
+                                  value={d.type}
+                                  onChange={(e) =>
+                                    updateNewDocField(idx, "type", e.target.value)
+                                  }
+                                  className={InputBase}
+                                >
+                                  <option value="">Select</option>
+                                  {DOC_TYPES.map((t) => (
+                                    <option key={t} value={t}>
+                                      {t}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {/* File */}
+                              <div className="md:col-span-5">
+                                <MiniLabel>File</MiniLabel>
+                                <div className="flex gap-2">
+                                  <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
+                                    Choose file
+                                    <input
+                                      type="file"
+                                      className="hidden"
+                                      onChange={(e) => {
+                                        const file = e.target.files?.[0] || null;
+                                        updateNewDocField(idx, "file", file);
+                                        e.target.value = "";
+                                        if (file && !d.title.trim()) {
+                                          updateNewDocField(idx, "title", file.name);
+                                        }
+                                      }}
+                                    />
+                                  </label>
+
+                                  <div className="flex-1 min-w-0">
+                                    <div
+                                      className={`h-9 w-full rounded-lg border px-3 text-xs flex items-center ${
+                                        fileName
+                                          ? "border-slate-300 text-slate-800"
+                                          : "border-slate-200 text-slate-400"
+                                      }`}
+                                      title={fileName || "No file selected"}
+                                    >
+                                      <span className="truncate">
+                                        {fileName || "No file selected"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Issued */}
+                              <div className="md:col-span-3">
+                                <MiniLabel>Issued</MiniLabel>
+                                <input
+                                  type="date"
+                                  value={d.issuedAt || ""}
+                                  onChange={(e) =>
+                                    updateNewDocField(idx, "issuedAt", e.target.value)
+                                  }
+                                  className={InputBase}
+                                />
+                              </div>
+
+                              {/* Expires */}
+                              <div className="md:col-span-3">
+                                <MiniLabel>Expires</MiniLabel>
+                                <input
+                                  type="date"
+                                  value={d.expiresAt || ""}
+                                  onChange={(e) =>
+                                    updateNewDocField(idx, "expiresAt", e.target.value)
+                                  }
+                                  className={InputBase}
+                                />
+                              </div>
+
+                              {/* Small hint row */}
+                              <div className="md:col-span-6 flex items-end">
+                                <div className="text-[11px] text-slate-500">
+                                  Tip: Title auto-fills from file name if left empty.
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+            {/* -------------------------------------------------------- */}
+
             <div className="flex justify-end gap-3 pt-2">
               <button
                 type="button"
@@ -441,7 +939,9 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                 >
                   <option value="">Select user type</option>
                   {userTypes.map((type) => (
-                    <option key={type} value={type}>{type}</option>
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
                   ))}
                 </select>
               </Field>

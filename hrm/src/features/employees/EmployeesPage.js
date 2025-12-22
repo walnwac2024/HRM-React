@@ -54,10 +54,8 @@ export default function EmployeesPage() {
     refetch,
   } = useEmployees();
 
-  // Local UI filters (what user is typing/choosing)
   const [uiFilters, setUiFilters] = useState(filters);
 
-  // keep UI filters in sync when hook filters reset
   useEffect(() => {
     setUiFilters(filters);
   }, [filters]);
@@ -65,25 +63,22 @@ export default function EmployeesPage() {
   const handleFilterChange = (name, value) => {
     setUiFilters((prev) => ({
       ...prev,
-      [name] : value ?? "",
+      [name]: value ?? "",
     }));
   };
 
   const handleApply = () => {
-    // send all current UI filters to the hook/backend
     apply(uiFilters);
   };
 
   const handleClear = () => {
-    resetFilters(); // hook resets its own filter state
-    // uiFilters will automatically sync from useEffect
+    resetFilters();
   };
 
-  // global search box (header of results card)
   const handleSearchChange = (value) => {
     const next = { ...uiFilters, search: value };
     setUiFilters(next);
-    apply(next); // instant search on type
+    apply(next);
   };
 
   const {
@@ -106,16 +101,38 @@ export default function EmployeesPage() {
     setEditEmployeeId(row.id);
   };
 
+  /* ------------------------------------------------------------------
+   * ✅ MARK INACTIVE / ACTIVATE (TOGGLE)
+   * ------------------------------------------------------------------ */
   const handleMarkInactive = async (row) => {
     if (!row?.id) return;
+
+    const isCurrentlyActive =
+      row.isActive === true || Number(row.isActive) === 1;
+
+    const nextActive = !isCurrentlyActive;
+
+    const confirmText = nextActive
+      ? "Activate this employee?"
+      : "Mark this employee as inactive?";
+
+    const ok = window.confirm(confirmText);
+    if (!ok) return;
+
     try {
       await api.patch(`/employees/${row.id}/status`, {
-        isActive: false,
-        status: "Left",
+        is_active: nextActive ? 1 : 0,
+        status: nextActive ? "Active" : "Left",
       });
+
       refetch();
     } catch (e) {
-      console.error(e);
+      console.error("Failed to update employee status", e);
+      alert(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Failed to update employee status"
+      );
     }
   };
 
@@ -138,27 +155,12 @@ export default function EmployeesPage() {
 
     if (active === "employee-settings") return <EmployeeSettings />;
 
-    // Employee List
     return (
       <div className="pr-6 pb-6">
         {/* Filters Card */}
         <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200">
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="font-medium">Filters</div>
-            <button
-              className="text-customRed hover:text-customRed/80"
-              title="Toggle"
-              type="button"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M3 5h18v2H3zM7 11h10v2H7zM10 17h4v2h-4z" />
-              </svg>
-            </button>
           </div>
 
           <div className="p-4">
@@ -200,7 +202,6 @@ export default function EmployeesPage() {
 
         {/* Results Card */}
         <div className="mt-4 bg-white rounded-lg overflow-hidden shadow border border-slate-200">
-          {/* Header row: count + global search */}
           <div className="px-4 py-3 flex items-center justify-between border-b bg-slate-50/70">
             <div className="text-xs text-slate-500">
               Showing {rows.length} of {total} employees
@@ -278,7 +279,10 @@ export default function EmployeesPage() {
         <AddEmployeeModal
           open={addOpen}
           onClose={() => setAddOpen(false)}
-          onSave={() => setAddOpen(false)}
+          onCreated={() => {
+            setAddOpen(false);
+            refetch();
+          }}
         />
 
         {editEmployeeId && (
