@@ -1,4 +1,3 @@
-// src/features/employees/components/EmployeesTable.js
 import React, { useState, memo } from "react";
 
 function EmployeesTable({
@@ -6,7 +5,7 @@ function EmployeesTable({
   firstItem = 1,
   onViewEmployee,
   onEditEmployee,
-  onMarkInactive,
+  onMarkInactive, // ✅ now toggles: active->inactive OR inactive->active (parent decides)
 }) {
   const [openRowId, setOpenRowId] = useState(null);
 
@@ -57,6 +56,7 @@ function EmployeesTable({
             ) : (
               rows.map((row, idx) => {
                 const isOpen = openRowId === row.id;
+
                 const name =
                   row.employee_name || row.Employee_Name || row.name || "—";
                 const code =
@@ -70,6 +70,9 @@ function EmployeesTable({
                 const designation =
                   row.designation || row.Designations || row.title || "—";
 
+                const isInactive =
+                  row.isActive === false || Number(row.isActive) === 0;
+
                 const avatarUrl = row.profile_picture
                   ? `${FILE_BASE}${row.profile_picture}`
                   : null;
@@ -78,7 +81,9 @@ function EmployeesTable({
                 return (
                   <tr
                     key={row.id ?? `${firstItem}-${idx}`}
-                    className="hover:bg-slate-50/80 transition-colors"
+                    className={`hover:bg-slate-50/80 transition-colors ${
+                      isInactive ? "opacity-70" : ""
+                    }`}
                   >
                     <td className="px-4 py-3 align-top text-xs text-slate-500">
                       {firstItem + idx}
@@ -99,10 +104,19 @@ function EmployeesTable({
                           </div>
                         )}
 
-                        <div>
-                          <div className="font-medium text-slate-800 leading-snug">
-                            {name}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium text-slate-800 leading-snug truncate">
+                              {name}
+                            </div>
+
+                            {isInactive && (
+                              <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                                Inactive
+                              </span>
+                            )}
                           </div>
+
                           <div className="mt-0.5 text-xs text-slate-500">
                             <span className="font-medium text-slate-600">
                               Code:
@@ -187,44 +201,12 @@ function EmployeesTable({
                             <span>View employee</span>
                           </button>
 
-                         <button
-                          type="button"
-                          className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
-                          onClick={() => {
-                            setOpenRowId(null);
-                            onEditEmployee?.(row);
-                          }}
-                        >
-                          <span className="inline-flex h-4 w-4 items-center justify-center">
-                            {/* Pen Icon */}
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              className="h-4 w-4"
-                            >
-                              <path
-                                d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.121L15.621 4a1.5 1.5 0 0 0-2.121 0L4 13.879V20z"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          </span>
-
-                          <span>Edit employee</span>
-                        </button>
-
-
-                          <div className="my-1 border-t border-slate-100" />
-
                           <button
                             type="button"
-                            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-slate-50"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
                             onClick={() => {
                               setOpenRowId(null);
-                              onMarkInactive?.(row);
+                              onEditEmployee?.(row);
                             }}
                           >
                             <span className="inline-flex h-4 w-4 items-center justify-center">
@@ -235,7 +217,7 @@ function EmployeesTable({
                                 className="h-4 w-4"
                               >
                                 <path
-                                  d="M15 9l-6 6m0-6l6 6"
+                                  d="M15.232 5.232l3.536 3.536M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.121L15.621 4a1.5 1.5 0 0 0-2.121 0L4 13.879V20z"
                                   stroke="currentColor"
                                   strokeWidth="1.5"
                                   strokeLinecap="round"
@@ -243,7 +225,57 @@ function EmployeesTable({
                                 />
                               </svg>
                             </span>
-                            <span>Mark inactive</span>
+                            <span>Edit employee</span>
+                          </button>
+
+                          <div className="my-1 border-t border-slate-100" />
+
+                          <button
+                            type="button"
+                            className={`flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${
+                              isInactive ? "text-emerald-600" : "text-red-600"
+                            }`}
+                            onClick={() => {
+                              setOpenRowId(null);
+                              onMarkInactive?.(row); // ✅ parent toggles based on row.isActive
+                            }}
+                          >
+                            <span className="inline-flex h-4 w-4 items-center justify-center">
+                              {isInactive ? (
+                                // check icon
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  className="h-4 w-4"
+                                >
+                                  <path
+                                    d="M20 6L9 17l-5-5"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              ) : (
+                                // X icon
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  className="h-4 w-4"
+                                >
+                                  <path
+                                    d="M15 9l-6 6m0-6l6 6"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              )}
+                            </span>
+                            <span>{isInactive ? "Activate employee" : "Mark inactive"}</span>
                           </button>
                         </div>
                       )}

@@ -10,17 +10,17 @@ function MenuIcon({ className = "" }) {
 
 const MENU = [
   { key: "employee-list", label: "Employee List" },
-  { key: "employee-profile-request", label: "Employee Profile Request" },
-  { key: "employee-transfer", label: "Employee Transfer" },
-  { key: "employee-info-request", label: "Employee Info Request" },
-  { key: "employee-approvals", label: "Employee Approvals" },
-  { key: "employee-settings", label: "Employee Settings" },
+  { key: "employee-profile-request", label: "Employee Profile Request", status: "working" },
+  { key: "employee-transfer", label: "Employee Transfer", status: "working" },
+  { key: "employee-info-request", label: "Employee Info Request", status: "working" },
+  { key: "employee-approvals", label: "Employee Approvals", status: "working" },
+  { key: "employee-settings", label: "Employee Settings", status: "working" },
 ];
 
 const ROLE_SUBMENU = [
-  { key: "employee-role/main", label: "Employee Role" },
-  { key: "employee-role/copy", label: "Copy Role" },
-  { key: "employee-role/templates", label: "Role Templates" },
+  { key: "employee-role/main", label: "Employee Role", status: "working" },
+  { key: "employee-role/copy", label: "Copy Role", status: "working" },
+  { key: "employee-role/templates", label: "Role Templates", status: "working" },
 ];
 
 export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
@@ -36,9 +36,14 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
     "pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[4px] rounded-r";
   const iconBase = "h-[14px] w-[14px]";
 
+  const badge = (
+    <span className="ml-auto px-1 py-0.5 rounded bg-amber-50 text-[8px] text-amber-600 font-bold uppercase border border-amber-200">
+      Working
+    </span>
+  );
+
   return (
     <aside className="w-60 shrink-0 ml-4">
-      {/* reduced offset */}
       <div className="sticky top-5">
         <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow">
           <div className="px-4 pt-3 pb-2">
@@ -51,29 +56,29 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
             <ul className="space-y-1.5">
               {MENU.slice(0, 3).map((item) => {
                 const isActive = activeKey === item.key;
+                const isWorking = item.status === "working";
                 return (
                   <li key={item.key}>
                     <button
                       type="button"
-                      onClick={() => onNavigate?.(item.key)}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`${itemBase} ${
-                        isActive
-                          ? "bg-customRed/10 text-customRed"
-                          : "text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                      }`}
+                      onClick={() => !isWorking && onNavigate?.(item.key)}
+                      className={`${itemBase} ${isActive
+                        ? "bg-customRed/10 text-customRed"
+                        : isWorking
+                          ? "text-slate-400 cursor-not-allowed opacity-75"
+                          : "text-slate-700 hover:bg-slate-100"
+                        }`}
                     >
                       <span
-                        className={`${leftBarBase} ${
-                          isActive ? "bg-customRed" : "bg-transparent group-hover:bg-slate-300"
-                        }`}
+                        className={`${leftBarBase} ${isActive ? "bg-customRed" : "bg-transparent"
+                          }`}
                       />
                       <MenuIcon
-                        className={`${iconBase} ${
-                          isActive ? "text-customRed" : "text-slate-500 group-hover:text-slate-700"
-                        }`}
+                        className={`${iconBase} ${isActive ? "text-customRed" : "text-slate-400"
+                          }`}
                       />
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate pr-1">{item.label}</span>
+                      {isWorking && badge}
                     </button>
                   </li>
                 );
@@ -84,39 +89,25 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
                 <button
                   type="button"
                   onClick={() => setRoleOpen((v) => !v)}
-                  aria-expanded={roleOpen}
-                  className={`${itemBase} ${
-                    activeKey.startsWith("employee-role")
-                      ? "bg-customRed/10 text-customRed"
-                      : "text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                  }`}
+                  className={`${itemBase} ${activeKey.startsWith("employee-role")
+                    ? "bg-customRed/10 text-customRed"
+                    : "text-slate-400 opacity-75"
+                    }`}
                 >
                   <span
-                    className={`${leftBarBase} ${
-                      activeKey.startsWith("employee-role")
-                        ? "bg-customRed"
-                        : "bg-transparent group-hover:bg-slate-300"
-                    }`}
+                    className={`${leftBarBase} ${activeKey.startsWith("employee-role")
+                      ? "bg-customRed"
+                      : "bg-transparent"
+                      }`}
                   />
                   <MenuIcon
-                    className={`${iconBase} ${
-                      activeKey.startsWith("employee-role")
-                        ? "text-customRed"
-                        : "text-slate-500 group-hover:text-slate-700"
-                    }`}
+                    className={`${iconBase} ${activeKey.startsWith("employee-role")
+                      ? "text-customRed"
+                      : "text-slate-400"
+                      }`}
                   />
-                  <span className="truncate">Employee Role</span>
-                  <span className="pointer-events-none absolute right-2 text-slate-500 group-hover:text-slate-700">
-                    {roleOpen ? (
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="6 9 12 15 18 9" />
-                      </svg>
-                    ) : (
-                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <polyline points="9 18 15 12 9 6" />
-                      </svg>
-                    )}
-                  </span>
+                  <span className="truncate pr-1">Employee Role</span>
+                  {badge}
                 </button>
 
                 {roleOpen && (
@@ -127,12 +118,7 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
                         <button
                           key={sub.key}
                           type="button"
-                          onClick={() => onNavigate?.(sub.key)}
-                          className={`w-full text-left px-3 py-1.5 rounded text-[13px] transition-colors ${
-                            active
-                              ? "text-customRed font-semibold bg-customRed/10"
-                              : "text-slate-600 hover:text-slate-800 hover:bg-slate-100"
-                          }`}
+                          className={`w-full text-left px-3 py-1.5 rounded text-[13px] opacity-60 cursor-not-allowed text-slate-400`}
                         >
                           {sub.label}
                         </button>
@@ -144,29 +130,29 @@ export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
 
               {MENU.slice(3).map((item) => {
                 const isActive = activeKey === item.key;
+                const isWorking = item.status === "working";
                 return (
                   <li key={item.key}>
                     <button
                       type="button"
-                      onClick={() => onNavigate?.(item.key)}
-                      aria-current={isActive ? "page" : undefined}
-                      className={`${itemBase} ${
-                        isActive
-                          ? "bg-customRed/10 text-customRed"
-                          : "text-slate-700 hover:bg-slate-100 focus:bg-slate-100"
-                      }`}
+                      onClick={() => !isWorking && onNavigate?.(item.key)}
+                      className={`${itemBase} ${isActive
+                        ? "bg-customRed/10 text-customRed"
+                        : isWorking
+                          ? "text-slate-400 cursor-not-allowed opacity-75"
+                          : "text-slate-700 hover:bg-slate-100"
+                        }`}
                     >
                       <span
-                        className={`${leftBarBase} ${
-                          isActive ? "bg-customRed" : "bg-transparent group-hover:bg-slate-300"
-                        }`}
+                        className={`${leftBarBase} ${isActive ? "bg-customRed" : "bg-transparent"
+                          }`}
                       />
                       <MenuIcon
-                        className={`${iconBase} ${
-                          isActive ? "text-customRed" : "text-slate-500 group-hover:text-slate-700"
-                        }`}
+                        className={`${iconBase} ${isActive ? "text-customRed" : "text-slate-400"
+                          }`}
                       />
-                      <span className="truncate">{item.label}</span>
+                      <span className="truncate pr-1">{item.label}</span>
+                      {isWorking && badge}
                     </button>
                   </li>
                 );

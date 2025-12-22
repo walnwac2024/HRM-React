@@ -1,29 +1,29 @@
 // Sidebar items
 export const ATTENDANCE_NAV = [
-  { id: 'attendance-request', label: 'Attendance Request', active: true },
-  { id: 'exemption-request',  label: 'Exemption Request' },
-  { id: 'worksheet',          label: 'WorkSheet' },
-  { id: 'remote-work',        label: 'Remote Work Request' },
-  { id: 'shift-request',      label: 'Shift Request' },
-  { id: 'amend-attendance',   label: 'Amend Attendance' },
-  { id: 'amend-employee-shift', label: 'Amend Employee Shift' },
-  { id: 'attendance-approval',  label: 'Attendance Approval' },
-  { id: 'schedule',           label: 'Schedule' },
-  { id: 'attendance-settings', label: 'Attendance Settings' },
+  { id: 'attendance-request', label: 'Attendance Request', status: 'working' },
+  { id: 'exemption-request', label: 'Exemption Request', status: 'working' },
+  { id: 'worksheet', label: 'WorkSheet', status: 'working' },
+  { id: 'remote-work', label: 'Remote Work Request', status: 'working' },
+  { id: 'shift-request', label: 'Shift Request', status: 'working' },
+  { id: 'amend-attendance', label: 'Amend Attendance', status: 'working' },
+  { id: 'amend-employee-shift', label: 'Amend Employee Shift', status: 'working' },
+  { id: 'attendance-approval', label: 'Attendance Approval', status: 'working' },
+  { id: 'schedule', label: 'Schedule', status: 'working' },
+  { id: 'attendance-settings', label: 'Attendance Settings', active: true },
 ];
 
 // (optional) routes if you use them elsewhere
 export const ATTENDANCE_ROUTES = {
-  'attendance-request'   : '/attendance',
-  'exemption-request'    : '/attendance/exemption',
-  'worksheet'            : '/attendance/worksheet',
-  'remote-work'          : '/attendance/remote-work',
-  'shift-request'        : '/attendance/shift',
-  'amend-attendance'     : '/attendance/amend',
-  'amend-employee-shift' : '/attendance/amend-shift',
-  'attendance-approval'  : '/attendance/approval',
-  'schedule'             : '/attendance/schedule',
-  'attendance-settings'  : '/attendance/settings',
+  'attendance-request': '/attendance',
+  'exemption-request': '/attendance/exemption',
+  'worksheet': '/attendance/worksheet',
+  'remote-work': '/attendance/remote-work',
+  'shift-request': '/attendance/shift',
+  'amend-attendance': '/attendance/amend',
+  'amend-employee-shift': '/attendance/amend-shift',
+  'attendance-approval': '/attendance/approval',
+  'schedule': '/attendance/schedule',
+  'attendance-settings': '/attendance/settings',
 };
 
 // Filter option sets
@@ -48,9 +48,9 @@ export const FLAG_TYPES = ['--ALL--', 'Normal', 'Critical'];
 export const WORKSHEET_ACTIONS = ['ALL', 'Created', 'Updated', 'Deleted'];
 export const WORKSHEET_YEARS = [
   '--ALL--',
-  '2025','2024','2023','2022','2021'
+  '2025', '2024', '2023', '2022', '2021'
 ];
 export const WORKSHEET_MONTHS = [
-  '--ALL--','January','February','March','April','May','June',
-  'July','August','September','October','November','December'
+  '--ALL--', 'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
 ];

@@ -1,564 +1,780 @@
 // src/features/employees/components/AddEmployeeModal.jsx
-import React, { useRef, useState, useMemo } from "react";
-import {
-  FaUser,
-  FaInfoCircle,
-  FaBuilding,
-  FaFileAlt,
-  FaMoneyBillWave,
-  FaChevronLeft,
-  FaUpload,
-  FaTimes,
-} from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import { FaTimes, FaEye, FaEyeSlash, FaPlus, FaTrash } from "react-icons/fa";
+import { toast } from "react-toastify";
+import api from "../../../utils/api";
 
-import AdditionalInformation from "./AdditionalInformation";
-import CompanyInformation from "./CompanyInformation";
-import EmployeeDocuments from "./EmployeeDocuments";
-import SalaryInformation from "./SalaryInformation"; // NEW
-
-const TABS = [
-  { key: "general", label: "General Information", Icon: FaUser },
-  { key: "additional", label: "Additional Information", Icon: FaInfoCircle },
-  { key: "company", label: "Company Information", Icon: FaBuilding },
-  { key: "documents", label: "Employee Documents", Icon: FaFileAlt },
-  { key: "salary", label: "Salary Information", Icon: FaMoneyBillWave },
+const DOC_TYPES = [
+  "CNIC",
+  "Passport",
+  "Offer Letter",
+  "Appointment Letter",
+  "Contract",
+  "Degree",
+  "Certification",
+  "Experience Letter",
+  "NDA",
+  "Other",
 ];
 
-export default function AddEmployeeModal({ open, onClose, onSave }) {
-  const [active, setActive] = useState("general");
+const MARITAL_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
 
-  const [form, setForm] = useState({
-    // General
-    prefix: "None",
-    employeeCode: "",
-    punchCode: "",
-    firstName: "",
-    lastName: "",
-    mobile: "",
-    email: "",
-    reportsTo: "",
-    manualAttendance: "No",
-    allowLogin: false,
-    roleTemplate: "",
-    userName: "",
-    password: "",
-    sendByEmail: false,
-    photo: null,
-
-    // Additional
-    gender: "",
-
-    // Company
-    station: "",
-    department: "",
-    designation: "", // required
-    employeeStatus: "",
-    employeeGroup: "",
-    joiningDate: "",
-    confirmationDueDate: "",
-    confirmationDate: "",
-    resignDate: "",
-
-    // Documents
-    documents: [],
-
-    // Salary (NEW)
-    salary: {
-      payrollSetup: "General",
-      salaryType: "Monthly Salary",
-      currency: "PKR",
-      monthlyGross: "",
-      annualGross: 0,
-      overtime: false,
-      shortTime: false,
-      paymentDetails: false,
-      items: [], // SalaryInformation will seed defaults
-    },
+export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
+  const [loading, setLoading] = useState(false);
+  const [lookups, setLookups] = useState({
+    stations: [],
+    departments: [],
+    designations: [],
+    userTypes: [],
   });
 
-  const [touched, setTouched] = useState({});
-  const [submitted, setSubmitted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const fileRef = useRef(null);
-  const set = (name) => (e) => {
-    const v =
-      e && e.target
-        ? e.target.type === "checkbox"
-          ? e.target.checked
-          : e.target.value
-        : e;
-    setForm((f) => ({ ...f, [name]: v }));
+  const [form, setForm] = useState({
+    // employment
+    employeeCode: "", // auto-generated, read-only (shown)
+    fullName: "",
+    designation: "",
+    department: "",
+    station: "",
+    status: "Active",
+
+    // personal
+    dateOfBirth: "",
+    gender: "",
+    bloodGroup: "",
+    religion: "",
+    maritalStatus: "",
+    address: "",
+    cnic: "",
+
+    // job & contact
+    dateOfJoining: "",
+    personalContact: "",
+    officialContact: "",
+    emergencyContact: "",
+    emergencyRelation: "",
+    reportingTo: "",
+    officialEmail: "",
+    allowPortalLogin: true,
+    password: "",
+    userType: "",
+  });
+
+  // ✅ documents state now includes file
+  // array of { title, type, file, issuedAt, expiresAt }
+  const [documents, setDocuments] = useState([]);
+
+  // ----------------------------------------------------
+  // helpers
+  // ----------------------------------------------------
+  const updateField = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const markTouched = (name) => () =>
-    setTouched((t) => ({ ...t, [name]: true }));
+  const canAddMoreDocs = documents.length < 10;
 
-  // ---- Validation ----
-  const validate = (f) => {
-    const errs = {};
-    // General
-    if (!f.employeeCode.trim()) errs.employeeCode = "Employee Code is required.";
-    if (!f.punchCode.trim()) errs.punchCode = "Punch Code is required.";
-    if (!f.firstName.trim()) errs.firstName = "First Name is required.";
-    if (!f.lastName.trim()) errs.lastName = "Last Name is required.";
-    if (!f.mobile.trim()) errs.mobile = "Mobile No is required.";
-    if (!f.email.trim()) {
-      errs.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) {
-      errs.email = "Enter a valid email address.";
+  const addDocumentRow = () => {
+    if (!canAddMoreDocs) return;
+    setDocuments((prev) => [
+      ...prev,
+      { title: "", type: "", file: null, issuedAt: "", expiresAt: "" },
+    ]);
+  };
+
+  const removeDocumentRow = (idx) => {
+    setDocuments((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const updateDocumentField = (idx, field, value) => {
+    setDocuments((prev) =>
+      prev.map((doc, i) => (i === idx ? { ...doc, [field]: value } : doc))
+    );
+  };
+
+  // ----------------------------------------------------
+  // load dropdown options from backend
+  // ----------------------------------------------------
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+
+    async function loadLookups() {
+      try {
+        const [stationsRes, departmentsRes, designationsRes, userTypesRes] =
+          await Promise.all([
+            api.get("/employees/lookups/stations"),
+            api.get("/employees/lookups/departments"),
+            api.get("/employees/lookups/designations"),
+            api.get("/employees/lookups/user-types"),
+          ]);
+
+        if (cancelled) return;
+
+        setLookups({
+          stations: stationsRes.data || [],
+          departments: departmentsRes.data || [],
+          designations: designationsRes.data || [],
+          userTypes: userTypesRes.data || [],
+        });
+      } catch (err) {
+        console.error("Failed to load employee lookups", err);
+        if (!cancelled) toast.error("Failed to load dropdown options.");
+      }
     }
 
-    // Additional
-    if (!f.gender?.trim()) errs.gender = "Gender is required.";
+    loadLookups();
 
-    // Company
-    if (!f.department?.trim()) errs.department = "Department is required.";
-    if (!f.designation?.trim()) errs.designation = "Designation is required.";
-    if (!f.employeeStatus?.trim())
-      errs.employeeStatus = "Employee Status is required.";
-    if (!f.employeeGroup?.trim())
-      errs.employeeGroup = "Employee Group is required.";
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
-    return errs;
+  // ----------------------------------------------------
+  // validation
+  // ----------------------------------------------------
+  const validate = () => {
+    const errors = [];
+
+    if (!form.fullName.trim()) errors.push("Full Name is required.");
+    if (!form.designation.trim()) errors.push("Designation is required.");
+    if (!form.department.trim()) errors.push("Department is required.");
+    if (!form.station.trim()) errors.push("Station / Office is required.");
+    if (!form.status.trim()) errors.push("Status is required.");
+
+    if (!form.dateOfBirth) errors.push("Date of Birth is required.");
+    if (!form.gender.trim()) errors.push("Gender is required.");
+
+    if (!form.dateOfJoining) errors.push("Date of Joining is required.");
+
+    if (!form.officialEmail.trim()) {
+      errors.push("Official Email is required.");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.officialEmail)) {
+      errors.push("Official Email is not valid.");
+    }
+
+    if (form.allowPortalLogin) {
+      if (!form.password || form.password.length < 6) {
+        errors.push(
+          "Password is required (min 6 characters) when portal login is allowed."
+        );
+      }
+      if (!form.userType.trim()) {
+        errors.push("User Type / Permission Level is required.");
+      }
+    }
+
+    // ✅ doc validation (optional but helpful)
+    const anyDocHasFile = documents.some((d) => d.file);
+    if (anyDocHasFile) {
+      for (const d of documents) {
+        if (d.file && !d.title.trim()) {
+          errors.push("Document title is required when a file is selected.");
+          break;
+        }
+      }
+    }
+
+    return errors;
   };
 
-  const errors = useMemo(() => validate(form), [form]);
-  const showError = (name) => (submitted || touched[name]) && !!errors[name];
+  // ----------------------------------------------------
+  // submit
+  // ----------------------------------------------------
+  const handleSubmit = async (e) => {
+    e?.preventDefault();
 
-  const handleSave = () => {
-    setSubmitted(true);
-    if (Object.keys(errors).length === 0) onSave?.(form);
+    const errors = validate();
+    if (errors.length) {
+      toast.error(errors[0]);
+      return;
+    }
+
+    // ✅ step-1 payload (employee only, no docs)
+    const payload = {
+      // employment
+      employeeCode: form.employeeCode || null,
+      fullName: form.fullName.trim(),
+      designation: form.designation,
+      department: form.department,
+      station: form.station,
+      status: form.status,
+
+      // personal
+      dateOfBirth: form.dateOfBirth || null,
+      gender: form.gender,
+      bloodGroup: form.bloodGroup || "",
+      religion: form.religion || "",
+      maritalStatus: form.maritalStatus || "",
+      address: form.address || "",
+      cnic: form.cnic || "",
+
+      // job & contact
+      dateOfJoining: form.dateOfJoining || null,
+      personalContact: form.personalContact || "",
+      officialContact: form.officialContact || "",
+      emergencyContact: form.emergencyContact || "",
+      emergencyRelation: form.emergencyRelation || "",
+      reportingTo: form.reportingTo || "",
+
+      // optional HR fields (kept for future)
+      offerLetter: "",
+      probation: "",
+
+      // login
+      officialEmail: form.officialEmail.trim(),
+      allowPortalLogin: !!form.allowPortalLogin,
+      password: form.password,
+      userType: form.userType || null,
+    };
+
+    try {
+      setLoading(true);
+
+      // ✅ STEP 1: create employee
+      const res = await api.post("/employees", payload);
+      const created = res.data;
+
+      const code = created?.employeeCode || "(auto)";
+      toast.success(`Employee created successfully. ID: ${code}`);
+
+      // if backend generated code, show it in the form until modal closes
+      if (!form.employeeCode && created?.employeeCode) {
+        setForm((prev) => ({ ...prev, employeeCode: created.employeeCode }));
+      }
+
+      // ✅ STEP 2: upload documents if any files selected
+      const docsToUpload = documents.filter((d) => d.file);
+      if (created?.id && docsToUpload.length) {
+        const fd = new FormData();
+
+        docsToUpload.forEach((d) => {
+          // backend expects: files (array)
+          fd.append("files", d.file);
+
+          // backend reads these arrays:
+          fd.append("titles", d.title.trim());
+          fd.append("types", d.type || "");
+          fd.append("issued_at", d.issuedAt || "");
+          fd.append("expires_at", d.expiresAt || "");
+        });
+
+        await api.post(`/employees/${created.id}/documents`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        toast.success(`Uploaded ${docsToUpload.length} document(s).`);
+      }
+
+      if (typeof onCreated === "function") {
+        onCreated(created);
+      } else if (typeof onSave === "function") {
+        onSave(created);
+      }
+
+      onClose?.();
+    } catch (err) {
+      console.error("Create employee error:", err);
+
+      // ✅ show real backend message
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to create employee. Please check data and try again.";
+
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Wizard footer state
-  const idx = TABS.findIndex((t) => t.key === active);
-  const isFirst = idx === 0;
-  const isLast = idx === TABS.length - 1;
-  const prevKey = !isFirst ? TABS[idx - 1].key : null;
-  const nextKey = !isLast ? TABS[idx + 1].key : null;
-  const showUpdate = isFirst || isLast; // only first & last
+  const handleClose = () => {
+    if (loading) return;
+    onClose?.();
+  };
+
+  if (!open) return null;
 
   return (
     <div
-      className={`fixed inset-0 z-50 ${open ? "flex" : "hidden"} items-center justify-center`}
-      role="dialog"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       aria-modal="true"
+      role="dialog"
     >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="bg-white rounded-xl shadow-xl max-w-6xl w-[98%] max-h-[96vh] overflow-hidden flex flex-col">
+        {/* header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b">
+          <h2 className="text-lg font-semibold">Add New Employee</h2>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="text-slate-500 hover:text-slate-700"
+          >
+            <FaTimes />
+          </button>
+        </div>
 
-      {/* Card */}
-      <div className="relative z-10 w-[98%] max-w-6xl max-h-[90vh] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col">
-        {/* Sticky header */}
-        <div className="sticky top-0 bg-white z-20 border-b">
-          <div className="flex items-center justify-between px-4 py-3">
-            <h2 className="font-semibold">Add Employee</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="inline-flex items-center gap-2 text-sm text-customRed hover:opacity-90"
-            >
-              <FaChevronLeft /> Back
-            </button>
-          </div>
+        {/* body */}
+        <form
+          className="flex-1 overflow-y-auto px-5 py-4 space-y-5"
+          onSubmit={handleSubmit}
+        >
+          {/* Employment Details */}
+          <section className="border rounded-lg p-4 bg-slate-50/40">
+            <h3 className="font-semibold mb-3">Employment Details</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <Field label="Employee ID / Code (auto)">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 bg-slate-100 text-slate-500 px-3 text-sm"
+                  value={
+                    form.employeeCode
+                      ? form.employeeCode
+                      : "Will be generated on save"
+                  }
+                  disabled
+                />
+              </Field>
 
-          {/* Tabs – icon above label */}
-          <div className="px-3 sm:px-4 bg-white">
-            <nav className="flex gap-4 overflow-x-auto py-3">
-              {TABS.map(({ key, label, Icon }) => {
-                const isActive = active === key;
-                return (
+              <Field label="Full Name" required>
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.fullName}
+                  onChange={(e) => updateField("fullName", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Designation" required>
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.designation}
+                  onChange={(e) => updateField("designation", e.target.value)}
+                >
+                  <option value="">Select Designation</option>
+                  {lookups.designations.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Department" required>
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.department}
+                  onChange={(e) => updateField("department", e.target.value)}
+                >
+                  <option value="">Select Department</option>
+                  {lookups.departments.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Station / Office" required>
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.station}
+                  onChange={(e) => updateField("station", e.target.value)}
+                >
+                  <option value="">Select Station</option>
+                  {lookups.stations.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Status" required>
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.status}
+                  onChange={(e) => updateField("status", e.target.value)}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Probation">Probation</option>
+                  <option value="Left">Left</option>
+                  <option value="On Hold">On Hold</option>
+                </select>
+              </Field>
+            </div>
+          </section>
+
+          {/* Personal Information */}
+          <section className="border rounded-lg p-4 bg-slate-50/40">
+            <h3 className="font-semibold mb-3">Personal Information</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <Field label="Date of Birth" required>
+                <input
+                  type="date"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.dateOfBirth}
+                  onChange={(e) => updateField("dateOfBirth", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Gender" required>
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.gender}
+                  onChange={(e) => updateField("gender", e.target.value)}
+                >
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </Field>
+
+              <Field label="Blood Group">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.bloodGroup}
+                  onChange={(e) => updateField("bloodGroup", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Religion">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.religion}
+                  onChange={(e) => updateField("religion", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Marital Status">
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.maritalStatus}
+                  onChange={(e) => updateField("maritalStatus", e.target.value)}
+                >
+                  <option value="">Select</option>
+                  {MARITAL_OPTIONS.map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="CNIC">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.cnic}
+                  onChange={(e) => updateField("cnic", e.target.value)}
+                />
+              </Field>
+            </div>
+
+            <div className="mt-4">
+              <Field label="Address">
+                <textarea
+                  className="w-full min-h-[70px] rounded border border-slate-300 px-3 py-2 text-sm"
+                  value={form.address}
+                  onChange={(e) => updateField("address", e.target.value)}
+                />
+              </Field>
+            </div>
+          </section>
+
+          {/* Job & Contact Information */}
+          <section className="border rounded-lg p-4 bg-slate-50/40">
+            <h3 className="font-semibold mb-3">Job & Contact Information</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <Field label="Date of Joining" required>
+                <input
+                  type="date"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.dateOfJoining}
+                  onChange={(e) => updateField("dateOfJoining", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Personal Contact">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.personalContact}
+                  onChange={(e) =>
+                    updateField("personalContact", e.target.value)
+                  }
+                />
+              </Field>
+
+              <Field label="Official Contact">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.officialContact}
+                  onChange={(e) =>
+                    updateField("officialContact", e.target.value)
+                  }
+                />
+              </Field>
+
+              <Field label="Emergency Contact">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.emergencyContact}
+                  onChange={(e) =>
+                    updateField("emergencyContact", e.target.value)
+                  }
+                />
+              </Field>
+
+              <Field label="Emergency Relation">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.emergencyRelation}
+                  onChange={(e) =>
+                    updateField("emergencyRelation", e.target.value)
+                  }
+                />
+              </Field>
+
+              <Field label="Reporting To">
+                <input
+                  type="text"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.reportingTo}
+                  onChange={(e) => updateField("reportingTo", e.target.value)}
+                />
+              </Field>
+
+              <Field label="Official Email (used for login)" required>
+                <input
+                  type="email"
+                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
+                  value={form.officialEmail}
+                  onChange={(e) =>
+                    updateField("officialEmail", e.target.value)
+                  }
+                />
+              </Field>
+
+              <Field label="Password" required={form.allowPortalLogin}>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    className="h-9 w-full rounded border border-slate-300 px-3 text-sm pr-8"
+                    value={form.password}
+                    onChange={(e) => updateField("password", e.target.value)}
+                    disabled={!form.allowPortalLogin}
+                  />
                   <button
-                    key={key}
                     type="button"
-                    onClick={() => setActive(key)}
-                    aria-current={isActive ? "page" : undefined}
-                    className={`relative flex flex-col items-center justify-center shrink-0
-                      min-w-[120px] px-3 py-2 rounded-md transition
-                      ${isActive ? "bg-white" : "hover:bg-slate-50"}`}
+                    className="absolute inset-y-0 right-2 flex items-center text-slate-500"
+                    onClick={() => setShowPassword((s) => !s)}
+                    tabIndex={-1}
                   >
-                    <span
-                      className={`h-11 w-11 rounded-full grid place-items-center border
-                        ${
-                          isActive
-                            ? "bg-customRed text-white border-customRed shadow-sm"
-                            : "bg-gray-100 text-slate-600 border-slate-200"
-                        }`}
-                    >
-                      <Icon className="text-[18px]" />
-                    </span>
-                    <span
-                      className={`mt-2 text-[12px] font-medium text-center whitespace-nowrap
-                        ${isActive ? "text-customRed" : "text-slate-700"}`}
-                    >
-                      {label}
-                    </span>
-                    {isActive && (
-                      <span className="absolute -bottom-px left-0 right-0 h-[2px] bg-customRed" />
-                    )}
+                    {showPassword ? <FaEyeSlash /> : <FaEye />}
                   </button>
-                );
-              })}
-            </nav>
-          </div>
-        </div>
+                </div>
+              </Field>
 
-        {/* Scrollable content */}
-        <div className="px-4 py-4 overflow-y-auto">
-          {active === "general" ? (
-            <GeneralInfoTab
-              form={form}
-              set={set}
-              fileRef={fileRef}
-              errors={errors}
-              showError={showError}
-              markTouched={markTouched}
-            />
-          ) : active === "additional" ? (
-            <AdditionalInformation
-              form={form}
-              set={set}
-              errors={errors}
-              showError={showError}
-              markTouched={markTouched}
-            />
-          ) : active === "company" ? (
-            <CompanyInformation
-              form={form}
-              set={set}
-              errors={errors}
-              showError={showError}
-              markTouched={markTouched}
-            />
-          ) : active === "documents" ? (
-            <EmployeeDocuments form={form} set={set} />
-          ) : active === "salary" ? (
-            <SalaryInformation form={form} set={set} />
-          ) : (
-            <PlaceholderTab label={TABS.find((t) => t.key === active)?.label} />
-          )}
-        </div>
+              <Field label="User Type / Permission Level">
+                <select
+                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
+                  value={form.userType}
+                  onChange={(e) => updateField("userType", e.target.value)}
+                  disabled={!form.allowPortalLogin}
+                >
+                  <option value="">Select user type</option>
+                  {lookups.userTypes.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
 
-        {/* Sticky footer */}
-        <div className="sticky bottom-0 bg-white z-20 border-t">
-          <div className="px-4 py-3 flex items-center justify-between">
-            {/* Checkbox ONLY on General tab */}
-            {active === "general" ? (
-              <label className="inline-flex items-center gap-2 text-sm">
+            <div className="mt-3">
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
                 <input
                   type="checkbox"
-                  checked={form.sendByEmail}
-                  onChange={set("sendByEmail")}
+                  checked={form.allowPortalLogin}
+                  onChange={(e) =>
+                    updateField("allowPortalLogin", e.target.checked)
+                  }
                 />
-                <span>Send Credentials by Email</span>
+                <span>Allow portal login (uses Official Email)</span>
               </label>
-            ) : (
-              <span /> // spacer
-            )}
-
-            <div className="space-x-2 flex items-center">
-              {/* PREVIOUS */}
-              {prevKey && (
-                <button
-                  type="button"
-                  onClick={() => setActive(prevKey)}
-                  className="h-9 px-5 rounded border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
-                >
-                  « Previous
-                </button>
-              )}
-
-              {/* UPDATE — only first & last */}
-              {showUpdate && (
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90 shadow-sm"
-                >
-                  Update
-                </button>
-              )}
-
-              {/* NEXT */}
-              {nextKey && (
-                <button
-                  type="button"
-                  onClick={() => setActive(nextKey)}
-                  className="h-9 px-5 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10"
-                >
-                  Next »
-                </button>
-              )}
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+          </section>
 
-/* ---------------- Tabs ---------------- */
+          {/* Documents Section */}
+          <section className="border rounded-lg p-4 bg-slate-50/40">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">Employee Documents</h3>
+              <button
+                type="button"
+                onClick={addDocumentRow}
+                disabled={!canAddMoreDocs}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-customRed text-customRed text-xs hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <FaPlus />
+                <span>Add Document</span>
+              </button>
+            </div>
 
-function GeneralInfoTab({ form, set, fileRef, errors, showError, markTouched }) {
-  const disabledCreds = !form.allowLogin;
-
-  const baseInput =
-    "w-full h-9 border rounded px-3 focus:ring-customRed focus:border-customRed";
-  const normalBorder = "border-slate-300";
-  const errorBorder = "border-customRed";
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      {/* Left form */}
-      <div className="lg:col-span-8 space-y-4">
-        <Field label="Prefix:">
-          <select
-            className={`${baseInput} ${normalBorder} px-2`}
-            value={form.prefix}
-            onChange={set("prefix")}
-            onBlur={markTouched("prefix")}
-          >
-            <option>None</option>
-            <option>Mr</option>
-            <option>Ms</option>
-            <option>Mrs</option>
-          </select>
-        </Field>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field
-            label="Employee Code:"
-            required
-            error={showError("employeeCode") && errors.employeeCode}
-          >
-            <input
-              className={`${baseInput} ${
-                showError("employeeCode") ? errorBorder : normalBorder
-              }`}
-              value={form.employeeCode}
-              onChange={set("employeeCode")}
-              onBlur={markTouched("employeeCode")}
-              aria-invalid={showError("employeeCode")}
-            />
-          </Field>
-          <Field
-            label="Punch Code:"
-            required
-            error={showError("punchCode") && errors.punchCode}
-          >
-            <input
-              className={`${baseInput} ${
-                showError("punchCode") ? errorBorder : normalBorder
-              }`}
-              value={form.punchCode}
-              onChange={set("punchCode")}
-              onBlur={markTouched("punchCode")}
-              aria-invalid={showError("punchCode")}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field
-            label="First Name:"
-            required
-            error={showError("firstName") && errors.firstName}
-          >
-            <input
-              className={`${baseInput} ${
-                showError("firstName") ? errorBorder : normalBorder
-              }`}
-              value={form.firstName}
-              onChange={set("firstName")}
-              onBlur={markTouched("firstName")}
-              aria-invalid={showError("firstName")}
-            />
-          </Field>
-          <Field
-            label="Last Name:"
-            required
-            error={showError("lastName") && errors.lastName}
-          >
-            <input
-              className={`${baseInput} ${
-                showError("lastName") ? errorBorder : normalBorder
-              }`}
-              value={form.lastName}
-              onChange={set("lastName")}
-              onBlur={markTouched("lastName")}
-              aria-invalid={showError("lastName")}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Mobile No:" required error={showError("mobile") && errors.mobile}>
-            <input
-              type="tel"
-              className={`${baseInput} ${showError("mobile") ? errorBorder : normalBorder}`}
-              value={form.mobile}
-              onChange={set("mobile")}
-              onBlur={markTouched("mobile")}
-              aria-invalid={showError("mobile")}
-            />
-          </Field>
-          <Field label="Email:" required error={showError("email") && errors.email}>
-            <input
-              type="email"
-              className={`${baseInput} ${showError("email") ? errorBorder : normalBorder}`}
-              value={form.email}
-              onChange={set("email")}
-              onBlur={markTouched("email")}
-              aria-invalid={showError("email")}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="Employee Reports To:">
-            <select
-              className={`${baseInput} ${normalBorder} px-2`}
-              value={form.reportsTo}
-              onChange={set("reportsTo")}
-              onBlur={markTouched("reportsTo")}
-            >
-              <option value="">Select One</option>
-              <option value="mgr1">Manager 1</option>
-              <option value="mgr2">Manager 2</option>
-            </select>
-          </Field>
-          <Field label="Allow Manual Attendance:">
-            <select
-              className={`${baseInput} ${normalBorder} px-2`}
-              value={form.manualAttendance}
-              onChange={set("manualAttendance")}
-              onBlur={markTouched("manualAttendance")}
-            >
-              <option>No</option>
-              <option>Yes</option>
-            </select>
-          </Field>
-        </div>
-
-        <div className="space-y-3 pt-1">
-          <label className="inline-flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={form.allowLogin}
-              onChange={set("allowLogin")}
-              onBlur={markTouched("allowLogin")}
-            />
-            <span className="text-sm text-slate-700">Allow Employee Login</span>
-          </label>
-
-          <Field label="Roles Template:">
-            <select
-              className={`${baseInput} ${normalBorder} px-2`}
-              value={form.roleTemplate}
-              onChange={set("roleTemplate")}
-              onBlur={markTouched("roleTemplate")}
-            >
-              <option value="">Select One</option>
-              <option value="HR">HR</option>
-              <option value="Manager">Manager</option>
-            </select>
-          </Field>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="User Name:">
-              <input
-                disabled={disabledCreds}
-                className={`${baseInput} ${
-                  disabledCreds
-                    ? "border-slate-200 bg-slate-100 text-slate-500"
-                    : normalBorder
-                }`}
-                value={form.userName}
-                onChange={set("userName")}
-                onBlur={markTouched("userName")}
-              />
-            </Field>
-            <Field label="Password:">
-              <input
-                type="password"
-                disabled={disabledCreds}
-                className={`${baseInput} ${
-                  disabledCreds
-                    ? "border-slate-200 bg-slate-100 text-slate-500"
-                    : normalBorder
-                }`}
-                value={form.password}
-                onChange={set("password")}
-                onBlur={markTouched("password")}
-              />
-            </Field>
-          </div>
-        </div>
-      </div>
-
-      {/* Right photo panel */}
-      <div className="lg:col-span-4">
-        <div className="flex flex-col items-center">
-          <div className="w-48 h-48 rounded border border-slate-200 bg-gray-50 grid place-items-center mb-3 overflow-hidden">
-            {form.photo ? (
-              <img
-                src={URL.createObjectURL(form.photo)}
-                alt="portrait"
-                className="w-full h-full object-cover"
-              />
+            {documents.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                No documents added yet. You can add up to 10 documents (CNIC,
+                Offer Letter, Contract, etc.).
+              </p>
             ) : (
-              <div className="text-slate-400 text-sm flex flex-col items-center">
-                <FaUser className="text-3xl mb-1" />
-                Portrait
+              <div className="space-y-3">
+                {documents.map((doc, idx) => (
+                  <div
+                    key={idx}
+                    className="grid md:grid-cols-[1.5fr,1fr,1.5fr,1fr,1fr,auto] gap-2 items-end bg-white rounded border border-slate-200 p-2"
+                  >
+                    <div>
+                      <Label>Title</Label>
+                      <input
+                        type="text"
+                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
+                        value={doc.title}
+                        onChange={(e) =>
+                          updateDocumentField(idx, "title", e.target.value)
+                        }
+                        placeholder="e.g. CNIC, Contract"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Type</Label>
+                      <select
+                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
+                        value={doc.type}
+                        onChange={(e) =>
+                          updateDocumentField(idx, "type", e.target.value)
+                        }
+                      >
+                        <option value="">Select</option>
+                        {DOC_TYPES.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* ✅ REAL FILE UPLOAD (replaces "path") */}
+                    <div>
+                      <Label>File</Label>
+                      <input
+                        type="file"
+                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs bg-white"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          updateDocumentField(idx, "file", file);
+                          // auto title if empty
+                          if (file && !doc.title.trim()) {
+                            updateDocumentField(idx, "title", file.name);
+                          }
+                        }}
+                      />
+                      {doc.file ? (
+                        <p className="text-[10px] text-slate-500 mt-1 truncate">
+                          Selected: {doc.file.name}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div>
+                      <Label>Issued At</Label>
+                      <input
+                        type="date"
+                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
+                        value={doc.issuedAt || ""}
+                        onChange={(e) =>
+                          updateDocumentField(idx, "issuedAt", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Expires At</Label>
+                      <input
+                        type="date"
+                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
+                        value={doc.expiresAt || ""}
+                        onChange={(e) =>
+                          updateDocumentField(idx, "expiresAt", e.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="pb-1 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => removeDocumentRow(idx)}
+                        className="h-8 w-8 inline-flex items-center justify-center rounded border border-red-200 text-red-500 hover:bg-red-50 text-xs"
+                        title="Remove document"
+                      >
+                        <FaTrash />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </div>
+          </section>
+        </form>
 
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0] || null;
-              if (f) set("photo")(f);
-            }}
-          />
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-sm inline-flex items-center gap-2"
-            >
-              <FaUpload /> Upload Photo
-            </button>
-            <button
-              type="button"
-              onClick={() => set("photo")(null)}
-              className="px-3 py-1.5 rounded border border-slate-300 bg-white hover:bg-slate-50 text-sm inline-flex items-center gap-2"
-            >
-              <FaTimes /> Clear Photo
-            </button>
-          </div>
+        {/* footer */}
+        <div className="px-5 py-3 border-t flex items-center justify-end gap-2 bg-white">
+          <button
+            type="button"
+            onClick={handleClose}
+            className="h-9 px-4 rounded border border-slate-300 bg-white text-sm hover:bg-slate-50"
+            disabled={loading}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="h-9 px-5 rounded bg-customRed text-white text-sm hover:bg-customRed/90 disabled:opacity-60"
+            disabled={loading}
+          >
+            {loading ? "Saving..." : "Save Employee"}
+          </button>
         </div>
       </div>
     </div>
   );
 }
 
-function PlaceholderTab({ label }) {
-  return <div className="text-sm text-slate-500">{label} — UI coming next.</div>;
+/* small helpers */
+
+function Field({ label, required, children }) {
+  return (
+    <div className="text-sm">
+      <Label required={required}>{label}</Label>
+      {children}
+    </div>
+  );
 }
 
-function Field({ label, required, error, children }) {
+function Label({ children, required }) {
   return (
-    <div>
-      <label className="block text-sm text-slate-700 mb-1">
-        {label} {required && <span className="text-customRed align-middle">*</span>}
-      </label>
+    <label className="block mb-1 text-xs font-medium text-slate-700">
       {children}
-      {error ? <p className="mt-1 text-[12px] text-customRed">{error}</p> : null}
-    </div>
+      {required && <span className="text-red-500 align-middle ml-0.5">*</span>}
+    </label>
   );
 }
