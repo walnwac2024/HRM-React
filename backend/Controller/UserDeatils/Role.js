@@ -220,26 +220,27 @@ const BASE_EMP_FIELDS = `
   Designations     AS designation
 `;
 
-// Utility: build tabs from features (super_admin sees all)
+// Utility: build tabs from features (super_admin, admin, and hr see all)
 function buildTabs(roleName, features) {
   const r = String(roleName || '').toLowerCase();
   const f = new Set(features || []);
 
-  const can = (code) => r === 'super_admin' || f.has(code);
+  // ✅ super_admin, admin, and hr get all tabs
+  const can = (code) => r === 'super_admin' || r === 'admin' || r === 'hr' || f.has(code);
 
   const tabs = [];
   const add = (key, label, code) => { if (can(code)) tabs.push({ key, label }); };
 
-  add('dashboard',   'Dashboard',   'dashboard_view');
-  add('organization','Organization','org_view');
+  add('dashboard', 'Dashboard', 'dashboard_view');
+  add('organization', 'Organization', 'org_view');
   add('recruitment', 'Recruitment', 'recruitment_view');
-  add('employee',    'Employee',    'employee_view');
-  add('timesheet',   'Timesheet',   'timesheet_view');
-  add('leave',       'Leave',       'leave_view');
-  add('attendance',  'Attendance',  'attendance_view');
+  add('employee', 'Employee', 'employee_view');
+  add('timesheet', 'Timesheet', 'timesheet_view');
+  add('leave', 'Leave', 'leave_view');
+  add('attendance', 'Attendance', 'attendance_view');
   add('performance', 'Performance', 'performance_view');
-  add('payroll',     'Payroll',     'payroll_view');
-  add('reports',     'Reports',     'reports_view');
+  add('payroll', 'Payroll', 'payroll_view');
+  add('reports', 'Reports', 'reports_view');
 
   return tabs;
 }

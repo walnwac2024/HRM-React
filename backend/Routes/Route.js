@@ -62,6 +62,18 @@ const {
   updateActiveRule,
 } = require("../Controller/Attendance/AttendanceSettings");
 
+// ✅ NEW: Leaves
+const {
+  getLeaveTypes,
+  applyLeave,
+  getMyLeaves,
+  getAllLeaves,
+  approveLeave,
+  createLeaveType,
+  updateLeaveType,
+  deleteLeaveType,
+} = require("../Controller/Leaves/Leave");
+
 // ---------- MIDDLEWARE ----------
 const {
   isAuthenticated,
@@ -344,6 +356,51 @@ router.put(
   isAuthenticated,
   requireRole("super_admin", "admin", "hr"),
   updateActiveRule
+);
+
+/*
+|--------------------------------------------------------------------------|
+| LEAVE MANAGEMENT (NEW)                                                   |
+|--------------------------------------------------------------------------|
+*/
+router.get("/leaves/types", isAuthenticated, getLeaveTypes);
+router.post("/leaves/apply", isAuthenticated, applyLeave);
+router.get("/leaves/my", isAuthenticated, getMyLeaves);
+
+router.get(
+  "/leaves/admin/all",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  getAllLeaves
+);
+
+router.patch(
+  "/leaves/approve/:id",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  approveLeave
+);
+
+/* --- LEAVE SETTINGS (Admin Only) --- */
+router.post(
+  "/leaves/types",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  createLeaveType
+);
+
+router.patch(
+  "/leaves/types/:id",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  updateLeaveType
+);
+
+router.delete(
+  "/leaves/types/:id",
+  isAuthenticated,
+  requireRole("hr", "admin", "super_admin"),
+  deleteLeaveType
 );
 
 module.exports = router;

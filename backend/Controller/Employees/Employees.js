@@ -119,9 +119,11 @@ async function createEmployee(req, res) {
 
     // login
     officialEmail,
+    personalEmail,
     allowPortalLogin,
     password,
     userType,
+    shiftId,
   } = req.body || {};
 
   try {
@@ -233,7 +235,7 @@ async function createEmployee(req, res) {
         gender || "",
         dateOfBirth || "",
         cnic || "",
-        null, // Email (personal, not used here)
+        personalEmail || null, // Email (personal)
         personalContact || "",
         bloodGroup || "",
         religion || "",
@@ -263,25 +265,29 @@ async function createEmployee(req, res) {
           );
           if (types.length) {
             const userTypeId = types[0].id;
-
             await conn.execute(
-              "DELETE FROM employee_user_types WHERE employee_id = ?",
-              [newEmployeeId]
-            );
-
-            await conn.execute(
-              `
-              INSERT INTO employee_user_types (employee_id, user_type_id, is_primary)
-              VALUES (?, ?, 1)
-              `,
+              "INSERT INTO employee_user_types (employee_id, user_type_id, is_primary) VALUES (?, ?, 1)",
               [newEmployeeId, userTypeId]
             );
           }
         } catch (linkErr) {
-          console.error(
-            "createEmployee: could not link userType (employee still created)",
-            linkErr
+          console.error("createEmployee: could not link userType", linkErr);
+        }
+      }
+
+      // --- assign shift ---
+      if (shiftId) {
+        try {
+          await conn.execute(
+            "INSERT INTO employee_shift_assignments (employee_id, shift_id, effective_from) VALUES (?, ?, ?)",
+            [newEmployeeId, shiftId, dateOfJoining || new Date().toISOString().slice(0, 10)]
           );
+        } catch (shiftErr) {
+          console.error("createEmployee: could not assign shift", shiftErr);
+          // we don't rollback here as employee is already created 
+          // or we could rollback if we want it to be atomic.
+          // In this case, let's keep it atomic if it fits the flow.
+          throw shiftErr;
         }
       }
 
@@ -299,11 +305,14 @@ async function createEmployee(req, res) {
         name: emp.Employee_Name,
       });
     } catch (err) {
-      await conn.rollback();
+      if (conn) await conn.rollback();
       console.error("createEmployee error:", err);
-      return res.status(500).json({ message: "Server error" });
+      const msg = err.code === 'ER_DUP_ENTRY'
+        ? "An employee with this email or ID already exists."
+        : (err.message || "Server error");
+      return res.status(500).json({ message: msg });
     } finally {
-      conn.release();
+      if (conn) conn.release();
     }
   } catch (outerErr) {
     console.error("createEmployee outer error:", outerErr);
@@ -466,7 +475,14 @@ async function getEmployeeById(req, res) {
     }
 
     const [rows] = await pool.execute(
-      "SELECT * FROM employee_records WHERE id = ? LIMIT 1",
+      `
+      SELECT e.*, ut.type AS userType
+      FROM employee_records e
+      LEFT JOIN employee_user_types eut ON eut.employee_id = e.id AND eut.is_primary = 1
+      LEFT JOIN users_types ut ON ut.id = eut.user_type_id
+      WHERE e.id = ?
+      LIMIT 1
+      `,
       [requestedId]
     );
 
@@ -494,13 +510,17 @@ async function getEmployeeById(req, res) {
       bloodGroup: emp.Blood_Group,
 
       emailPersonal: emp.Email,
+      personalEmail: emp.Email, // Unified field
       emailOfficial: emp.Official_Email,
+      officialEmail: emp.Official_Email, // Unified field
       contact: emp.Contact,
       emergencyContact: emp.Emergency_Contact,
       address: emp.Address,
 
       canLogin: !!emp.can_login,
       isActive: !!emp.is_active,
+
+      userType: emp.userType || null,
 
       profile_picture: emp.profile_img || null,
       profile_img: emp.profile_img || null,
@@ -532,7 +552,9 @@ async function updateEmployee(req, res) {
       gender,
       bloodGroup,
       emailPersonal,
+      personalEmail, // Unified field
       emailOfficial,
+      officialEmail, // Unified field
       contact,
       emergencyContact,
       address,
@@ -585,13 +607,13 @@ async function updateEmployee(req, res) {
       fields.push("Blood_Group = ?");
       params.push(bloodGroup);
     }
-    if (emailPersonal !== undefined) {
+    if (emailPersonal !== undefined || personalEmail !== undefined) {
       fields.push("Email = ?");
-      params.push(emailPersonal);
+      params.push(personalEmail ?? emailPersonal);
     }
-    if (emailOfficial !== undefined) {
+    if (emailOfficial !== undefined || officialEmail !== undefined) {
       fields.push("Official_Email = ?");
-      params.push(emailOfficial);
+      params.push(officialEmail ?? emailOfficial);
     }
     if (contact !== undefined) {
       fields.push("Contact = ?");
@@ -698,11 +720,14 @@ async function updateEmployeeLogin(req, res) {
       await conn.commit();
       return res.json({ message: "Employee login updated successfully" });
     } catch (err) {
-      await conn.rollback();
+      if (conn) await conn.rollback();
       console.error("updateEmployeeLogin error:", err);
-      return res.status(500).json({ message: "Server error" });
+      const msg = err.code === "ER_DUP_ENTRY"
+        ? "An employee with this email or ID already exists."
+        : (err.message || "Server error");
+      return res.status(500).json({ message: msg });
     } finally {
-      conn.release();
+      if (conn) conn.release();
     }
   } catch (outerErr) {
     console.error("updateEmployeeLogin outer error:", outerErr);
@@ -1029,13 +1054,13 @@ async function deleteEmployeeDocument(req, res) {
   } catch (err) {
     try {
       if (conn) await conn.rollback();
-    } catch {}
+    } catch { }
     console.error("deleteEmployeeDocument error:", err);
     return res.status(500).json({ message: "Server error" });
   } finally {
     try {
       if (conn) conn.release();
-    } catch {}
+    } catch { }
   }
 }
 
@@ -1107,13 +1132,13 @@ async function replaceEmployeeDocumentFile(req, res) {
   } catch (err) {
     try {
       if (conn) await conn.rollback();
-    } catch {}
+    } catch { }
     console.error("replaceEmployeeDocumentFile error:", err);
     return res.status(500).json({ message: "Server error" });
   } finally {
     try {
       if (conn) conn.release();
-    } catch {}
+    } catch { }
   }
 }
 
@@ -1186,7 +1211,7 @@ async function lookupUserTypes(req, res) {
       `
       SELECT type AS value
       FROM users_types
-      WHERE del = 'N'
+      WHERE del != 'Y' OR del IS NULL
       ORDER BY type
       `
     );

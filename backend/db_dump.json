@@ -1,0 +1,92 @@
+[
+  {
+    "id": 1,
+    "type": "admin",
+    "permission_level": "9.0",
+    "del": "N",
+    "Create_permission": 9,
+    "Edit_permission": 9,
+    "View_permission": 9
+  },
+  {
+    "id": 2,
+    "type": "standard",
+    "permission_level": "3.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 3,
+    "type": "manager",
+    "permission_level": "4.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 4,
+    "type": "user",
+    "permission_level": "0.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 5,
+    "type": "accounts",
+    "permission_level": "3.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 6,
+    "type": "dealer",
+    "permission_level": "3.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 7,
+    "type": "director",
+    "permission_level": "6.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 8,
+    "type": "zone_manager",
+    "permission_level": "5.0",
+    "del": "N",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  },
+  {
+    "id": 9,
+    "type": "super_admin",
+    "permission_level": "10.0",
+    "del": "N",
+    "Create_permission": 10,
+    "Edit_permission": 10,
+    "View_permission": 10
+  },
+  {
+    "id": 10,
+    "type": "HR",
+    "permission_level": "8.0",
+    "del": "",
+    "Create_permission": 0,
+    "Edit_permission": 0,
+    "View_permission": 0
+  }
+]
