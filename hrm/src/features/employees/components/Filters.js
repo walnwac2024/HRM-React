@@ -38,7 +38,7 @@ const LabeledInput = ({
         onChange={handleChange}
         onBlur={handleBlur}
         placeholder={placeholder}
-        className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:ring-2 focus:ring-customRed/30 focus:border-customRed"
+        className="input"
       />
     </label>
   );
@@ -66,7 +66,7 @@ const LabeledSelect = ({
         name={name}
         value={value ?? ""}
         onChange={handleChange}
-        className="h-9 w-full rounded-md border border-slate-300 px-2 text-sm outline-none focus:ring-2 focus:ring-customRed/30 focus:border-customRed"
+        className="select"
       >
         {options.map((o) => (
           <option key={o.value ?? o} value={o.value ?? o}>

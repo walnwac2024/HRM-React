@@ -40,7 +40,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
   const { employee, loading, error } = useEmployee(employeeId);
   const { user } = useAuth();
   const role = user?.role;
-  const canEditVault = role === "super_admin" || role === "admin";
+  const canEditVault = role === "super_admin" || role === "admin" || role === "hr";
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingVault, setSavingVault] = useState(false);
@@ -58,8 +58,8 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     cnic: "",
     gender: "",
     bloodGroup: "",
-    emailPersonal: "",
-    emailOfficial: "",
+    personalEmail: "",
+    officialEmail: "",
     contact: "",
     emergencyContact: "",
     address: "",
@@ -73,6 +73,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
   });
 
   const [userTypes, setUserTypes] = useState([]);
+  const [statuses, setStatuses] = useState([]);
 
   // ---------------- DOCUMENTS STATE (NEW) ----------------
   const [docsLoading, setDocsLoading] = useState(false);
@@ -111,10 +112,17 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
   };
 
   useEffect(() => {
-    api
-      .get("/employees/lookups/user-types")
-      .then((res) => setUserTypes(res.data || []))
-      .catch(() => setUserTypes([]));
+    Promise.all([
+      api.get("/employees/lookups/user-types"),
+      api.get("/employees/lookups/statuses")
+    ])
+      .then(([utRes, stRes]) => {
+        setUserTypes(utRes.data || []);
+        setStatuses(stRes.data || []);
+      })
+      .catch((err) => {
+        console.error("Failed to load edit lookups", err);
+      });
   }, []);
 
   useEffect(() => {
@@ -132,15 +140,15 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       cnic: employee.cnic || "",
       gender: employee.gender || "",
       bloodGroup: employee.bloodGroup || "",
-      emailPersonal: employee.emailPersonal || "",
-      emailOfficial: employee.emailOfficial || "",
+      personalEmail: employee.personalEmail || "",
+      officialEmail: employee.officialEmail || "",
       contact: employee.contact || "",
       emergencyContact: employee.emergencyContact || "",
       address: employee.address || "",
     });
 
     setVaultForm({
-      officialEmail: employee.emailOfficial || "",
+      officialEmail: employee.officialEmail || "",
       canLogin: employee.canLogin ?? true,
       password: "",
       userType: employee.userType || "",
@@ -247,8 +255,8 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       console.error("Replace doc file failed", e);
       alert(
         e?.response?.data?.message ||
-          e?.message ||
-          "Failed to replace document file"
+        e?.message ||
+        "Failed to replace document file"
       );
     } finally {
       setDocReplacingId(null);
@@ -414,7 +422,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="name"
                   value={profileForm.name}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -424,7 +432,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="employeeCode"
                   value={profileForm.employeeCode}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -434,7 +442,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="department"
                   value={profileForm.department}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -444,7 +452,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="designation"
                   value={profileForm.designation}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -454,18 +462,25 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="station"
                   value={profileForm.station}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
               <Field label="Status:">
-                <input
-                  type="text"
+                <select
                   name="status"
                   value={profileForm.status}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                />
+                  className="select"
+                >
+                  <option value="">Select Status</option>
+                  {statuses.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                  {!statuses.includes(profileForm.status) && profileForm.status && (
+                    <option value={profileForm.status}>{profileForm.status}</option>
+                  )}
+                </select>
               </Field>
 
               <Field label="Date of Birth:">
@@ -474,7 +489,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="dateOfBirth"
                   value={profileForm.dateOfBirth || ""}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -484,7 +499,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="dateOfJoining"
                   value={profileForm.dateOfJoining || ""}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -494,7 +509,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="cnic"
                   value={profileForm.cnic}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -504,7 +519,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="gender"
                   value={profileForm.gender}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -514,27 +529,27 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="bloodGroup"
                   value={profileForm.bloodGroup}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
               <Field label="Official Email:">
                 <input
                   type="email"
-                  name="emailOfficial"
-                  value={profileForm.emailOfficial}
+                  name="officialEmail"
+                  value={profileForm.officialEmail}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
               <Field label="Personal Email:">
                 <input
                   type="email"
-                  name="emailPersonal"
-                  value={profileForm.emailPersonal}
+                  name="personalEmail"
+                  value={profileForm.personalEmail}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -544,7 +559,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="contact"
                   value={profileForm.contact}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
 
@@ -554,7 +569,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   name="emergencyContact"
                   value={profileForm.emergencyContact}
                   onChange={onProfileChange}
-                  className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                  className="input"
                 />
               </Field>
             </div>
@@ -564,7 +579,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                 name="address"
                 value={profileForm.address}
                 onChange={onProfileChange}
-                className="w-full rounded border border-slate-300 px-3 py-2 text-xs resize-none focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                className="textarea"
                 rows={3}
               />
             </Field>
@@ -822,11 +837,10 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
 
                                   <div className="flex-1 min-w-0">
                                     <div
-                                      className={`h-9 w-full rounded-lg border px-3 text-xs flex items-center ${
-                                        fileName
-                                          ? "border-slate-300 text-slate-800"
-                                          : "border-slate-200 text-slate-400"
-                                      }`}
+                                      className={`h-9 w-full rounded-lg border px-3 text-xs flex items-center ${fileName
+                                        ? "border-slate-300 text-slate-800"
+                                        : "border-slate-200 text-slate-400"
+                                        }`}
                                       title={fileName || "No file selected"}
                                     >
                                       <span className="truncate">
@@ -917,11 +931,10 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   value={vaultForm.officialEmail}
                   onChange={onVaultChange}
                   disabled={!canEditVault}
-                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${
-                    canEditVault
-                      ? "border-slate-300 focus:border-customRed focus:ring-customRed"
-                      : "border-slate-200 bg-slate-50 text-slate-500"
-                  }`}
+                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
+                    ? "border-slate-300 focus:border-customRed focus:ring-customRed"
+                    : "border-slate-200 bg-slate-50 text-slate-500"
+                    }`}
                 />
               </Field>
 
@@ -931,11 +944,10 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   value={vaultForm.userType}
                   onChange={onVaultChange}
                   disabled={!canEditVault}
-                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${
-                    canEditVault
-                      ? "border-slate-300 focus:border-customRed focus:ring-customRed"
-                      : "border-slate-200 bg-slate-50 text-slate-500"
-                  }`}
+                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
+                    ? "border-slate-300 focus:border-customRed focus:ring-customRed"
+                    : "border-slate-200 bg-slate-50 text-slate-500"
+                    }`}
                 >
                   <option value="">Select user type</option>
                   {userTypes.map((type) => (

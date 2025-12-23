@@ -22,6 +22,7 @@ import AttendanceSettings from "./features/attendance/components/AttendanceSetti
 
 // 👇 NEW: profile page
 import ProfilePage from "./features/profile/ProfilePage";
+import LeavePage from "./features/leave/LeavePage";
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -103,7 +104,7 @@ export default function App() {
             <Route path="/organization" element={<div className="p-4">Organization</div>} />
             <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
             <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />
-            <Route path="/leave" element={<div className="p-4">Leave</div>} />
+            <Route path="/leave" element={<LeavePage />} />
             <Route path="/performance" element={<div className="p-4">Performance</div>} />
             <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
             <Route path="/reports" element={<div className="p-4">Reports</div>} />

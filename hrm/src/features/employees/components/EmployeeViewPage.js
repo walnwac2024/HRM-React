@@ -63,7 +63,7 @@ export default function EmployeeViewPage() {
       <div className="p-8">
         <button
           onClick={() => navigate(-1)}
-          className="mb-4 inline-flex items-center px-3 py-1.5 rounded border border-slate-300 text-xs font-medium bg-white hover:bg-slate-50"
+          className="mb-4 btn-ghost h-10 px-4"
         >
           ← Back
         </button>
@@ -115,7 +115,7 @@ export default function EmployeeViewPage() {
         {/* BACK BUTTON */}
         <button
           onClick={() => navigate(-1)}
-          className="mb-4 inline-flex items-center px-3 py-1.5 rounded-md border border-slate-300 text-xs font-medium bg-white hover:bg-slate-50 shadow-sm"
+          className="mb-4 btn-ghost h-10 px-4"
         >
           ← Back
         </button>
@@ -281,21 +281,19 @@ export default function EmployeeViewPage() {
 
                             {/* right actions */}
                             <div className="shrink-0 flex items-center gap-2">
-                              {/* ✅ View button now has text */}
                               <a
                                 href={viewUrl}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="h-9 inline-flex items-center gap-2 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 hover:border-slate-300 transition"
+                                className="btn-outline h-10 px-4"
                               >
-                                {/* <span className="text-sm leading-none">👁️</span> */}
-                                <span>View</span>
+                                View
                               </a>
 
                               <button
                                 type="button"
                                 onClick={() => handleDownload(doc)}
-                                className="h-9 px-4 rounded-lg border border-customRed text-customRed text-xs font-semibold hover:bg-customRed/10 transition"
+                                className="btn-primary h-10 px-4"
                               >
                                 Download
                               </button>

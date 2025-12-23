@@ -1,91 +1,194 @@
 /* Tailwind layers */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+
 @tailwind base;
 @tailwind components;
 
 @layer components {
+
   /* -------- page + card -------- */
-  .page { @apply mx-auto max-w-screen-2xl px-6 pt-4 pb-6; }
-  .card { @apply bg-white rounded-2xl shadow-sm ring-1 ring-gray-100; }
-  .card-header { @apply border-b border-gray-100 px-4 py-3; }
-  .card-body { @apply px-4 py-3; }
+  /* -------- page + card -------- */
+  .page {
+    /* Page padding 24px (px-6) top/bottom can be adjusted */
+    @apply mx-auto max-w-screen-2xl px-6 py-6;
+  }
 
-  /* -------- inputs -------- */
-  .input    { @apply w-full h-10 rounded-md border border-gray-300 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-gray-200; }
-  .select   { @apply input; }
-  .textarea { @apply input h-auto py-2; }
+  .card {
+    /* radius 12 is rounded-xl? rounded-2xl is 16px usually. rounded-xl is 12px. User said radius 12. */
+    @apply bg-white rounded-xl shadow-sm ring-1 ring-gray-100;
+  }
 
-  /* -------- buttons (unified) -------- */
+  .card-header {
+    /* padding 16-20. px-5 is 20px. py-4 is 16px. */
+    @apply border-b border-gray-100 px-5 py-4;
+  }
+
+  .card-title {
+    /* H2 20 semibold? Or is this H3? Usually card title is H2 or smaller. 
+       User said H2 20 semibold. Let's map card title to H2 style or keep small caps if it's a "label".
+       The previous style was small caps. Let's make it H2 style if it's a main heading, 
+       but for "Filters" maybe keep it small. 
+       Actually user said H1 28 Bold, H2 20 Semi. 
+       Let's add generic utility classes for these. 
+    */
+    @apply text-lg font-semibold text-slate-800;
+    /* ~18-20px */
+  }
+
+  .card-body {
+    /* padding 16-20. p-5 = 20px. */
+    @apply p-5;
+  }
+
+  /* -------- Typography mappings -------- */
+  .h1 {
+    @apply text-[28px] font-bold text-slate-900 leading-tight;
+  }
+
+  .h2 {
+    @apply text-[20px] font-semibold text-slate-800 leading-snug;
+  }
+
+  /* Body defaults to 14-15. Tailwind base is 16, sm is 14. 
+     We can set body in @layer base if needed, currently we use utilities.
+  */
+
+  /* -------- inputs (Premium Standard: 40px height, radius 12) -------- */
+  .input {
+    /* h-10 is 40px. rounded-xl is 12px. */
+    @apply w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-[14px] outline-none focus:border-customRed focus:ring-1 focus:ring-customRed/20 transition-all shadow-sm;
+  }
+
+  .select {
+    @apply input appearance-none bg-no-repeat bg-right pr-8;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-size: 1.5em 1.5em;
+  }
+
+  .textarea {
+    @apply input h-auto py-2;
+  }
+
+  /* -------- buttons (Unified Premium: 40px height, radius 12) -------- */
   .btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 h-9 text-sm font-medium
-           transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1;
+    @apply inline-flex items-center justify-center rounded-xl px-6 h-10 text-[14px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-95;
   }
+
   .btn-primary {
-    @apply btn bg-customRed text-white hover:brightness-95 active:brightness-90
-           focus-visible:ring-customRed/30;
+    @apply btn bg-customRed text-white hover:bg-customRed/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-customRed;
   }
+
   .btn-outline {
-    @apply btn border border-customRed text-customRed bg-white
-           hover:bg-customRed/10 active:bg-customRed/15
-           focus-visible:ring-customRed/25;
+    @apply btn border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
   }
-  .btn-chip {
-    @apply inline-flex items-center justify-center rounded-lg border border-gray-300
-           px-3 h-9 text-sm bg-white text-gray-700 hover:bg-gray-50;
+
+  .btn-ghost {
+    @apply btn bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 shadow-none;
   }
-  .btn-ghost { @apply btn text-gray-600 hover:bg-gray-50; }
 
-  /* disabled look (same as Employee) + very light hover tint */
-  .btn-outline:disabled,
-  .btn-outline[aria-disabled="true"] { @apply border-customRed/30 text-customRed/40 bg-white cursor-not-allowed opacity-100; }
-  .btn-outline:disabled:hover,
-  .btn-outline[aria-disabled="true"]:hover { @apply bg-customRed/5; }
-  .btn-outline:disabled:focus,
-  .btn-outline[aria-disabled="true"]:focus { @apply bg-customRed/5 shadow-none; }
+  /* -------- sidebar bits (Gold Standard) -------- */
+  .sidebar {
+    @apply w-64 shrink-0;
+  }
 
-  .btn-primary:disabled,
-  .btn-primary[aria-disabled="true"] { @apply bg-customRed/40 text-white/80 cursor-not-allowed; }
-  .btn-primary:disabled:hover,
-  .btn-primary:disabled:focus,
-  .btn-primary[aria-disabled="true"]:hover,
-  .btn-primary[aria-disabled="true"]:focus { @apply shadow-none; }
+  .sidebar-card {
+    @apply sticky top-6 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden;
+  }
 
-  /* -------- sidebar bits (unchanged) -------- */
-  .sidebar         { @apply w-60 shrink-0; }
-  .sidebar-card    { @apply bg-white rounded-2xl shadow-sm ring-1 ring-gray-100; }
-  .sidebar-heading { @apply px-5 pt-4 pb-3 text-xs font-semibold tracking-wide text-gray-500; }
-  .sidebar-list    { @apply px-2 pb-4; }
-  .sidebar-item    { @apply relative w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50; }
-  .sidebar-icon    { @apply h-4 w-4 text-gray-400; }
-  .sidebar-active  { @apply bg-customRed/10 text-customRed; }
-  .sidebar-active .sidebar-icon { @apply text-customRed; }
-  .sidebar-strip   { @apply absolute left-0 top-0 h-full w-1 rounded-l; background-color: theme('colors.customRed'); }
+  .sidebar-heading {
+    @apply px-5 pt-4 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-500;
+  }
+
+  .sidebar-list {
+    @apply px-2 pb-4 space-y-1;
+  }
+
+  .sidebar-item {
+    @apply relative w-full flex items-center gap-3 rounded-xl px-3 h-10 text-[14px] font-medium text-slate-700 transition-all duration-200 hover:bg-slate-50 outline-none text-left;
+  }
+
+  .sidebar-icon {
+    @apply h-[18px] w-[18px] text-slate-400 transition-colors;
+  }
+
+  .sidebar-active {
+    @apply bg-customRed/10 text-customRed font-semibold;
+  }
+
+  .sidebar-active .sidebar-icon {
+    @apply text-customRed;
+  }
+
+  .sidebar-strip {
+    @apply absolute left-0 top-2 h-[calc(100%-16px)] w-[4px] rounded-r-md;
+    background-color: theme('colors.customRed');
+  }
+
+  /* Submenu */
+  .sidebar-submenu {
+    @apply mt-1 ml-9 space-y-1 border-l border-slate-100 pl-4 py-1;
+  }
+
+  .sidebar-subitem {
+    @apply block py-1.5 text-[13px] text-slate-500 hover:text-customRed transition-colors;
+  }
+
+  .sidebar-subitem-active {
+    @apply text-customRed font-medium;
+  }
+
+  /* -------- Standard Cards -------- */
+  /* Remove duplicate .card definitions if any, keeping the simplified unified one above */
 
   /* -------- labels -------- */
-  .form-label { @apply block text-[13px] leading-5 font-normal text-gray-600 mb-1; }
+  .form-label {
+    @apply block text-[13px] leading-5 font-normal text-gray-600 mb-1;
+  }
 
   /* -------- tables (match Employee) -------- */
-  /* collapse so the header divider is one clean line like Employee */
-  .table { @apply w-full border-collapse; }
+  .table {
+    @apply w-full border-collapse;
+  }
 
-  /* header style + subtle divider using customLightGrey */
-  .thead { @apply text-sm font-semibold text-gray-800 border-b border-customLightGrey/40; }
-  .th    { @apply text-left py-3 px-4 text-sm font-semibold text-gray-800; }
+  .thead {
+    /* Sticky header requirement */
+    @apply sticky top-0 z-10 bg-white text-sm font-semibold text-gray-800 border-b border-customLightGrey/40;
+  }
 
-  /* body rows */
-  .tr    { @apply border-b border-gray-100 last:border-b-0; }
-  .td    { @apply py-4 px-4 align-top text-sm text-gray-700; }
+  .th {
+    @apply text-left py-3 px-4 text-sm font-semibold text-gray-800 whitespace-nowrap;
+  }
 
-  /* soft hover to match Employee feel */
-  .row:hover > .td { background-color: theme('colors.gray.50'); }
+  .tr {
+    @apply border-b border-gray-100 last:border-b-0 hover:bg-slate-50 transition-colors;
+  }
+
+  .td {
+    @apply py-4 px-4 align-top text-sm text-gray-700;
+  }
 
   /* badges */
-  .badge       { @apply inline-flex items-center rounded-full px-2.5 h-6 text-xs font-medium; }
-  .badge-red   { @apply badge bg-customRed/10 text-customRed; }
-  .badge-green { @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200; }
-  .badge-gray  { @apply badge bg-gray-100 text-gray-700; }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 h-6 text-xs font-medium;
+  }
+
+  .badge-red {
+    @apply badge bg-customRed/10 text-customRed;
+  }
+
+  .badge-green {
+    @apply badge bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200;
+  }
+
+  .badge-gray {
+    @apply badge bg-gray-100 text-gray-700;
+  }
 
   /* kebab */
-  .kebab { @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-customRed text-customRed hover:bg-customRed/10; }
+  .kebab {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-customRed text-customRed hover:bg-customRed/10;
+  }
 }
 
 @tailwind utilities;

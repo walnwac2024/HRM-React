@@ -130,8 +130,8 @@ export default function EmployeesPage() {
       console.error("Failed to update employee status", e);
       alert(
         e?.response?.data?.message ||
-          e?.message ||
-          "Failed to update employee status"
+        e?.message ||
+        "Failed to update employee status"
       );
     }
   };
@@ -156,11 +156,11 @@ export default function EmployeesPage() {
     if (active === "employee-settings") return <EmployeeSettings />;
 
     return (
-      <div className="pr-6 pb-6">
+      <div className="space-y-6">
         {/* Filters Card */}
-        <div className="bg-white rounded-lg overflow-hidden shadow border border-slate-200">
-          <div className="flex items-center justify-between px-4 py-3 border-b">
-            <div className="font-medium">Filters</div>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">Filters</h2>
           </div>
 
           <div className="p-4">
@@ -201,18 +201,16 @@ export default function EmployeesPage() {
         </div>
 
         {/* Results Card */}
-        <div className="mt-4 bg-white rounded-lg overflow-hidden shadow border border-slate-200">
-          <div className="px-4 py-3 flex items-center justify-between border-b bg-slate-50/70">
-            <div className="text-xs text-slate-500">
+        <div className="card">
+          <div className="card-header">
+            <div className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
               Showing {rows.length} of {total} employees
             </div>
             <div className="w-full max-w-xs">
               <input
                 type="text"
                 placeholder="Search name, code, department..."
-                className="h-8 w-full rounded border border-slate-300 px-3 text-xs
-                           focus:outline-none focus:ring-2 focus:ring-customRed/50
-                           focus:border-customRed"
+                className="input"
                 value={uiFilters.search || ""}
                 onChange={(e) => handleSearchChange(e.target.value)}
               />
@@ -245,7 +243,7 @@ export default function EmployeesPage() {
             <div className="space-x-2">
               <button
                 type="button"
-                className="h-8 px-3 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-outline"
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page <= 1}
               >
@@ -253,7 +251,7 @@ export default function EmployeesPage() {
               </button>
               <button
                 type="button"
-                className="h-8 px-3 rounded border border-customRed text-customRed bg-white hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                className="btn-outline"
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page >= totalPages}
               >
@@ -296,16 +294,9 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-[1600px] pt-5 pb-6">
-        <div className="flex gap-6 items-start">
-          <div className="w-[15rem] shrink-0">
-            <EmployeeSidebar activeKey={active} onNavigate={setActive} />
-          </div>
-
-          <main className="flex-1 min-w-0">{renderMain()}</main>
-        </div>
-      </div>
-    </div>
+    <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
+      <EmployeeSidebar activeKey={active} onNavigate={setActive} />
+      <section className="flex-1 min-w-0">{renderMain()}</section>
+    </main>
   );
 }

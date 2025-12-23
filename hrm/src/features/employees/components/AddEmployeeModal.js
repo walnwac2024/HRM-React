@@ -20,12 +20,17 @@ const DOC_TYPES = [
 const MARITAL_OPTIONS = ["Single", "Married", "Divorced", "Widowed"];
 
 export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
+  const [activeTab, setActiveTab] = useState("employment");
   const [loading, setLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [successData, setSuccessData] = useState(null);
   const [lookups, setLookups] = useState({
     stations: [],
     departments: [],
     designations: [],
     userTypes: [],
+    shifts: [],
+    statuses: [],
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -56,9 +61,11 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
     emergencyRelation: "",
     reportingTo: "",
     officialEmail: "",
+    personalEmail: "",
     allowPortalLogin: true,
     password: "",
     userType: "",
+    shiftId: "",
   });
 
   // ✅ documents state now includes file
@@ -102,12 +109,14 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
 
     async function loadLookups() {
       try {
-        const [stationsRes, departmentsRes, designationsRes, userTypesRes] =
+        const [stationsRes, departmentsRes, designationsRes, userTypesRes, shiftsRes, statusesRes] =
           await Promise.all([
             api.get("/employees/lookups/stations"),
             api.get("/employees/lookups/departments"),
             api.get("/employees/lookups/designations"),
             api.get("/employees/lookups/user-types"),
+            api.get("/attendance/settings/shifts"),
+            api.get("/employees/lookups/statuses"),
           ]);
 
         if (cancelled) return;
@@ -117,6 +126,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
           departments: departmentsRes.data || [],
           designations: designationsRes.data || [],
           userTypes: userTypesRes.data || [],
+          shifts: shiftsRes.data?.shifts || [],
+          statuses: statusesRes.data || [],
         });
       } catch (err) {
         console.error("Failed to load employee lookups", err);
@@ -142,6 +153,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
     if (!form.department.trim()) errors.push("Department is required.");
     if (!form.station.trim()) errors.push("Station / Office is required.");
     if (!form.status.trim()) errors.push("Status is required.");
+    if (!form.shiftId) errors.push("Default Shift is required.");
 
     if (!form.dateOfBirth) errors.push("Date of Birth is required.");
     if (!form.gender.trim()) errors.push("Gender is required.");
@@ -152,6 +164,12 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
       errors.push("Official Email is required.");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.officialEmail)) {
       errors.push("Official Email is not valid.");
+    }
+
+    if (!form.personalEmail.trim()) {
+      errors.push("Personal Email is required.");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.personalEmail)) {
+      errors.push("Personal Email is not valid.");
     }
 
     if (form.allowPortalLogin) {
@@ -224,9 +242,11 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
 
       // login
       officialEmail: form.officialEmail.trim(),
+      personalEmail: form.personalEmail.trim(),
       allowPortalLogin: !!form.allowPortalLogin,
       password: form.password,
       userType: form.userType || null,
+      shiftId: form.shiftId || null,
     };
 
     try {
@@ -235,6 +255,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
       // ✅ STEP 1: create employee
       const res = await api.post("/employees", payload);
       const created = res.data;
+      setSuccessData(created);
+      setIsSuccess(true);
 
       const code = created?.employeeCode || "(auto)";
       toast.success(`Employee created successfully. ID: ${code}`);
@@ -298,462 +320,579 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
       aria-modal="true"
       role="dialog"
     >
-      <div className="bg-white rounded-xl shadow-xl max-w-6xl w-[98%] max-h-[96vh] overflow-hidden flex flex-col">
-        {/* header */}
-        <div className="flex items-center justify-between px-5 py-3 border-b">
-          <h2 className="text-lg font-semibold">Add New Employee</h2>
-          <button
-            type="button"
-            onClick={handleClose}
-            className="text-slate-500 hover:text-slate-700"
-          >
-            <FaTimes />
-          </button>
-        </div>
+      <div className="bg-white w-full max-w-5xl max-h-[90vh] overflow-hidden rounded-3xl shadow-2xl flex flex-col animate-in zoom-in-95 duration-300">
 
-        {/* body */}
-        <form
-          className="flex-1 overflow-y-auto px-5 py-4 space-y-5"
-          onSubmit={handleSubmit}
-        >
-          {/* Employment Details */}
-          <section className="border rounded-lg p-4 bg-slate-50/40">
-            <h3 className="font-semibold mb-3">Employment Details</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Field label="Employee ID / Code (auto)">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 bg-slate-100 text-slate-500 px-3 text-sm"
-                  value={
-                    form.employeeCode
-                      ? form.employeeCode
-                      : "Will be generated on save"
-                  }
-                  disabled
-                />
-              </Field>
-
-              <Field label="Full Name" required>
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.fullName}
-                  onChange={(e) => updateField("fullName", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Designation" required>
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.designation}
-                  onChange={(e) => updateField("designation", e.target.value)}
-                >
-                  <option value="">Select Designation</option>
-                  {lookups.designations.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Department" required>
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.department}
-                  onChange={(e) => updateField("department", e.target.value)}
-                >
-                  <option value="">Select Department</option>
-                  {lookups.departments.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Station / Office" required>
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.station}
-                  onChange={(e) => updateField("station", e.target.value)}
-                >
-                  <option value="">Select Station</option>
-                  {lookups.stations.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="Status" required>
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.status}
-                  onChange={(e) => updateField("status", e.target.value)}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Probation">Probation</option>
-                  <option value="Left">Left</option>
-                  <option value="On Hold">On Hold</option>
-                </select>
-              </Field>
+        {isSuccess ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-200">
+              <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          </section>
+            <h2 className="text-3xl font-black text-slate-900 mb-2">Employee Added!</h2>
+            <p className="text-slate-500 max-w-md mb-8">
+              New employee <span className="font-bold text-slate-800">{successData?.fullName || successData?.name}</span> has been successfully onboarded with ID <span className="text-customRed font-bold">{successData?.employeeCode}</span>.
+            </p>
 
-          {/* Personal Information */}
-          <section className="border rounded-lg p-4 bg-slate-50/40">
-            <h3 className="font-semibold mb-3">Personal Information</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Field label="Date of Birth" required>
-                <input
-                  type="date"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.dateOfBirth}
-                  onChange={(e) => updateField("dateOfBirth", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Gender" required>
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.gender}
-                  onChange={(e) => updateField("gender", e.target.value)}
-                >
-                  <option value="">Select</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
-              </Field>
-
-              <Field label="Blood Group">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.bloodGroup}
-                  onChange={(e) => updateField("bloodGroup", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Religion">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.religion}
-                  onChange={(e) => updateField("religion", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Marital Status">
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.maritalStatus}
-                  onChange={(e) => updateField("maritalStatus", e.target.value)}
-                >
-                  <option value="">Select</option>
-                  {MARITAL_OPTIONS.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field label="CNIC">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.cnic}
-                  onChange={(e) => updateField("cnic", e.target.value)}
-                />
-              </Field>
-            </div>
-
-            <div className="mt-4">
-              <Field label="Address">
-                <textarea
-                  className="w-full min-h-[70px] rounded border border-slate-300 px-3 py-2 text-sm"
-                  value={form.address}
-                  onChange={(e) => updateField("address", e.target.value)}
-                />
-              </Field>
-            </div>
-          </section>
-
-          {/* Job & Contact Information */}
-          <section className="border rounded-lg p-4 bg-slate-50/40">
-            <h3 className="font-semibold mb-3">Job & Contact Information</h3>
-            <div className="grid md:grid-cols-3 gap-4">
-              <Field label="Date of Joining" required>
-                <input
-                  type="date"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.dateOfJoining}
-                  onChange={(e) => updateField("dateOfJoining", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Personal Contact">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.personalContact}
-                  onChange={(e) =>
-                    updateField("personalContact", e.target.value)
-                  }
-                />
-              </Field>
-
-              <Field label="Official Contact">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.officialContact}
-                  onChange={(e) =>
-                    updateField("officialContact", e.target.value)
-                  }
-                />
-              </Field>
-
-              <Field label="Emergency Contact">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.emergencyContact}
-                  onChange={(e) =>
-                    updateField("emergencyContact", e.target.value)
-                  }
-                />
-              </Field>
-
-              <Field label="Emergency Relation">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.emergencyRelation}
-                  onChange={(e) =>
-                    updateField("emergencyRelation", e.target.value)
-                  }
-                />
-              </Field>
-
-              <Field label="Reporting To">
-                <input
-                  type="text"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.reportingTo}
-                  onChange={(e) => updateField("reportingTo", e.target.value)}
-                />
-              </Field>
-
-              <Field label="Official Email (used for login)" required>
-                <input
-                  type="email"
-                  className="h-9 w-full rounded border border-slate-300 px-3 text-sm"
-                  value={form.officialEmail}
-                  onChange={(e) =>
-                    updateField("officialEmail", e.target.value)
-                  }
-                />
-              </Field>
-
-              <Field label="Password" required={form.allowPortalLogin}>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    className="h-9 w-full rounded border border-slate-300 px-3 text-sm pr-8"
-                    value={form.password}
-                    onChange={(e) => updateField("password", e.target.value)}
-                    disabled={!form.allowPortalLogin}
-                  />
-                  <button
-                    type="button"
-                    className="absolute inset-y-0 right-2 flex items-center text-slate-500"
-                    onClick={() => setShowPassword((s) => !s)}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <FaEyeSlash /> : <FaEye />}
-                  </button>
-                </div>
-              </Field>
-
-              <Field label="User Type / Permission Level">
-                <select
-                  className="h-9 w-full rounded border border-slate-300 px-2 text-sm"
-                  value={form.userType}
-                  onChange={(e) => updateField("userType", e.target.value)}
-                  disabled={!form.allowPortalLogin}
-                >
-                  <option value="">Select user type</option>
-                  {lookups.userTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-
-            <div className="mt-3">
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={form.allowPortalLogin}
-                  onChange={(e) =>
-                    updateField("allowPortalLogin", e.target.checked)
-                  }
-                />
-                <span>Allow portal login (uses Official Email)</span>
-              </label>
-            </div>
-          </section>
-
-          {/* Documents Section */}
-          <section className="border rounded-lg p-4 bg-slate-50/40">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold">Employee Documents</h3>
+            <div className="flex gap-4">
               <button
-                type="button"
-                onClick={addDocumentRow}
-                disabled={!canAddMoreDocs}
-                className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-customRed text-customRed text-xs hover:bg-customRed/10 disabled:opacity-40 disabled:cursor-not-allowed"
+                onClick={() => {
+                  setForm({
+                    employeeCode: "", fullName: "", designation: "", department: "", station: "", status: "Active",
+                    dateOfBirth: "", gender: "", bloodGroup: "", religion: "", maritalStatus: "", address: "", cnic: "",
+                    dateOfJoining: "", personalContact: "", officialContact: "", emergencyContact: "", emergencyRelation: "",
+                    reportingTo: "", officialEmail: "", personalEmail: "", allowPortalLogin: true, password: "", userType: "", shiftId: ""
+                  });
+                  setDocuments([]);
+                  setIsSuccess(false);
+                  setActiveTab("employment");
+                }}
+                className="h-11 px-8 rounded-xl bg-slate-900 text-white font-bold text-sm hover:bg-black transition-all shadow-md"
               >
-                <FaPlus />
-                <span>Add Document</span>
+                Add Another
+              </button>
+              <button
+                onClick={handleClose}
+                className="h-11 px-8 rounded-xl border-2 border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all"
+              >
+                Return to List
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Header */}
+            <div className="px-8 py-6 border-b flex items-center justify-between bg-slate-50/50">
+              <div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">Add New Employee</h2>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Onboarding Process</p>
+              </div>
+              <button
+                onClick={handleClose}
+                className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-200/50 text-slate-400 transition-colors"
+              >
+                <FaTimes size={18} />
               </button>
             </div>
 
-            {documents.length === 0 ? (
-              <p className="text-xs text-slate-500">
-                No documents added yet. You can add up to 10 documents (CNIC,
-                Offer Letter, Contract, etc.).
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {documents.map((doc, idx) => (
-                  <div
-                    key={idx}
-                    className="grid md:grid-cols-[1.5fr,1fr,1.5fr,1fr,1fr,auto] gap-2 items-end bg-white rounded border border-slate-200 p-2"
-                  >
-                    <div>
-                      <Label>Title</Label>
+            {/* Tabs */}
+            <div className="flex bg-slate-50 border-b overflow-x-auto scrollbar-hide">
+              {[
+                { id: "employment", label: "Employment" },
+                { id: "personal", label: "Personal" },
+                { id: "contact", label: "Contact Info" },
+                { id: "emails", label: "Email Addresses" },
+                { id: "account", label: "Account & Portal" },
+                { id: "documents", label: "Documents" },
+              ].map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActiveTab(t.id)}
+                  className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-all ${activeTab === t.id
+                    ? "border-customRed text-customRed bg-white"
+                    : "border-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
+                    }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* body */}
+            <form
+              className="flex-1 overflow-y-auto px-6 py-6"
+              onSubmit={handleSubmit}
+            >
+              {/* Employment Details */}
+              {activeTab === "employment" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-6 w-1 bg-customRed rounded-full" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Employment Details</h3>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <Field label="Employee ID / Code (auto)">
                       <input
                         type="text"
-                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
-                        value={doc.title}
-                        onChange={(e) =>
-                          updateDocumentField(idx, "title", e.target.value)
-                        }
-                        placeholder="e.g. CNIC, Contract"
+                        className="input bg-slate-100 text-slate-500"
+                        value={form.employeeCode || "Will be generated on save"}
+                        disabled
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <Label>Type</Label>
+                    <Field label="Full Name" required>
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.fullName}
+                        onChange={(e) => updateField("fullName", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Designation" required>
                       <select
-                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
-                        value={doc.type}
-                        onChange={(e) =>
-                          updateDocumentField(idx, "type", e.target.value)
-                        }
+                        className="select"
+                        value={form.designation}
+                        onChange={(e) => updateField("designation", e.target.value)}
                       >
-                        <option value="">Select</option>
-                        {DOC_TYPES.map((t) => (
-                          <option key={t} value={t}>
-                            {t}
+                        <option value="">Select Designation</option>
+                        {lookups.designations.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Department" required>
+                      <select
+                        className="select"
+                        value={form.department}
+                        onChange={(e) => updateField("department", e.target.value)}
+                      >
+                        <option value="">Select Department</option>
+                        {lookups.departments.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Station / Office" required>
+                      <select
+                        className="select"
+                        value={form.station}
+                        onChange={(e) => updateField("station", e.target.value)}
+                      >
+                        <option value="">Select Station</option>
+                        {lookups.stations.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label="Status" required>
+                      <select
+                        className="select"
+                        value={form.status}
+                        onChange={(e) => updateField("status", e.target.value)}
+                      >
+                        <option value="">Select Status</option>
+                        {lookups.statuses.length > 0 ? (
+                          lookups.statuses.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))
+                        ) : (
+                          <>
+                            <option value="Active">Active</option>
+                            <option value="Probation">Probation</option>
+                            <option value="Left">Left</option>
+                            <option value="On Hold">On Hold</option>
+                          </>
+                        )}
+                      </select>
+                    </Field>
+
+                    <Field label="Default Shift" required>
+                      <select
+                        className="select"
+                        value={form.shiftId}
+                        onChange={(e) => updateField("shiftId", e.target.value)}
+                      >
+                        <option value="">Select Shift</option>
+                        {lookups.shifts.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} ({s.start_time} - {s.end_time})
                           </option>
                         ))}
                       </select>
-                    </div>
+                    </Field>
+                  </div>
+                </section>
+              )}
 
-                    {/* ✅ REAL FILE UPLOAD (replaces "path") */}
-                    <div>
-                      <Label>File</Label>
-                      <input
-                        type="file"
-                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs bg-white"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] || null;
-                          updateDocumentField(idx, "file", file);
-                          // auto title if empty
-                          if (file && !doc.title.trim()) {
-                            updateDocumentField(idx, "title", file.name);
-                          }
-                        }}
-                      />
-                      {doc.file ? (
-                        <p className="text-[10px] text-slate-500 mt-1 truncate">
-                          Selected: {doc.file.name}
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div>
-                      <Label>Issued At</Label>
+              {/* Personal Information */}
+              {activeTab === "personal" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-6 w-1 bg-customRed rounded-full" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Personal Information</h3>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <Field label="Date of Birth" required>
                       <input
                         type="date"
-                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
-                        value={doc.issuedAt || ""}
-                        onChange={(e) =>
-                          updateDocumentField(idx, "issuedAt", e.target.value)
-                        }
+                        className="input"
+                        value={form.dateOfBirth}
+                        onChange={(e) => updateField("dateOfBirth", e.target.value)}
                       />
-                    </div>
+                    </Field>
 
-                    <div>
-                      <Label>Expires At</Label>
-                      <input
-                        type="date"
-                        className="h-8 w-full rounded border border-slate-300 px-2 text-xs"
-                        value={doc.expiresAt || ""}
-                        onChange={(e) =>
-                          updateDocumentField(idx, "expiresAt", e.target.value)
-                        }
-                      />
-                    </div>
-
-                    <div className="pb-1 flex justify-end">
-                      <button
-                        type="button"
-                        onClick={() => removeDocumentRow(idx)}
-                        className="h-8 w-8 inline-flex items-center justify-center rounded border border-red-200 text-red-500 hover:bg-red-50 text-xs"
-                        title="Remove document"
+                    <Field label="Gender" required>
+                      <select
+                        className="select"
+                        value={form.gender}
+                        onChange={(e) => updateField("gender", e.target.value)}
                       >
-                        <FaTrash />
-                      </button>
+                        <option value="">Select</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </Field>
+
+                    <Field label="Blood Group">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.bloodGroup}
+                        onChange={(e) => updateField("bloodGroup", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Religion">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.religion}
+                        onChange={(e) => updateField("religion", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Marital Status">
+                      <select
+                        className="select"
+                        value={form.maritalStatus}
+                        onChange={(e) => updateField("maritalStatus", e.target.value)}
+                      >
+                        <option value="">Select</option>
+                        {MARITAL_OPTIONS.map((m) => (
+                          <option key={m} value={m}>{m}</option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="CNIC">
+                      <input
+                        type="text"
+                        className="input"
+                        value={form.cnic}
+                        onChange={(e) => updateField("cnic", e.target.value)}
+                      />
+                    </Field>
+                  </div>
+
+                  <Field label="Address">
+                    <textarea
+                      className="w-full min-h-[70px] rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-customRed focus:outline-none shadow-sm"
+                      value={form.address}
+                      onChange={(e) => updateField("address", e.target.value)}
+                    />
+                  </Field>
+                </section>
+              )}
+
+              {/* Contact Information */}
+              {activeTab === "contact" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-6 w-1 bg-customRed rounded-full" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Contact Information</h3>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <Field label="Date of Joining" required>
+                      <input
+                        type="date"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.dateOfJoining}
+                        onChange={(e) => updateField("dateOfJoining", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Personal Contact">
+                      <input
+                        type="text"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.personalContact}
+                        onChange={(e) => updateField("personalContact", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Official Contact">
+                      <input
+                        type="text"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.officialContact}
+                        onChange={(e) => updateField("officialContact", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Emergency Contact">
+                      <input
+                        type="text"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.emergencyContact}
+                        onChange={(e) => updateField("emergencyContact", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Emergency Relation">
+                      <input
+                        type="text"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.emergencyRelation}
+                        onChange={(e) => updateField("emergencyRelation", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Reporting To">
+                      <input
+                        type="text"
+                        className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.reportingTo}
+                        onChange={(e) => updateField("reportingTo", e.target.value)}
+                      />
+                    </Field>
+                  </div>
+                </section>
+              )}
+
+              {/* Email Tab */}
+              {activeTab === "emails" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-6 w-1 bg-customRed rounded-full" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Email Addresses</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="p-6 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <Field label="Personal Email Address" required>
+                        <input
+                          type="email"
+                          className="h-10 w-full rounded-xl border border-slate-300 px-4 text-sm focus:border-customRed focus:outline-none shadow-sm"
+                          value={form.personalEmail}
+                          onChange={(e) => updateField("personalEmail", e.target.value)}
+                          placeholder="e.g. user@gmail.com"
+                        />
+                        <p className="mt-2 text-[10px] text-slate-500 italic">Used for attendance alerts and personal notifications.</p>
+                      </Field>
+                    </div>
+
+                    <div className="p-6 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                      <Field label="Official Email Address" required>
+                        <input
+                          type="email"
+                          className="h-10 w-full rounded-xl border border-slate-300 px-4 text-sm focus:border-customRed focus:outline-none shadow-sm"
+                          value={form.officialEmail}
+                          onChange={(e) => updateField("officialEmail", e.target.value)}
+                          placeholder="e.g. name@company.com"
+                        />
+                        <p className="mt-2 text-[10px] text-slate-500 italic">Used for system login and official communications.</p>
+                      </Field>
                     </div>
                   </div>
-                ))}
+                </section>
+              )}
+
+              {/* Account & Portal */}
+              {activeTab === "account" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-6 w-1 bg-customRed rounded-full" />
+                    <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Account & Portal Access</h3>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <Field label="Password" required={form.allowPortalLogin}>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          className="h-10 w-full rounded-xl border border-slate-300 px-4 text-sm pr-10 focus:border-customRed focus:outline-none"
+                          value={form.password}
+                          onChange={(e) => updateField("password", e.target.value)}
+                          disabled={!form.allowPortalLogin}
+                        />
+                        <button
+                          type="button"
+                          className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-600 transition-colors"
+                          onClick={() => setShowPassword((s) => !s)}
+                          tabIndex={-1}
+                        >
+                          {showPassword ? <FaEyeSlash /> : <FaEye />}
+                        </button>
+                      </div>
+                    </Field>
+
+                    <Field label="User Type / Permission Level">
+                      <select
+                        className="h-10 w-full rounded-xl border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none"
+                        value={form.userType}
+                        onChange={(e) => updateField("userType", e.target.value)}
+                        disabled={!form.allowPortalLogin}
+                      >
+                        <option value="">Select user type</option>
+                        {lookups.userTypes.map((t) => (
+                          <option key={t} value={t}>{t}</option>
+                        ))}
+                      </select>
+                    </Field>
+                  </div>
+
+                  <div className="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="allowLogin"
+                      className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500"
+                      checked={form.allowPortalLogin}
+                      onChange={(e) => updateField("allowPortalLogin", e.target.checked)}
+                    />
+                    <label htmlFor="allowLogin" className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                      Enable Portal Login for this Employee
+                    </label>
+                  </div>
+                </section>
+              )}
+
+              {/* Documents Section */}
+              {activeTab === "documents" && (
+                <section className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-6 w-1 bg-customRed rounded-full" />
+                      <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">Employee Documents</h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={addDocumentRow}
+                      disabled={!canAddMoreDocs}
+                      className="btn-outline h-8 px-4 text-[10px] uppercase font-bold tracking-widest"
+                    >
+                      <FaPlus className="mr-2" />
+                      Add Document
+                    </button>
+                  </div>
+
+                  {documents.length === 0 ? (
+                    <p className="text-xs text-slate-500">
+                      No documents added yet. You can add up to 10 documents (CNIC,
+                      Offer Letter, Contract, etc.).
+                    </p>
+                  ) : (
+                    <div className="space-y-4">
+                      {documents.map((doc, idx) => (
+                        <div
+                          key={idx}
+                          className="p-4 bg-slate-50/50 rounded-2xl border border-slate-200 hover:border-slate-300 transition-colors shadow-sm"
+                        >
+                          <div className="grid md:grid-cols-[1.5fr,1fr,1.5fr,1fr,1fr,auto] gap-4 items-end">
+                            <Field label="Document Title">
+                              <input
+                                type="text"
+                                className="h-10 w-full rounded-xl border border-slate-300 px-4 text-xs focus:border-customRed focus:outline-none shadow-sm"
+                                value={doc.title}
+                                onChange={(e) => updateDocumentField(idx, "title", e.target.value)}
+                                placeholder="e.g. CNIC, Contract"
+                              />
+                            </Field>
+
+                            <Field label="Doc Type">
+                              <select
+                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none shadow-sm"
+                                value={doc.type}
+                                onChange={(e) => updateDocumentField(idx, "type", e.target.value)}
+                              >
+                                <option value="">Select</option>
+                                {DOC_TYPES.map((t) => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                            </Field>
+
+                            <Field label="File Upload">
+                              <div className="relative group">
+                                <label className="flex h-10 w-full cursor-pointer items-center justify-between rounded-xl border border-slate-300 bg-white px-4 text-[11px] font-bold text-slate-600 hover:border-customRed hover:bg-slate-50 transition-all shadow-sm">
+                                  <span className="truncate max-w-[120px]">
+                                    {doc.file ? doc.file.name : "Choose File"}
+                                  </span>
+                                  <div className="h-6 w-6 bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 group-hover:bg-customRed/10 group-hover:text-customRed">
+                                    <FaPlus size={10} />
+                                  </div>
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0] || null;
+                                      updateDocumentField(idx, "file", file);
+                                      if (file && !doc.title.trim()) {
+                                        updateDocumentField(idx, "title", file.name);
+                                      }
+                                    }}
+                                  />
+                                </label>
+                              </div>
+                            </Field>
+
+                            <Field label="Issued Date">
+                              <input
+                                type="date"
+                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none shadow-sm"
+                                value={doc.issuedAt || ""}
+                                onChange={(e) => updateDocumentField(idx, "issuedAt", e.target.value)}
+                              />
+                            </Field>
+
+                            <Field label="Expiry Date">
+                              <input
+                                type="date"
+                                className="h-10 w-full rounded-xl border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none shadow-sm"
+                                value={doc.expiresAt || ""}
+                                onChange={(e) => updateDocumentField(idx, "expiresAt", e.target.value)}
+                              />
+                            </Field>
+
+                            <div className="flex h-10 items-center">
+                              <button
+                                type="button"
+                                onClick={() => removeDocumentRow(idx)}
+                                className="h-10 w-10 inline-flex items-center justify-center rounded-xl bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all border border-red-100"
+                                title="Remove document"
+                              >
+                                <FaTrash size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              )}
+            </form>
+
+            {/* footer */}
+            {!isSuccess && (
+              <div className="px-8 py-5 border-t flex items-center justify-end gap-3 bg-slate-50/50">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="h-11 px-6 rounded-xl border-2 border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition-all"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="h-11 px-8 rounded-xl bg-customRed text-white text-sm font-black uppercase tracking-widest hover:bg-customRed/90 disabled:opacity-60 transition-all shadow-lg active:scale-95"
+                  disabled={loading}
+                >
+                  {loading ? "Onboarding..." : "Save Employee"}
+                </button>
               </div>
             )}
-          </section>
-        </form>
-
-        {/* footer */}
-        <div className="px-5 py-3 border-t flex items-center justify-end gap-2 bg-white">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="h-9 px-4 rounded border border-slate-300 bg-white text-sm hover:bg-slate-50"
-            disabled={loading}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="h-9 px-5 rounded bg-customRed text-white text-sm hover:bg-customRed/90 disabled:opacity-60"
-            disabled={loading}
-          >
-            {loading ? "Saving..." : "Save Employee"}
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );

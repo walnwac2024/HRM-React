@@ -1,0 +1,411 @@
+// src/features/leave/LeavePage.js
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
+import LeaveSidebar from "./components/LeaveSidebar";
+import {
+    getLeaveTypes,
+    getMyLeaves,
+    applyLeave,
+    getAllLeavesAdmin,
+    approveLeaveAdmin,
+    createLeaveType,
+    updateLeaveType,
+    deleteLeaveType
+} from "./services/leaveService";
+
+export default function LeavePage() {
+    const { user } = useAuth();
+    const [activeKey, setActiveKey] = useState("my-leaves");
+    const [leaveTypes, setLeaveTypes] = useState([]);
+    const [myLeaves, setMyLeaves] = useState([]);
+    const [allLeaves, setAllLeaves] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Leave Application Form state
+    const [formData, setFormData] = useState({
+        leave_type_id: "",
+        start_date: "",
+        end_date: "",
+        reason: "",
+    });
+
+    // Leave Settings state
+    const [showTypeForm, setShowTypeForm] = useState(false);
+    const [typeFormData, setTypeFormData] = useState({ id: null, name: "", entitlement_days: "", description: "" });
+
+    useEffect(() => {
+        fetchInitialData();
+    }, []);
+
+    const fetchInitialData = async () => {
+        try {
+            setLoading(true);
+            const types = await getLeaveTypes();
+            setLeaveTypes(types);
+            if (activeKey === "my-leaves") {
+                const my = await getMyLeaves();
+                setMyLeaves(my);
+            } else if (activeKey === "leave-approvals") {
+                const all = await getAllLeavesAdmin();
+                setAllLeaves(all);
+            }
+        } catch (e) {
+            console.error("fetchInitialData error", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (activeKey === "my-leaves") {
+            getMyLeaves().then(setMyLeaves);
+        } else if (activeKey === "leave-approvals") {
+            getAllLeavesAdmin().then(setAllLeaves);
+        } else if (activeKey === "leave-settings") {
+            getLeaveTypes().then(setLeaveTypes);
+        }
+    }, [activeKey]);
+
+    const handleApply = async (e) => {
+        e.preventDefault();
+        try {
+            await applyLeave(formData);
+            alert("Leave applied successfully");
+            setActiveKey("my-leaves");
+            setFormData({ leave_type_id: "", start_date: "", end_date: "", reason: "" });
+            getMyLeaves().then(setMyLeaves);
+        } catch (e) {
+            alert("Failed to apply leave");
+        }
+    };
+
+    const handleStatusUpdate = async (id, status) => {
+        try {
+            await approveLeaveAdmin(id, { status, comment: "" });
+            alert(`Leave ${status}`);
+            const all = await getAllLeavesAdmin();
+            setAllLeaves(all);
+        } catch (e) {
+            alert("Failed to update status");
+        }
+    };
+
+    // Settings Handlers
+    const handleSaveType = async (e) => {
+        e.preventDefault();
+        try {
+            if (typeFormData.id) {
+                await updateLeaveType(typeFormData.id, typeFormData);
+            } else {
+                await createLeaveType(typeFormData);
+            }
+            alert("Leave type saved");
+            setShowTypeForm(false);
+            setTypeFormData({ id: null, name: "", entitlement_days: "", description: "" });
+            getLeaveTypes().then(setLeaveTypes);
+        } catch (e) {
+            alert("Failed to save leave type");
+        }
+    };
+
+    const handleDeleteType = async (id) => {
+        if (!window.confirm("Are you sure you want to deactivate this leave type?")) return;
+        try {
+            await deleteLeaveType(id);
+            getLeaveTypes().then(setLeaveTypes);
+        } catch (e) {
+            alert("Failed to delete");
+        }
+    };
+
+    return (
+        <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
+            <LeaveSidebar
+                activeKey={activeKey}
+                onNavigate={setActiveKey}
+                userRole={user?.role}
+            />
+
+            <section className="flex-1">
+                <div className="card min-h-[500px]">
+                    <div className="card-header">
+                        <h2 className="card-title">
+                            {activeKey.replace("-", " ")}
+                        </h2>
+                        {activeKey === "leave-settings" && !showTypeForm && (
+                            <button
+                                onClick={() => { setTypeFormData({ id: null, name: "", entitlement_days: "", description: "" }); setShowTypeForm(true); }}
+                                className="btn-primary h-8 text-[11px] uppercase"
+                            >
+                                Add Leave Type
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="p-6">
+                        {loading && <div className="text-slate-400 text-sm">Loading...</div>}
+
+                        {activeKey === "my-leaves" && (
+                            <div className="space-y-6">
+                                {/* Summary Cards */}
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Approved</div>
+                                        <div className="text-2xl font-black text-emerald-700 mt-1">
+                                            {myLeaves.filter(l => l.status === 'approved').length}
+                                        </div>
+                                    </div>
+                                    <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-bold text-amber-600 tracking-wider">Pending</div>
+                                        <div className="text-2xl font-black text-amber-700 mt-1">
+                                            {myLeaves.filter(l => l.status === 'pending').length}
+                                        </div>
+                                    </div>
+                                    <div className="bg-rose-50/50 border border-rose-100 p-4 rounded-2xl">
+                                        <div className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">Rejected</div>
+                                        <div className="text-2xl font-black text-rose-700 mt-1">
+                                            {myLeaves.filter(l => l.status === 'rejected').length}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
+                                                <th className="px-4 py-3 font-semibold">Type</th>
+                                                <th className="px-4 py-3 font-semibold">Dates</th>
+                                                <th className="px-4 py-3 font-semibold">Days</th>
+                                                <th className="px-4 py-3 font-semibold">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {myLeaves.map((l) => (
+                                                <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-4 py-4 font-medium text-slate-700">{l.leave_type_name}</td>
+                                                    <td className="px-4 py-4 text-slate-600">
+                                                        {new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-slate-600">{l.total_days}</td>
+                                                    <td className="px-4 py-4">
+                                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${l.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm shadow-emerald-50' :
+                                                            l.status === 'rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                                                'bg-amber-50 text-amber-600 border border-amber-100 animate-pulse'
+                                                            }`}>
+                                                            {l.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {myLeaves.length === 0 && !loading && (
+                                                <tr><td colSpan="4" className="text-center py-10 text-slate-400 italic">No leave requests found.</td></tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeKey === "apply-leave" && (
+                            <form onSubmit={handleApply} className="max-w-md space-y-5 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                <div>
+                                    <label className="form-label uppercase text-[11px] font-bold">Leave Type</label>
+                                    <select
+                                        className="select h-11"
+                                        value={formData.leave_type_id}
+                                        onChange={(e) => setFormData({ ...formData, leave_type_id: e.target.value })}
+                                        required
+                                    >
+                                        <option value="">Select Type</option>
+                                        {leaveTypes.map((t) => (
+                                            <option key={t.id} value={t.id}>{t.name} ({t.entitlement_days} days)</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="form-label uppercase text-[11px] font-bold">Start Date</label>
+                                        <input
+                                            type="date"
+                                            className="input h-11"
+                                            value={formData.start_date}
+                                            onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label uppercase text-[11px] font-bold">End Date</label>
+                                        <input
+                                            type="date"
+                                            className="input h-11"
+                                            value={formData.end_date}
+                                            onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="form-label uppercase text-[11px] font-bold">Reason</label>
+                                    <textarea
+                                        className="textarea min-h-[100px] py-3"
+                                        value={formData.reason}
+                                        onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                                        required
+                                        placeholder="Briefly explain the reason for leave..."
+                                    ></textarea>
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="btn-primary w-full h-11 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
+                                >
+                                    Submit Application
+                                </button>
+                            </form>
+                        )}
+
+                        {activeKey === "leave-approvals" && (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
+                                            <th className="px-4 py-3 font-semibold">Employee</th>
+                                            <th className="px-4 py-3 font-semibold">Type</th>
+                                            <th className="px-4 py-3 font-semibold">Dates & Days</th>
+                                            <th className="px-4 py-3 font-semibold">Status</th>
+                                            <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-50">
+                                        {allLeaves.map((l) => (
+                                            <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-4 py-4 text-slate-700">
+                                                    <div className="font-bold">{l.Employee_Name}</div>
+                                                    <div className="text-[10px] text-slate-400 font-medium uppercase">{l.employee_code}</div>
+                                                </td>
+                                                <td className="px-4 py-4 text-slate-600 font-medium">{l.leave_type_name}</td>
+                                                <td className="px-4 py-4 text-slate-600">
+                                                    <div className="font-medium text-[13px]">{new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}</div>
+                                                    <div className="text-[11px] text-slate-400">{l.total_days} days</div>
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${l.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                                                        l.status === 'rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
+                                                            'bg-amber-50 text-amber-600 border border-amber-100'
+                                                        }`}>
+                                                        {l.status}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-right space-x-2">
+                                                    {l.status === "pending" && (
+                                                        <div className="inline-flex gap-2">
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(l.id, "approved")}
+                                                                className="h-8 px-3 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 text-[10px] uppercase font-bold transition-colors"
+                                                            >
+                                                                Approve
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleStatusUpdate(l.id, "rejected")}
+                                                                className="h-8 px-3 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-[10px] uppercase font-bold transition-colors"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {activeKey === "leave-settings" && (
+                            <div className="space-y-6">
+                                {showTypeForm ? (
+                                    <form onSubmit={handleSaveType} className="max-w-md space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                        <h3 className="text-xs font-bold text-slate-700 uppercase mb-4">{typeFormData.id ? "Edit Leave Type" : "Add New Leave Type"}</h3>
+                                        <div>
+                                            <label className="form-label uppercase text-[10px] font-bold">Type Name</label>
+                                            <input
+                                                className="input h-10"
+                                                value={typeFormData.name}
+                                                onChange={(e) => setTypeFormData({ ...typeFormData, name: e.target.value })}
+                                                placeholder="e.g. Sick Leave"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="form-label uppercase text-[10px] font-bold">Entitlement (Days)</label>
+                                            <input
+                                                type="number"
+                                                className="input h-10"
+                                                value={typeFormData.entitlement_days}
+                                                onChange={(e) => setTypeFormData({ ...typeFormData, entitlement_days: e.target.value })}
+                                                placeholder="e.g. 10"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="form-label uppercase text-[10px] font-bold">Description</label>
+                                            <textarea
+                                                className="textarea min-h-[80px]"
+                                                value={typeFormData.description}
+                                                onChange={(e) => setTypeFormData({ ...typeFormData, description: e.target.value })}
+                                                placeholder="Optional details..."
+                                            />
+                                        </div>
+                                        <div className="flex gap-3 pt-2">
+                                            <button type="submit" className="btn-primary flex-1 h-10 text-[11px] uppercase">Save Type</button>
+                                            <button type="button" onClick={() => setShowTypeForm(false)} className="btn-outline flex-1 h-10 text-[11px] uppercase font-bold border-slate-200 text-slate-500">Cancel</button>
+                                        </div>
+                                    </form>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-sm text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
+                                                    <th className="px-4 py-3 font-semibold">Name</th>
+                                                    <th className="px-4 py-3 font-semibold">Entitlement</th>
+                                                    <th className="px-4 py-3 font-semibold">Status</th>
+                                                    <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {leaveTypes.map((t) => (
+                                                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-4 py-4 text-slate-800 font-bold">{t.name}</td>
+                                                        <td className="px-4 py-4 text-slate-600 font-medium">{t.entitlement_days} Days</td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${t.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                                {t.is_active ? 'Active' : 'Inactive'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right space-x-2">
+                                                            <button
+                                                                onClick={() => { setTypeFormData(t); setShowTypeForm(true); }}
+                                                                className="text-slate-400 hover:text-customRed transition-colors"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteType(t.id)}
+                                                                className="text-slate-400 hover:text-rose-500 transition-colors"
+                                                            >
+                                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
+        </main>
+    );
+}
