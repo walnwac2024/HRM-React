@@ -30,10 +30,10 @@ function ComingSoon({ label }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="text-base font-semibold text-gray-900">{label}</h3>
+        <h3 className="card-title">{label}</h3>
       </div>
-      <div className="card-body text-sm text-gray-600">
-        This section is coming soon.
+      <div className="card-body text-sm text-slate-500 italic">
+        This section is coming soon...
       </div>
     </div>
   );
@@ -43,9 +43,9 @@ function UnauthorizedBox() {
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="text-base font-semibold text-gray-900">Unauthorized</h3>
+        <h3 className="card-title">Unauthorized</h3>
       </div>
-      <div className="card-body text-sm text-gray-600">
+      <div className="card-body text-sm text-rose-500 font-medium">
         You don’t have permission to view this page.
       </div>
     </div>
@@ -162,7 +162,16 @@ export default function AttendancePage() {
   // ✅ Upper-level check (adjust roles as you want)
   const canSeeSettings = useMemo(() => {
     const roles = Array.isArray(user?.roles) ? user.roles : [];
-    return roles.includes('super_admin') || roles.includes('admin') || roles.includes('hr');
+    const role = String(user?.role || '').toLowerCase();
+
+    return (
+      roles.includes('super_admin') ||
+      roles.includes('admin') ||
+      roles.includes('hr') ||
+      role === 'super_admin' ||
+      role === 'admin' ||
+      role === 'hr'
+    );
   }, [user]);
 
   // ✅ Build nav based on permissions
@@ -273,11 +282,11 @@ export default function AttendancePage() {
   };
 
   return (
-    <div className="bg-gray-50">
-      <main className="page grid grid-cols-1 gap-4 lg:grid-cols-[15rem_1fr]">
+    <div className="bg-slate-50/50 min-h-screen">
+      <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
         <Sidebar items={nav} onNavigate={handleNavigate} />
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-6">
           {activeId === 'attendance-request' && (
             <>
               <Filters

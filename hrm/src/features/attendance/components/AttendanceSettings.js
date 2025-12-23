@@ -110,30 +110,27 @@ export default function AttendanceSettings() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-white rounded-xl shadow border overflow-hidden">
-        <div className="px-4 py-3 bg-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700 uppercase">
+    <div className="space-y-6">
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">
             Attendance Settings
           </h2>
-          <span className="text-xs text-gray-500 capitalize">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
             {user?.role?.replace("_", " ") || "User"}
           </span>
         </div>
 
-        <div className="p-4 space-y-4">
+        <div className="card-body space-y-8">
           {/* RULES */}
-          <div className="rounded-xl border p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold text-gray-800">Global Rule</div>
+          <div className="rounded-2xl border border-slate-100 p-6 bg-slate-50/30">
+            <div className="flex items-center justify-between mb-6">
+              <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Global Rule</div>
 
               <button
                 onClick={saveRule}
                 disabled={savingRule || loading}
-                className={`px-4 py-2 rounded-lg text-sm text-white ${savingRule || loading
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-customRed hover:opacity-95"
-                  }`}
+                className="btn-primary h-9 px-6 text-[11px] uppercase tracking-widest"
               >
                 {savingRule ? "Saving..." : "Save Rule"}
               </button>
@@ -197,10 +194,10 @@ export default function AttendanceSettings() {
           </div>
 
           {/* SHIFTS */}
-          <div className="rounded-xl border overflow-hidden">
-            <div className="px-4 py-3 bg-gray-50 flex items-center justify-between">
-              <div className="font-semibold text-gray-800">Shifts</div>
-              <div className="text-xs text-gray-500">
+          <div className="rounded-2xl border border-slate-100 overflow-hidden bg-white shadow-sm">
+            <div className="px-6 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+              <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Shifts</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                 Auto-detected by date range (RAMADAN &gt; SUMMER &gt; WINTER)
               </div>
             </div>
@@ -304,8 +301,8 @@ export default function AttendanceSettings() {
                             onClick={() => saveShift(s)}
                             disabled={savingShiftId === s.id}
                             className={`px-4 py-2 rounded-lg text-sm text-white ${savingShiftId === s.id
-                                ? "bg-gray-300 cursor-not-allowed"
-                                : "bg-customRed hover:opacity-95"
+                              ? "bg-gray-300 cursor-not-allowed"
+                              : "bg-customRed hover:opacity-95"
                               }`}
                           >
                             {savingShiftId === s.id ? "Saving..." : "Save"}

@@ -1,166 +1,80 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
+import SharedSidebar from "../../../components/common/SharedSidebar";
 
-function MenuIcon({ className = "" }) {
-  return (
-    <svg viewBox="0 0 24 24" className={`h-[14px] w-[14px] ${className}`} fill="currentColor">
-      <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
+const icons = {
+  list: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
     </svg>
-  );
-}
+  ),
+  profile: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  ),
+  transfer: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="16 3 21 3 21 8" />
+      <line x1="4" y1="20" x2="21" y2="3" />
+      <polyline points="8 21 3 21 3 16" />
+      <line x1="3" y1="21" x2="20" y2="4" />
+    </svg>
+  ),
+  role: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2" />
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" />
+    </svg>
+  ),
+  info: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  ),
+  approvals: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  settings: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06-1.45 2.51-.1-.03a1.65 1.65 0 0 0-1.54.45l-.06.06-2.51-1.45-.1.08a1.65 1.65 0 0 0-1.82 0l-.1-.08-2.51 1.45-.06-.06a1.65 1.65 0 0 0-1.54-.45l-.1.03-1.45-2.51.06-.06a1.65 1.65 0 0 0 .33-1.82V12a1.65 1.65 0 0 0-.33-1.82l-.06-.06 1.45-2.51.1.03a1.65 1.65 0 0 0 1.54-.45l.06-.06 2.51 1.45.1-.08a1.65 1.65 0 0 0 1.82 0l.1.08 2.51-1.45.06.06a1.65 1.65 0 0 0 1.54.45l.1-.03 1.45 2.51-.06.06a1.65 1.65 0 0 0-.33 1.82V12z" />
+    </svg>
+  )
+};
 
-const MENU = [
-  { key: "employee-list", label: "Employee List" },
-  { key: "employee-profile-request", label: "Employee Profile Request", status: "working" },
-  { key: "employee-transfer", label: "Employee Transfer", status: "working" },
-  { key: "employee-info-request", label: "Employee Info Request", status: "working" },
-  { key: "employee-approvals", label: "Employee Approvals", status: "working" },
-  { key: "employee-settings", label: "Employee Settings", status: "working" },
+const MENU_ITEMS = [
+  { id: "employee-list", label: "Employee List", icon: icons.list },
+  { id: "employee-profile-request", label: "Profile Request", status: "working", icon: icons.profile },
+  { id: "employee-transfer", label: "Employee Transfer", status: "working", icon: icons.transfer },
+  {
+    id: "employee-role",
+    label: "Employee Role",
+    status: "working",
+    icon: icons.role,
+    subItems: [
+      { id: "employee-role/main", label: "Role List" },
+      { id: "employee-role/copy", label: "Copy Role" },
+    ]
+  },
+  { id: "employee-info-request", label: "Info Request", status: "working", icon: icons.info },
+  { id: "employee-approvals", label: "Approvals", status: "working", icon: icons.approvals },
+  { id: "employee-settings", label: "Settings", status: "working", icon: icons.settings },
 ];
 
-const ROLE_SUBMENU = [
-  { key: "employee-role/main", label: "Employee Role", status: "working" },
-  { key: "employee-role/copy", label: "Copy Role", status: "working" },
-  { key: "employee-role/templates", label: "Role Templates", status: "working" },
-];
-
-export default function EmployeeSidebar({ activeKey = "", onNavigate }) {
-  const [roleOpen, setRoleOpen] = useState(false);
-
-  useEffect(() => {
-    if (activeKey.startsWith("employee-role")) setRoleOpen(true);
-  }, [activeKey]);
-
-  const itemBase =
-    "group relative grid grid-cols-[18px_1fr] items-center w-full h-9 rounded-md pl-3 pr-2 text-left text-[13px] font-medium outline-none transition-colors";
-  const leftBarBase =
-    "pointer-events-none absolute left-0 top-1.5 h-[calc(100%-12px)] w-[4px] rounded-r";
-  const iconBase = "h-[14px] w-[14px]";
-
-  const badge = (
-    <span className="ml-auto px-1 py-0.5 rounded bg-amber-50 text-[8px] text-amber-600 font-bold uppercase border border-amber-200">
-      Working
-    </span>
-  );
-
+export default function EmployeeSidebar({ activeKey, onNavigate }) {
   return (
-    <aside className="w-60 shrink-0 ml-4">
-      <div className="sticky top-5">
-        <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white shadow">
-          <div className="px-4 pt-3 pb-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Employee
-            </span>
-          </div>
-
-          <nav className="px-2 pb-3">
-            <ul className="space-y-1.5">
-              {MENU.slice(0, 3).map((item) => {
-                const isActive = activeKey === item.key;
-                const isWorking = item.status === "working";
-                return (
-                  <li key={item.key}>
-                    <button
-                      type="button"
-                      onClick={() => !isWorking && onNavigate?.(item.key)}
-                      className={`${itemBase} ${isActive
-                        ? "bg-customRed/10 text-customRed"
-                        : isWorking
-                          ? "text-slate-400 cursor-not-allowed opacity-75"
-                          : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                    >
-                      <span
-                        className={`${leftBarBase} ${isActive ? "bg-customRed" : "bg-transparent"
-                          }`}
-                      />
-                      <MenuIcon
-                        className={`${iconBase} ${isActive ? "text-customRed" : "text-slate-400"
-                          }`}
-                      />
-                      <span className="truncate pr-1">{item.label}</span>
-                      {isWorking && badge}
-                    </button>
-                  </li>
-                );
-              })}
-
-              {/* Employee Role (collapsible) */}
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setRoleOpen((v) => !v)}
-                  className={`${itemBase} ${activeKey.startsWith("employee-role")
-                    ? "bg-customRed/10 text-customRed"
-                    : "text-slate-400 opacity-75"
-                    }`}
-                >
-                  <span
-                    className={`${leftBarBase} ${activeKey.startsWith("employee-role")
-                      ? "bg-customRed"
-                      : "bg-transparent"
-                      }`}
-                  />
-                  <MenuIcon
-                    className={`${iconBase} ${activeKey.startsWith("employee-role")
-                      ? "text-customRed"
-                      : "text-slate-400"
-                      }`}
-                  />
-                  <span className="truncate pr-1">Employee Role</span>
-                  {badge}
-                </button>
-
-                {roleOpen && (
-                  <div className="mt-1 ml-7">
-                    {ROLE_SUBMENU.map((sub) => {
-                      const active = activeKey === sub.key;
-                      return (
-                        <button
-                          key={sub.key}
-                          type="button"
-                          className={`w-full text-left px-3 py-1.5 rounded text-[13px] opacity-60 cursor-not-allowed text-slate-400`}
-                        >
-                          {sub.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </li>
-
-              {MENU.slice(3).map((item) => {
-                const isActive = activeKey === item.key;
-                const isWorking = item.status === "working";
-                return (
-                  <li key={item.key}>
-                    <button
-                      type="button"
-                      onClick={() => !isWorking && onNavigate?.(item.key)}
-                      className={`${itemBase} ${isActive
-                        ? "bg-customRed/10 text-customRed"
-                        : isWorking
-                          ? "text-slate-400 cursor-not-allowed opacity-75"
-                          : "text-slate-700 hover:bg-slate-100"
-                        }`}
-                    >
-                      <span
-                        className={`${leftBarBase} ${isActive ? "bg-customRed" : "bg-transparent"
-                          }`}
-                      />
-                      <MenuIcon
-                        className={`${iconBase} ${isActive ? "text-customRed" : "text-slate-400"
-                          }`}
-                      />
-                      <span className="truncate pr-1">{item.label}</span>
-                      {isWorking && badge}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
-        </div>
-      </div>
-    </aside>
+    <SharedSidebar
+      title="EMPLOYEE"
+      items={MENU_ITEMS}
+      activeKey={activeKey}
+      onNavigate={onNavigate}
+      isAdminUser={true}
+    />
   );
 }

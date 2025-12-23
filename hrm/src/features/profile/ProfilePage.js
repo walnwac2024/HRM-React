@@ -22,14 +22,14 @@ function Field({ label, value, readOnly = false, onChange, type = "text" }) {
       </label>
       {type === "textarea" ? (
         <textarea
-          className="text-sm rounded-md border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-customRed/50 focus:border-customRed resize-none min-h-[70px]"
+          className="textarea min-h-[70px]"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
         />
       ) : (
         <input
           type={type}
-          className="text-sm rounded-md border border-slate-300 px-3 py-2 outline-none focus:ring-2 focus:ring-customRed/50 focus:border-customRed"
+          className="input"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -86,8 +86,10 @@ export default function ProfilePage() {
 
   // figure out permission level & whether this user can edit everything
   const level = Number(user?.flags?.level || 0);
-  // ✅ ONLY level > 6 (7, 8, 9, 10…) can edit ALL sections
-  const canEditAll = level > 6;
+  const userRole = user?.role?.toLowerCase() || "";
+
+  // ✅ level > 6 (7, 8, 9, 10…) OR HR role can edit ALL sections
+  const canEditAll = level > 6 || userRole === "hr";
 
   // support img from both user + employee and both keys
   const rawAvatarPath =
@@ -100,9 +102,8 @@ export default function ProfilePage() {
   const avatarUrl = rawAvatarPath
     ? rawAvatarPath.startsWith("http")
       ? rawAvatarPath
-      : `${FILE_BASE}${
-          rawAvatarPath.startsWith("/") ? rawAvatarPath : `/${rawAvatarPath}`
-        }`
+      : `${FILE_BASE}${rawAvatarPath.startsWith("/") ? rawAvatarPath : `/${rawAvatarPath}`
+      }`
     : null;
 
   // Load profile info
@@ -187,10 +188,10 @@ export default function ProfilePage() {
       setEmployee((prev) =>
         prev
           ? {
-              ...prev,
-              profile_img: newPath,
-              profile_picture: newPath,
-            }
+            ...prev,
+            profile_img: newPath,
+            profile_picture: newPath,
+          }
           : prev
       );
 
@@ -516,7 +517,7 @@ export default function ProfilePage() {
                 <div className="mt-4 flex justify-end gap-2">
                   <button
                     type="button"
-                    className="px-3 py-1.5 text-xs rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    className="btn-outline"
                     onClick={() => {
                       // reset from current employee snapshot
                       setPersonalEmail(employee.emailPersonal || "");
@@ -540,7 +541,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     type="button"
-                    className="px-4 py-1.5 text-xs rounded-md bg-customRed text-white font-semibold hover:bg-customRed/90 disabled:opacity-60"
+                    className="btn-primary"
                     onClick={handleSave}
                     disabled={saving}
                   >
@@ -587,7 +588,7 @@ export default function ProfilePage() {
                 <div className="mt-4 flex justify-end">
                   <button
                     type="button"
-                    className="px-4 py-1.5 text-xs rounded-md bg-slate-900 text-white font-semibold hover:bg-slate-800 disabled:opacity-60"
+                    className="btn-primary bg-slate-900 hover:bg-slate-800"
                     onClick={handlePasswordSave}
                     disabled={pwSaving}
                   >
