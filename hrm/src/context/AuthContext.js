@@ -19,6 +19,9 @@ function normalizeUser(raw) {
 
   return {
     ...raw,
+    role: raw.role ? String(raw.role).toLowerCase() : null,
+    roles: Array.isArray(raw.roles) ? raw.roles.map(r => String(r).toLowerCase()) : [],
+    features: Array.isArray(raw.features) ? raw.features.map(f => String(f).toLowerCase()) : [],
     profile_img: raw.profile_img || raw.profile_picture || raw.profileImage || null,
   };
 }
@@ -99,7 +102,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("idle:forceLogout", String(Date.now()));
     try {
       bcRef.current?.postMessage({ type: "forceLogout" });
-    } catch {}
+    } catch { }
   };
 
   const refresh = async () => {
@@ -126,7 +129,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem("idle:lastActivity", String(Date.now()));
     try {
       bcRef.current?.postMessage({ type: "activity", ts: Date.now() });
-    } catch {}
+    } catch { }
 
     clearTimeout(idleTimerRef.current);
     clearTimeout(warnTimerRef.current);
@@ -186,7 +189,7 @@ export function AuthProvider({ children }) {
         if (e?.data?.type === "activity") resetIdleTimers();
         if (e?.data?.type === "forceLogout") logout();
       };
-    } catch {}
+    } catch { }
 
     const onStorage = (e) => {
       if (e.key === "idle:lastActivity") resetIdleTimers();
@@ -205,7 +208,7 @@ export function AuthProvider({ children }) {
 
     try {
       bcRef.current?.close();
-    } catch {}
+    } catch { }
     bcRef.current = null;
 
     startIdleWatch._cleanup?.();

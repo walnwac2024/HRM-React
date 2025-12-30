@@ -1,6 +1,8 @@
 // src/App.js
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import ProtectedRoute from "./components/pages/ProtectedRoute/ProtectedRoute";
 
 import Login from "./userdetails/Login";
@@ -23,6 +25,7 @@ import AttendanceSettings from "./features/attendance/components/AttendanceSetti
 // 👇 NEW: profile page
 import ProfilePage from "./features/profile/ProfilePage";
 import LeavePage from "./features/leave/LeavePage";
+import PermissionsPage from "./features/permissions/PermissionsPage";
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -60,6 +63,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <ToastContainer position="top-right" autoClose={3000} />
         <Routes>
           {/* Public */}
           <Route
@@ -108,6 +112,7 @@ export default function App() {
             <Route path="/performance" element={<div className="p-4">Performance</div>} />
             <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
             <Route path="/reports" element={<div className="p-4">Reports</div>} />
+            <Route path="/permissions" element={<PermissionsPage />} />
 
             {/* 👇 NEW: profile route */}
             <Route path="/profile" element={<ProfilePage />} />

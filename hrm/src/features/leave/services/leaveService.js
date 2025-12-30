@@ -16,6 +16,11 @@ export async function getMyLeaves() {
     return data.leaves || [];
 }
 
+export async function getLeaveBalances() {
+    const { data } = await api.get("/leaves/balances");
+    return data.balances || [];
+}
+
 export async function getAllLeavesAdmin() {
     const { data } = await api.get("/leaves/admin/all");
     return data.leaves || [];
@@ -38,5 +43,10 @@ export async function updateLeaveType(id, payload) {
 
 export async function deleteLeaveType(id) {
     const { data } = await api.delete(`/leaves/types/${id}`);
+    return data;
+}
+
+export async function getLeaveDashboardStats() {
+    const { data } = await api.get("/leaves/summary/stats");
     return data;
 }

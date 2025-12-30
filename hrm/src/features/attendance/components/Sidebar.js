@@ -1,5 +1,6 @@
 import React from "react";
 import SharedSidebar from "../../../components/common/SharedSidebar";
+import { useAuth } from "../../../context/AuthContext";
 
 const icons = {
   request: (
@@ -67,23 +68,38 @@ const icons = {
 };
 
 export default function AttendanceSidebar({ items = [], onNavigate, title = "ATTENDANCE" }) {
+  const { user } = useAuth();
+
   const mappedItems = items.map(it => {
     let icon = icons.request;
+    let permission = "attendance_view";
+
     if (it.id === 'exemption-request') icon = icons.exemption;
     if (it.id === 'worksheet') icon = icons.worksheet;
     if (it.id === 'remote-work') icon = icons.remote;
     if (it.id.includes('shift')) icon = icons.shift;
-    if (it.id.includes('amend')) icon = icons.amend;
-    if (it.id.includes('approval')) icon = icons.approval;
+    if (it.id.includes('amend')) {
+      icon = icons.amend;
+      permission = "attendance_edit";
+    }
+    if (it.id.includes('approval')) {
+      icon = icons.approval;
+      permission = "attendance_edit";
+    }
     if (it.id === 'schedule') icon = icons.schedule;
-    if (it.id.includes('settings')) icon = icons.settings;
+
+    if (it.id.includes('settings')) {
+      icon = icons.settings;
+      permission = "attendance_settings";
+    }
 
     return {
       id: it.id,
       label: it.label,
       status: it.status,
       isActive: !!it.active,
-      icon: icon
+      icon: icon,
+      permission: permission
     };
   });
 
@@ -95,7 +111,7 @@ export default function AttendanceSidebar({ items = [], onNavigate, title = "ATT
       items={mappedItems}
       activeKey={activeKey}
       onNavigate={onNavigate}
-      isAdminUser={true}
+      userPermissions={user?.features || []}
     />
   );
 }

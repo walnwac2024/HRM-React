@@ -44,7 +44,7 @@ function toApiParams(filters, { includeInactive } = {}) {
 export default function useEmployees() {
   const { user } = useAuth();
   const role = user?.role;
-  const canSeeInactive = role === "admin" || role === "super_admin";
+  const canSeeInactive = role === "admin" || role === "super_admin" || role === "hr";
 
   const [filters, setFilters] = useState(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState(emptyFilters);
@@ -98,8 +98,8 @@ export default function useEmployees() {
           emp.isActive === true
             ? true
             : emp.isActive === false
-            ? false
-            : Number(emp.isActive) === 1,
+              ? false
+              : Number(emp.isActive) === 1,
       }));
 
       setList(items);
@@ -110,8 +110,8 @@ export default function useEmployees() {
       setTotal(0);
       setError(
         err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load employees"
+        err?.message ||
+        "Failed to load employees"
       );
     } finally {
       setLoading(false);
@@ -179,8 +179,8 @@ export default function useEmployees() {
       console.error("Failed to export employees", err);
       setError(
         err?.response?.data?.message ||
-          err?.message ||
-          "Failed to export employees"
+        err?.message ||
+        "Failed to export employees"
       );
     }
   };

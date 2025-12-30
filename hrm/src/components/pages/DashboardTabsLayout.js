@@ -1,17 +1,25 @@
-import React from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 export default function DashboardTabsLayout() {
-  // use absolute paths so clicks don't stack
-  const tabs = [
-    { label: "Home",                 to: "/dashboard" },
-    { label: "HR Dashboard",         to: "/dashboard/hr" },
-    { label: "Payroll Dashboard",    to: "/dashboard/payroll" },
-    { label: "Recruitment Dashboard",to: "/dashboard/recruitment" },
-    { label: "Organcogram",          to: "/dashboard/organcogram" },
+  const { user } = useAuth();
+  const { pathname } = useLocation();
+
+  const roleList = user?.roles || [];
+  if (user?.role) roleList.push(user.role);
+  const isAdmin = roleList.some(r => ["admin", "super_admin", "hr", "developer"].includes(String(r).toLowerCase()));
+  const feats = new Set(user?.features || []);
+
+  const allTabs = [
+    { label: "Home", to: "/dashboard" },
+    { label: "HR Dashboard", to: "/dashboard/hr", code: "hr_dashboard" },
+    { label: "Payroll Dashboard", to: "/dashboard/payroll", code: "payroll_dashboard" },
+    { label: "Recruitment Dashboard", to: "/dashboard/recruitment", code: "recruitment_dashboard" },
+    { label: "Organcogram", to: "/dashboard/organcogram", code: "organogram_view" },
   ];
 
-  const { pathname } = useLocation();
+  // Filter tabs: Show if Admin OR has the specific feature code
+  const tabs = allTabs.filter(t => !t.code || isAdmin || feats.has(t.code.toLowerCase()));
 
   return (
     <>
@@ -21,11 +29,10 @@ export default function DashboardTabsLayout() {
             <NavLink
               key={to}
               to={to}
-              // Home should only be active on /dashboard (not on /dashboard/hr, etc.)
               end={to === "/dashboard"}
               className={({ isActive }) =>
                 [
-                  "px-3 sm:px-4 py-1.5 text-[11px] sm:text-[12px] uppercase tracking-wide rounded-t-md border transition-colors",
+                  "px-3 sm:px-4 py-1.5 text-[11px] sm:text-[12px] uppercase tracking-wide rounded-t-md border transition-colors whitespace-nowrap",
                   isActive
                     ? "bg-customRed text-white border-customRed shadow-sm"
                     : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100",

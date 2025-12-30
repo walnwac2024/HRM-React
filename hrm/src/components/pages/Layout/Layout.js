@@ -1,10 +1,32 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Outlet } from "react-router-dom";
 import Topbar from "../Topbar/Topbar";
 import { useAuth } from "../../../context/AuthContext";
+import ChatPopup from "../../common/ChatPopup";
+import api from "../../../utils/api";
 
 export default function Layout() {
   const { user } = useAuth();
+
+  // Heartbeat to keep online status active
+  useEffect(() => {
+    if (!user) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await api.post("/auth/heartbeat");
+      } catch (e) {
+        console.error("Heartbeat failed", e);
+      }
+    };
+
+    // Initial heartbeat
+    sendHeartbeat();
+
+    // Every 2 minutes
+    const interval = setInterval(sendHeartbeat, 120000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Build a safe display name no matter how user is shaped
   // Support both { user: {...} } (old) and {...} (new) shapes
@@ -21,6 +43,7 @@ export default function Layout() {
       <main className="p-4 max-w-screen-2xl mx-auto">
         <Outlet />
       </main>
+      <ChatPopup />
     </>
   );
 }

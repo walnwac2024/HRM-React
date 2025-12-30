@@ -159,34 +159,27 @@ function ShiftSection({ perPage, onPerPageChange, onAddNew, onAddIrregular, rows
 export default function AttendancePage() {
   const { user } = useAuth();
 
-  // ✅ Upper-level check (adjust roles as you want)
+  // ✅ Check settings permission
   const canSeeSettings = useMemo(() => {
-    const roles = Array.isArray(user?.roles) ? user.roles : [];
-    const role = String(user?.role || '').toLowerCase();
-
-    return (
-      roles.includes('super_admin') ||
-      roles.includes('admin') ||
-      roles.includes('hr') ||
-      role === 'super_admin' ||
-      role === 'admin' ||
-      role === 'hr'
-    );
+    return (user?.features || []).includes('attendance_settings');
   }, [user]);
 
   // ✅ Build nav based on permissions
   const safeNav = useMemo(() => {
     const base = Array.isArray(ATTENDANCE_NAV) ? ATTENDANCE_NAV : [];
-    const filtered = canSeeSettings
-      ? base
-      : base.filter((i) => i.id !== 'attendance-settings');
+    const features = user?.features || [];
 
-    // If after filtering nothing is active, force first active
+    const filtered = base.filter(item => {
+      if (item.id === 'attendance-settings') return features.includes('attendance_settings');
+      if (item.id === 'attendance-approval') return features.includes('attendance_edit');
+      return features.includes('attendance_view');
+    });
+
     if (!filtered.some((i) => i.active) && filtered.length) {
       return filtered.map((i, idx) => ({ ...i, active: idx === 0 }));
     }
     return filtered;
-  }, [canSeeSettings]);
+  }, [user]);
 
   const [nav, setNav] = useState(safeNav);
   const [modal, setModal] = useState(null);

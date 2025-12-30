@@ -5,12 +5,38 @@ import {
   getAttendanceOffices,
   getTodayAttendance,
   punchAttendance,
+  getPersonalAttendanceSummary,
 } from "../features/attendance/services/attendanceService";
+import {
+  getLeaveBalances,
+  getLeaveDashboardStats
+} from "../features/leave/services/leaveService";
+import { getDashboardData } from "../features/dashboard/services/dashboardService";
+
+const BACKEND_URL = "http://localhost:5000";
 
 function formatTime(dt) {
   if (!dt) return "—";
   const d = new Date(dt);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * Haversine formula for client-side check
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
 }
 
 function badge(status) {
@@ -61,6 +87,14 @@ export default function Dashboard() {
   const [punching, setPunching] = useState(false);
   const [error, setError] = useState("");
 
+  // New Summary States
+  const [leaveBalances, setLeaveBalances] = useState([]);
+  const [leaveStats, setLeaveStats] = useState({ myRequestsCount: 0, myApprovalsCount: 0 });
+  const [attendanceSummary, setAttendanceSummary] = useState([]);
+  const [missingAttendance, setMissingAttendance] = useState([]);
+  const [rightTab, setRightTab] = useState("requests"); // "requests" or "approvals"
+  const [dashboardData, setDashboardData] = useState(null);
+
   const kpiRows = [
     "Working Hour",
     "Average Working Hours",
@@ -105,20 +139,29 @@ export default function Dashboard() {
       setLoadingAttendance(true);
       setError("");
 
-      const [officeList, today] = await Promise.all([
+      const [officeList, today, balances, stats, summaryData, dbData] = await Promise.all([
         getAttendanceOffices(),
         getTodayAttendance(),
+        getLeaveBalances(),
+        getLeaveDashboardStats(),
+        getPersonalAttendanceSummary(),
+        getDashboardData(),
       ]);
 
       setOffices(officeList);
       setTodayData(today);
+      setLeaveBalances(balances);
+      setLeaveStats(stats);
+      setAttendanceSummary(summaryData.summary || []);
+      setMissingAttendance(summaryData.missing || []);
+      setDashboardData(dbData);
 
       const inOfficeId = today?.attendance?.office_id_first_in;
       if (inOfficeId) setSelectedOfficeId(String(inOfficeId));
       else if (officeList?.length) setSelectedOfficeId(String(officeList[0].id));
     } catch (e) {
       console.error(e);
-      setError("Failed to load attendance. Please refresh.");
+      setError("Failed to load dashboard data. Please refresh.");
     } finally {
       setLoadingAttendance(false);
     }
@@ -130,6 +173,30 @@ export default function Dashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  const getCurrentPosition = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error("Geolocation is not supported by your browser."));
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve(pos.coords),
+        (err) => {
+          let msg = "Location permission is required to mark attendance.";
+          if (err.code === err.PERMISSION_DENIED) {
+            msg = "Location permission was denied. Please enable it in your browser settings.";
+          } else if (err.code === err.POSITION_UNAVAILABLE) {
+            msg = "Location information is unavailable.";
+          } else if (err.code === err.TIMEOUT) {
+            msg = "Location request timed out.";
+          }
+          reject(new Error(msg));
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    });
+  };
+
   const handlePunch = async (type) => {
     try {
       setPunching(true);
@@ -140,10 +207,42 @@ export default function Dashboard() {
         return;
       }
 
+      // 1. Get Location
+      let coords = null;
+      try {
+        coords = await getCurrentPosition();
+      } catch (err) {
+        setError(err.message);
+        return;
+      }
+
+      const { latitude, longitude } = coords;
+
+      // 2. Client-side Geofence Check (Optional but helpful)
+      const office = offices.find((o) => String(o.id) === String(selectedOfficeId));
+      if (office && office.latitude && office.longitude) {
+        const dist = calculateDistance(
+          latitude,
+          longitude,
+          Number(office.latitude),
+          Number(office.longitude)
+        );
+        const radius = office.allowed_radius_meters || 200;
+        if (dist > radius) {
+          setError(
+            `You are not within the authorized radius for ${office.name
+            }. You are approximately ${Math.round(dist)}m away.`
+          );
+          return; // STOP HERE: Do not allow punching if outside
+        }
+      }
+
       const res = await punchAttendance({
         office_id: Number(selectedOfficeId),
         punch_type: type,
         clientTime: new Date().toISOString(),
+        latitude,
+        longitude,
       });
 
       setTodayData((prev) => ({
@@ -161,6 +260,14 @@ export default function Dashboard() {
     }
   };
 
+  // ✅ Unified Helper for profile images
+  const getAvatarUrl = (imgPath) => {
+    if (!imgPath) return null;
+    if (imgPath.startsWith("http")) return imgPath;
+    const cleanPath = imgPath.startsWith("/") ? imgPath : `/${imgPath}`;
+    return `${BACKEND_URL}${cleanPath}`;
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
       {/* LEFT COLUMN */}
@@ -168,20 +275,43 @@ export default function Dashboard() {
         {/* Profile Card */}
         <div className="bg-white rounded-xl shadow border overflow-hidden">
           <div className="p-3 sm:p-4 flex items-center gap-3">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-200" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-200 border overflow-hidden flex-shrink-0">
+              {(() => {
+                const imgPath = dashboardData?.profile?.profile_img || user?.profile_img || user?.profile_picture;
+                const src = getAvatarUrl(imgPath);
+                if (src) {
+                  return (
+                    <img
+                      src={src}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  );
+                }
+                return (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400">
+                    <svg className="w-8 h-8" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                    </svg>
+                  </div>
+                );
+              })()}
+            </div>
             <div className="min-w-0">
               <div className="text-sm font-semibold text-gray-800 truncate">
-                {user?.Employee_Name || user?.name || "—"}
+                {dashboardData?.profile?.name || user?.Employee_Name || user?.name || "—"}
               </div>
               <div className="text-xs text-gray-500 truncate">
-                {user?.Official_Email || user?.email || "—"}
+                {dashboardData?.profile?.email || user?.Official_Email || user?.email || "—"}
               </div>
             </div>
           </div>
           <div className="border-t">
             <div className="flex text-[11px] sm:text-xs">
-              <button className="flex-1 py-2 hover:bg-gray-50">
-                No Birthday Today
+              <button className={`flex-1 py-2 hover:bg-gray-50 ${dashboardData?.widgets?.birthdayToday ? 'text-red-600 font-bold animate-pulse' : ''}`}>
+                {dashboardData?.widgets?.birthdayToday ? '🎂 Happy Birthday!' :
+                  dashboardData?.widgets?.colleaguesBirthdays?.length > 0 ? `🎂 ${dashboardData.widgets.colleaguesBirthdays.length} Birthday Today` :
+                    'No Birthday Today'}
               </button>
               <button className="flex-1 py-2 border-l hover:bg-gray-50">
                 New Message
@@ -253,8 +383,8 @@ export default function Dashboard() {
                 onClick={() => handlePunch("IN")}
                 disabled={loadingAttendance || punching || !canCheckIn}
                 className={`w-full rounded-lg py-2 text-sm text-white ${loadingAttendance || punching || !canCheckIn
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-customRed hover:opacity-95"
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-customRed hover:opacity-95"
                   }`}
               >
                 {punching ? "..." : "Check In"}
@@ -264,8 +394,8 @@ export default function Dashboard() {
                 onClick={() => handlePunch("OUT")}
                 disabled={loadingAttendance || punching || !canCheckOut}
                 className={`w-full rounded-lg py-2 text-sm text-white ${loadingAttendance || punching || !canCheckOut
-                    ? "bg-gray-300 cursor-not-allowed"
-                    : "bg-customRed hover:opacity-95"
+                  ? "bg-gray-300 cursor-not-allowed"
+                  : "bg-customRed hover:opacity-95"
                   }`}
               >
                 {punching ? "..." : "Check Out"}
@@ -306,22 +436,21 @@ export default function Dashboard() {
           <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-[12px] sm:text-[13px] font-semibold text-gray-700">
             LEAVE SUMMARY
           </div>
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4">
+          <div className="px-3 sm:px-4 pb-3 sm:pb-4 max-h-[250px] overflow-y-auto custom-scrollbar">
             <div className="text-[10px] sm:text-[11px] uppercase text-gray-500 mb-2">
               Title
             </div>
-            {[
-              { label: "AL", value: "20.0" },
-              { label: "Sick Leave", value: "8.0" },
-              { label: "testLeavePermanent", value: "24.00" },
-            ].map((r) => (
+            {leaveBalances.length === 0 && (
+              <div className="text-xs text-gray-400 py-4 text-center">No leave balances found</div>
+            )}
+            {leaveBalances.map((r) => (
               <div
-                key={r.label}
+                key={r.leave_type_name}
                 className="flex items-center justify-between py-2 border-t first:border-t-0"
               >
-                <span className="text-[13px] text-gray-700">{r.label}</span>
+                <span className="text-[13px] text-gray-700">{r.leave_type_name}</span>
                 <span className="px-2 py-1 rounded bg-gray-100 text-[11px] sm:text-[12px]">
-                  {r.value}
+                  {r.balance}
                 </span>
               </div>
             ))}
@@ -339,7 +468,7 @@ export default function Dashboard() {
                   Missing Attendance
                 </div>
               </div>
-              <div className="p-2.5 sm:p-3">
+              <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
                 <div className="overflow-x-auto rounded border">
                   <table className="min-w-[520px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
@@ -351,20 +480,25 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-t">
-                        <td className="p-2">—</td>
-                        <td className="p-2">—</td>
-                        <td className="p-2">—</td>
-                        <td className="p-2 text-gray-500">
-                          Next: connect HR missing widget
-                        </td>
-                      </tr>
+                      {missingAttendance.length === 0 ? (
+                        <tr className="border-t">
+                          <td colSpan="4" className="p-2 text-center text-gray-400">
+                            No missing attendance found
+                          </td>
+                        </tr>
+                      ) : (
+                        missingAttendance.map((m, idx) => (
+                          <tr key={idx} className="border-t">
+                            <td className="p-2">{new Date(m.date).toLocaleDateString()}</td>
+                            <td className="p-2">{m.in ? formatTime(m.in) : "—"}</td>
+                            <td className="p-2">{m.out ? formatTime(m.out) : "—"}</td>
+                            <td className="p-2">{badge(m.status)}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Next step: wire HR/Admin missing list + email reminders.
-                </p>
               </div>
             </div>
 
@@ -374,7 +508,7 @@ export default function Dashboard() {
                   Attendance Summary
                 </div>
               </div>
-              <div className="p-2.5 sm:p-3">
+              <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
                 <div className="overflow-x-auto rounded border">
                   <table className="min-w-[420px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
@@ -384,27 +518,27 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {[
-                        { title: "Present", val: "—" },
-                        { title: "Absent", val: "—" },
-                        { title: "Leave", val: "—" },
-                        { title: "H/D Leave", val: "—" },
-                      ].map((r) => (
-                        <tr key={r.title} className="border-t">
-                          <td className="p-2">{r.title}</td>
-                          <td className="p-2 text-right">
-                            <span className="px-2 py-0.5 rounded bg-gray-100">
-                              {r.val}
-                            </span>
+                      {attendanceSummary.length === 0 ? (
+                        <tr className="border-t">
+                          <td colSpan="2" className="p-2 text-center text-gray-400">
+                            No data for current month
                           </td>
                         </tr>
-                      ))}
+                      ) : (
+                        attendanceSummary.map((r) => (
+                          <tr key={r.status} className="border-t">
+                            <td className="p-2">{r.status}</td>
+                            <td className="p-2 text-right">
+                              <span className="px-2 py-0.5 rounded bg-gray-100">
+                                {r.count}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Next step: connect summary from attendance_daily.
-                </p>
               </div>
             </div>
           </div>
@@ -454,47 +588,105 @@ export default function Dashboard() {
               <button className="px-3 py-2 text-gray-600">My Managers</button>
             </nav>
           </div>
-          <div className="p-3 sm:p-4 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-200" />
-                  <div>
-                    <div className="h-3 w-24 sm:w-28 bg-gray-100 rounded mb-1" />
-                    <div className="h-3 w-14 sm:w-16 bg-gray-100 rounded" />
-                  </div>
-                </div>
-                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border" />
-              </div>
-            ))}
-            <p className="text-xs text-gray-500">No team data yet.</p>
+          <div className="p-3 sm:p-4 space-y-3 max-h-[350px] overflow-y-auto custom-scrollbar">
+            {(() => {
+              const teamMembers = dashboardData?.widgets?.team ||
+                dashboardData?.widgets?.teamRecent ||
+                dashboardData?.widgets?.recentEmployees ||
+                [];
+
+              if (teamMembers.length === 0) {
+                return <p className="text-xs text-gray-500">No team data yet.</p>;
+              }
+
+              return (
+                <>
+                  {teamMembers.map((m) => (
+                    <div key={m.id} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 border overflow-hidden flex-shrink-0">
+                          {(() => {
+                            const src = getAvatarUrl(m.profile_img);
+                            if (src) {
+                              return (
+                                <img
+                                  src={src}
+                                  alt={m.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              );
+                            }
+                            return (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                {m.name?.charAt(0).toUpperCase()}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[12px] font-semibold text-gray-700 truncate group-hover:text-customRed transition-colors">
+                            {m.name}
+                          </div>
+                          <div className="text-[10px] text-gray-500 truncate">
+                            {m.designation || "Employee"}
+                          </div>
+                        </div>
+                      </div>
+                      {(() => {
+                        const lastLogin = m.last_login_at ? new Date(m.last_login_at) : null;
+                        const isOnline = lastLogin && (new Date() - lastLogin) < 300000; // 5 minutes
+                        return (
+                          <div
+                            className={`w-2 h-2 rounded-full shadow-[0_0_5px_rgba(74,222,128,0.5)] ${isOnline ? 'bg-green-400' : 'bg-gray-300'}`}
+                            title={isOnline ? "Online" : "Away"}
+                          />
+                        );
+                      })()}
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         </div>
 
         <div className="bg-white rounded-xl shadow border overflow-hidden">
           <div className="px-3 sm:px-4 pt-2 border-b">
             <nav className="flex text-[11px] sm:text-[12px]">
-              <button className="px-3 py-2 font-semibold text-customRed border-b-2 border-customRed">
+              <button
+                onClick={() => setRightTab("requests")}
+                className={`px-3 py-2 font-semibold ${rightTab === "requests" ? "text-customRed border-b-2 border-customRed" : "text-gray-500"}`}
+              >
                 My Requests
               </button>
-              <button className="px-3 py-2 text-gray-600">My Approvals</button>
+              <button
+                onClick={() => setRightTab("approvals")}
+                className={`px-3 py-2 font-semibold ${rightTab === "approvals" ? "text-customRed border-b-2 border-customRed" : "text-gray-500"}`}
+              >
+                My Approvals
+              </button>
             </nav>
           </div>
-          <div className="p-3 sm:p-4 space-y-2 text-[13px] text-gray-700">
-            {[
-              "List of Leave Approvals",
-              "List of Attendance Approvals",
-              "List of Exemption Approvals",
-              "List of Payroll Approvals",
-            ].map((label) => (
-              <div key={label} className="flex items-center justify-between">
-                <span>{label}</span>
-                <span className="px-2 py-0.5 rounded bg-gray-100 text-[11px] sm:text-[12px]">
-                  0
+          <div className="p-3 sm:p-4 space-y-2 text-[13px] text-gray-700 max-h-[150px] overflow-y-auto custom-scrollbar">
+            {rightTab === "requests" ? (
+              <div className="flex items-center justify-between">
+                <span>Pending Leave Applications</span>
+                <span className="px-2 py-0.5 rounded bg-gray-100 font-bold">
+                  {leaveStats.myRequestsCount}
                 </span>
               </div>
-            ))}
-            <p className="text-xs text-gray-500 pt-2">No records found</p>
+            ) : (
+              <div className="flex items-center justify-between">
+                <span>Leaves Pending Approval</span>
+                <span className="px-2 py-0.5 rounded bg-gray-100 font-bold">
+                  {leaveStats.myApprovalsCount}
+                </span>
+              </div>
+            )}
+            {((rightTab === "requests" && leaveStats.myRequestsCount === 0) ||
+              (rightTab === "approvals" && leaveStats.myApprovalsCount === 0)) && (
+                <p className="text-xs text-gray-400 pt-2 text-center">No pending items</p>
+              )}
           </div>
         </div>
 

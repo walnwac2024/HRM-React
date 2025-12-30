@@ -63,6 +63,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     contact: "",
     emergencyContact: "",
     address: "",
+    profile_img: "",
   });
 
   const [vaultForm, setVaultForm] = useState({
@@ -93,6 +94,25 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     () => API_BASE.replace(/\/api\/v1\/?$/, ""),
     [API_BASE]
   );
+
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const handleUpdateAvatar = async (file) => {
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const { data } = await api.post(`/employees/${employeeId}/avatar`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setProfileForm((prev) => ({ ...prev, profile_img: data.profile_img }));
+    } catch (e) {
+      console.error("Avatar upload failed", e);
+      alert("Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const loadDocuments = async () => {
     setDocsLoading(true);
@@ -145,6 +165,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       contact: employee.contact || "",
       emergencyContact: employee.emergencyContact || "",
       address: employee.address || "",
+      profile_img: employee.profile_img || "",
     });
 
     setVaultForm({
@@ -411,8 +432,49 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
         <div className="grid flex-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
           {/* LEFT: Profile / general */}
           <form onSubmit={handleSaveProfile} className="space-y-5">
+            <div className="flex items-center gap-6 mb-4">
+              <div className="relative group">
+                <div className="h-16 w-16 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden flex-shrink-0">
+                  {profileForm.profile_img ? (
+                    <img
+                      src={`${FILE_BASE}${profileForm.profile_img}`}
+                      alt="Avatar"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-400">
+                      NO PHOTO
+                    </div>
+                  )}
+                </div>
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-full">
+                    <div className="h-4 w-4 border-2 border-customRed border-t-transparent animate-spin rounded-full" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase mb-1">
+                  Employee Photo
+                </h3>
+                <label className="cursor-pointer inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 transition-colors">
+                  {avatarUploading ? "Uploading..." : "Change Photo"}
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    disabled={avatarUploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpdateAvatar(file);
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+
             <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
-              Employee Information
+              Profile Information
             </h3>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -919,7 +981,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                 Vault / Login Info
               </h3>
               <p className="mt-1 text-[11px] text-slate-500">
-                Only admins can change login access and reset password.
+                Only admins and HR can change login access and reset password.
               </p>
             </div>
 

@@ -66,6 +66,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
     password: "",
     userType: "",
     shiftId: "",
+    profileImg: null,
   });
 
   // ✅ documents state now includes file
@@ -266,6 +267,16 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
         setForm((prev) => ({ ...prev, employeeCode: created.employeeCode }));
       }
 
+      // ✅ STEP 1.5: upload profile image if present
+      if (created?.id && form.profileImg) {
+        const fd = new FormData();
+        fd.append("image", form.profileImg);
+        await api.post(`/employees/${created.id}/avatar`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        toast.success("Profile image uploaded.");
+      }
+
       // ✅ STEP 2: upload documents if any files selected
       const docsToUpload = documents.filter((d) => d.file);
       if (created?.id && docsToUpload.length) {
@@ -345,7 +356,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                     employeeCode: "", fullName: "", designation: "", department: "", station: "", status: "Active",
                     dateOfBirth: "", gender: "", bloodGroup: "", religion: "", maritalStatus: "", address: "", cnic: "",
                     dateOfJoining: "", personalContact: "", officialContact: "", emergencyContact: "", emergencyRelation: "",
-                    reportingTo: "", officialEmail: "", personalEmail: "", allowPortalLogin: true, password: "", userType: "", shiftId: ""
+                    reportingTo: "", officialEmail: "", personalEmail: "", allowPortalLogin: true, password: "", userType: "", shiftId: "",
+                    profileImg: null,
                   });
                   setDocuments([]);
                   setIsSuccess(false);
@@ -579,6 +591,15 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         className="input"
                         value={form.cnic}
                         onChange={(e) => updateField("cnic", e.target.value)}
+                      />
+                    </Field>
+
+                    <Field label="Profile Image">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="input h-auto py-1"
+                        onChange={(e) => updateField("profileImg", e.target.files[0])}
                       />
                     </Field>
                   </div>
