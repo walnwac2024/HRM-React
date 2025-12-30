@@ -11,6 +11,7 @@ const {
   login,
   me,
   logout,
+  heartbeat,
   changePassword,
   uploadAvatar,
 } = require("../Controller/UserDeatils/Login");
@@ -44,15 +45,11 @@ const {
   updateEmployeeDocument,
   deleteEmployeeDocument,
   replaceEmployeeDocumentFile,
+  updateEmployeeAvatar,
 } = require("../Controller/Employees/Employees");
 
-// ✅ NEW: Attendance core
-const {
-  listOffices,
-  getToday,
-  punch,
-  adminMissing,
-} = require("../Controller/Attendance/Attendance");
+// ✅ ATTENDANCE CONTROLLERS
+const Attendance = require("../Controller/Attendance/Attendance");
 
 // ✅ NEW: Attendance settings
 const {
@@ -62,23 +59,29 @@ const {
   updateActiveRule,
 } = require("../Controller/Attendance/AttendanceSettings");
 
-// ✅ NEW: Leaves
+// ✅ LEAVE CONTROLLERS
+const Leave = require("../Controller/Leaves/Leave");
+
+// ---------- CHAT CONTROLLERS ----------
+const Chat = require("../Controller/UserDeatils/ChatController");
+
+// ---------- NOTIFICATION CONTROLLERS ----------
+const Notifications = require("../Controller/UserDeatils/NotificationController");
+
+// ---------- PERMISSION CONTROLLERS ----------
 const {
-  getLeaveTypes,
-  applyLeave,
-  getMyLeaves,
-  getAllLeaves,
-  approveLeave,
-  createLeaveType,
-  updateLeaveType,
-  deleteLeaveType,
-} = require("../Controller/Leaves/Leave");
+  listUserTypes: listTypesPerm,
+  listAllPermissions,
+  getTypePermissions,
+  updateTypePermissions,
+} = require("../Controller/UserDeatils/PermissionController");
 
 // ---------- MIDDLEWARE ----------
 const {
   isAuthenticated,
   requireRole,
   requireFeatures,
+  requireFeaturesOrSelf,
 } = require("../middlewares/middleware");
 
 /*
@@ -135,7 +138,19 @@ const docsUpload = multer({ storage: docsStorage });
 router.post("/auth/login", login);
 router.get("/auth/me", isAuthenticated, me);
 router.post("/auth/logout", isAuthenticated, logout);
+router.post("/auth/heartbeat", isAuthenticated, heartbeat);
 router.post("/auth/change-password", isAuthenticated, changePassword);
+
+// ---------- NOTIFICATION ROUTES ----------
+router.get("/notifications", isAuthenticated, Notifications.listMyNotifications);
+router.patch("/notifications/read-all", isAuthenticated, Notifications.markAllAsRead);
+router.patch("/notifications/:id/read", isAuthenticated, Notifications.markAsRead);
+
+// ---------- CHAT ROUTES ----------
+router.get("/chat/messages/:roomId", isAuthenticated, Chat.getMessages);
+router.get("/chat/unread", isAuthenticated, Chat.getUnreadCounts);
+router.post("/chat/send", isAuthenticated, Chat.sendMessage);
+router.get("/chat/authority-rooms", isAuthenticated, Chat.getAuthorityRooms);
 
 router.post(
   "/auth/me/avatar",
@@ -168,7 +183,17 @@ router.get(
 | ADMIN ROUTES                                                             |
 |--------------------------------------------------------------------------|
 */
-router.get("/admin/users", isAuthenticated, requireRole("admin"), listAllUsers);
+router.get("/admin/users", isAuthenticated, requireRole("admin", "super_admin", "hr", "developer"), listAllUsers);
+
+/*
+|--------------------------------------------------------------------------|
+| PERMISSION MANAGEMENT ROUTES                                             |
+|--------------------------------------------------------------------------|
+*/
+router.get("/permissions/user-types", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), listTypesPerm);
+router.get("/permissions/all", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), listAllPermissions);
+router.get("/permissions/type/:typeId", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), getTypePermissions);
+router.post("/permissions/type/:typeId", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateTypePermissions);
 
 /*
 |--------------------------------------------------------------------------|
@@ -291,7 +316,7 @@ router.post(
 router.patch(
   "/employees/:id",
   isAuthenticated,
-  requireFeatures("employee_edit"),
+  requireFeaturesOrSelf("employee_edit"),
   updateEmployee
 );
 
@@ -309,20 +334,29 @@ router.patch(
   updateEmployeeStatus
 );
 
+router.post(
+  "/employees/:id/avatar",
+  isAuthenticated,
+  requireFeatures("employee_edit"),
+  upload.single("image"),
+  updateEmployeeAvatar
+);
+
 /*
 |--------------------------------------------------------------------------|
 | ATTENDANCE (NEW)                                                         |
 |--------------------------------------------------------------------------|
 */
-router.get("/attendance/offices", isAuthenticated, listOffices);
-router.get("/attendance/today", isAuthenticated, getToday);
-router.post("/attendance/punch", isAuthenticated, punch);
+router.get("/attendance/offices", isAuthenticated, Attendance.listOffices);
+router.get("/attendance/today", isAuthenticated, Attendance.getToday);
+router.get("/attendance/summary/personal", isAuthenticated, Attendance.getPersonalSummary);
+router.post("/attendance/punch", isAuthenticated, Attendance.punch);
 
 router.get(
   "/attendance/admin/missing",
   isAuthenticated,
   requireRole("hr", "admin", "super_admin"),
-  adminMissing
+  Attendance.adminMissing
 );
 
 /*
@@ -363,22 +397,24 @@ router.put(
 | LEAVE MANAGEMENT (NEW)                                                   |
 |--------------------------------------------------------------------------|
 */
-router.get("/leaves/types", isAuthenticated, getLeaveTypes);
-router.post("/leaves/apply", isAuthenticated, applyLeave);
-router.get("/leaves/my", isAuthenticated, getMyLeaves);
+router.get("/leaves/types", isAuthenticated, Leave.getLeaveTypes);
+router.post("/leaves/apply", isAuthenticated, Leave.applyLeave);
+router.get("/leaves/my", isAuthenticated, Leave.getMyLeaves);
+router.get("/leaves/balances", isAuthenticated, Leave.getLeaveBalances);
+router.get("/leaves/summary/stats", isAuthenticated, Leave.getLeaveDashboardStats);
 
 router.get(
   "/leaves/admin/all",
   isAuthenticated,
-  requireRole("hr", "admin", "super_admin"),
-  getAllLeaves
+  requireRole("hr", "admin", "super_admin", "manager", "developer"),
+  Leave.getAllLeaves
 );
 
 router.patch(
   "/leaves/approve/:id",
   isAuthenticated,
-  requireRole("hr", "admin", "super_admin"),
-  approveLeave
+  requireRole("hr", "admin", "super_admin", "manager", "developer"),
+  Leave.approveLeave
 );
 
 /* --- LEAVE SETTINGS (Admin Only) --- */
@@ -386,21 +422,21 @@ router.post(
   "/leaves/types",
   isAuthenticated,
   requireRole("hr", "admin", "super_admin"),
-  createLeaveType
+  Leave.createLeaveType
 );
 
 router.patch(
   "/leaves/types/:id",
   isAuthenticated,
   requireRole("hr", "admin", "super_admin"),
-  updateLeaveType
+  Leave.updateLeaveType
 );
 
 router.delete(
   "/leaves/types/:id",
   isAuthenticated,
   requireRole("hr", "admin", "super_admin"),
-  deleteLeaveType
+  Leave.deleteLeaveType
 );
 
 module.exports = router;

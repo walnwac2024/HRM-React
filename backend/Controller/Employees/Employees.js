@@ -37,9 +37,13 @@ function hasFullAccess(user) {
   const level = Number(user.flags?.level || 0);
   if (level > 6) return true;
 
-  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const roles = (Array.isArray(user.roles) ? user.roles : []).map((r) =>
+    String(r).toLowerCase()
+  );
   if (roles.includes("super_admin")) return true;
   if (roles.includes("admin")) return true;
+  if (roles.includes("hr")) return true;
+  if (roles.includes("developer")) return true;
 
   return false;
 }
@@ -539,6 +543,20 @@ async function getEmployeeById(req, res) {
 async function updateEmployee(req, res) {
   try {
     const { id } = req.params;
+    const body = req.body || {};
+    const sessionUser = req.session?.user;
+
+    // ✅ If NOT admin/hr/developer, restrict which fields can be updated
+    if (!hasFullAccess(sessionUser)) {
+      // These are strictly personal fields. All other fields from req.body will be ignored.
+      const allowed = ["emailPersonal", "personalEmail", "contact", "emergencyContact", "address"];
+      Object.keys(body).forEach(key => {
+        if (!allowed.includes(key)) {
+          delete body[key];
+        }
+      });
+    }
+
     const {
       employeeCode,
       name,
@@ -552,13 +570,13 @@ async function updateEmployee(req, res) {
       gender,
       bloodGroup,
       emailPersonal,
-      personalEmail, // Unified field
+      personalEmail,
       emailOfficial,
-      officialEmail, // Unified field
+      officialEmail,
       contact,
       emergencyContact,
       address,
-    } = req.body || {};
+    } = body;
 
     const fields = [];
     const params = [];
@@ -1309,9 +1327,31 @@ async function lookupStatuses(req, res) {
   }
 }
 
+async function updateEmployeeAvatar(req, res) {
+  try {
+    const { id } = req.params;
+    if (!req.file) return res.status(400).json({ message: "No image uploaded" });
+
+    const relPath = `/uploads/${req.file.filename}`;
+
+    await pool.execute(
+      "UPDATE employee_records SET profile_img = ? WHERE id = ? LIMIT 1",
+      [relPath, id]
+    );
+
+    return res.json({ message: "Avatar updated", profile_img: relPath });
+  } catch (err) {
+    console.error("updateEmployeeAvatar error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
 async function lookupRoleTemplates(req, res) {
   try {
-    res.json(["admin", "HR", "manager", "standard"]);
+    const [rows] = await pool.execute(
+      `SELECT type AS value FROM users_types WHERE del != 'Y' OR del IS NULL ORDER BY type`
+    );
+    res.json(rows.map((r) => r.value));
   } catch (err) {
     console.error("lookupRoleTemplates error:", err);
     res.status(500).json({ message: "Server error" });
@@ -1340,4 +1380,5 @@ module.exports = {
   updateEmployeeDocument,
   deleteEmployeeDocument,
   replaceEmployeeDocumentFile,
+  updateEmployeeAvatar,
 };

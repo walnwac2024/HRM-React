@@ -82,8 +82,40 @@ async function checkMissingAttendance() {
             await sendEmail({ to: emp.Personal_Email, subject, text: body });
           }
 
+          // 1. Email Admin/HR
           if (rule.notify_hr_admin && process.env.HR_EMAIL) {
             await sendEmail({ to: process.env.HR_EMAIL, subject: `Admin Alert: ${subject}`, text: body });
+          }
+
+          // 2. Dashboard Notifications for Authorities
+          // Find all admins/hr + the department manager
+          const [authorities] = await pool.execute(
+            `
+            SELECT e.id
+            FROM employee_records e
+            JOIN employee_user_types eut ON e.id = eut.employee_id
+            JOIN users_types ut ON ut.id = eut.user_type_id
+            WHERE ut.type IN ('admin', 'super_admin', 'hr')
+            UNION
+            SELECT manager_id as id FROM department_managers WHERE department_name = ?
+            `,
+            [emp.Department]
+          );
+
+          // Exclude the missing employee from their own notification
+          const uniqueAuthIds = [...new Set(
+            authorities.map(a => Number(a.id))
+              .filter(id => id && id !== Number(emp.id))
+          )];
+
+          const notifyTitle = "Attendance Alert";
+          const notifyMsg = `${emp.Employee_Name} has failed to mark attendance for today (${today}).`;
+
+          for (const authId of uniqueAuthIds) {
+            await pool.execute(
+              "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'attendance')",
+              [authId, notifyTitle, notifyMsg]
+            );
           }
 
           await pool.execute(
@@ -93,7 +125,7 @@ async function checkMissingAttendance() {
             [
               emp.id,
               today,
-              rule.id || 0,
+              rule.id || null,
               rule.notify_employee ? 1 : 0,
               rule.notify_hr_admin ? 1 : 0,
               subject

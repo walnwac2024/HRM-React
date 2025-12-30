@@ -17,7 +17,9 @@ function hasFullAccess(user) {
   const rolesLower = roles.map(r => String(r).toLowerCase());
 
   if (rolesLower.includes("super_admin")) return true;
+  if (rolesLower.includes("admin")) return true;
   if (rolesLower.includes("hr")) return true;
+  if (rolesLower.includes("developer")) return true;
 
   return false;
 }
@@ -51,22 +53,29 @@ function requireRole(...allowedRoles) {
 function requireFeatures(...neededCodes) {
   return (req, res, next) => {
     const user = req.session?.user;
-    if (!user) {
-      return res.status(401).json({ message: "Unauthenticated" });
-    }
-
-    if (hasFullAccess(user)) {
-      return next();
-    }
+    if (!user) return res.status(401).json({ message: "Unauthenticated" });
+    if (hasFullAccess(user)) return next();
 
     const feats = new Set(user.features || []);
-    const ok = neededCodes.every((code) => feats.has(code));
+    if (neededCodes.every((code) => feats.has(code))) return next();
 
-    if (!ok) {
-      return res.status(403).json({ message: "Forbidden (missing feature)" });
-    }
+    return res.status(403).json({ message: "Forbidden (missing feature)" });
+  };
+}
 
-    next();
+function requireFeaturesOrSelf(featureCode, idParam = "id") {
+  return (req, res, next) => {
+    const user = req.session?.user;
+    if (!user) return res.status(401).json({ message: "Unauthenticated" });
+    if (hasFullAccess(user)) return next();
+
+    const requestedId = String(req.params[idParam]);
+    if (String(user.id) === requestedId) return next();
+
+    const feats = new Set(user.features || []);
+    if (feats.has(featureCode)) return next();
+
+    return res.status(403).json({ message: "Forbidden (access denied)" });
   };
 }
 
@@ -74,4 +83,5 @@ module.exports = {
   isAuthenticated,
   requireRole,
   requireFeatures,
+  requireFeaturesOrSelf,
 };

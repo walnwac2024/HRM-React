@@ -217,7 +217,9 @@ const BASE_EMP_FIELDS = `
   Employee_Name    AS name,
   Official_Email   AS email,
   Department,
-  Designations     AS designation
+  Designations     AS designation,
+  profile_img,
+  last_login_at
 `;
 
 // Utility: build tabs from features (super_admin, admin, and hr see all)
@@ -225,8 +227,8 @@ function buildTabs(roleName, features) {
   const r = String(roleName || '').toLowerCase();
   const f = new Set(features || []);
 
-  // ✅ super_admin, admin, and hr get all tabs
-  const can = (code) => r === 'super_admin' || r === 'admin' || r === 'hr' || f.has(code);
+  // ✅ super_admin, admin, hr, and developer get all tabs
+  const can = (code) => ['super_admin', 'admin', 'hr', 'developer'].includes(r) || f.has(code);
 
   const tabs = [];
   const add = (key, label, code) => { if (can(code)) tabs.push({ key, label }); };
@@ -241,6 +243,7 @@ function buildTabs(roleName, features) {
   add('performance', 'Performance', 'performance_view');
   add('payroll', 'Payroll', 'payroll_view');
   add('reports', 'Reports', 'reports_view');
+  add('permissions', 'Permissions', 'permissions_edit');
 
   return tabs;
 }
@@ -275,8 +278,37 @@ async function getDashboard(req, res) {
   const role = String(primaryRole).toLowerCase();
 
   try {
+    // 0. Fetch logged-in user profile (ALWAYS included)
+    const [meRows] = await pool.execute(
+      `SELECT ${BASE_EMP_FIELDS}, Date_of_Birth, profile_img
+         FROM employee_records
+        WHERE id = ?
+        LIMIT 1`,
+      [userId]
+    );
+    const myProfile = meRows[0] || null;
+    const myDept = myProfile?.Department || null;
+
+    // Helper to check if a DD-MMM-YY string matches today
+    const isBirthdayToday = (dobStr) => {
+      if (!dobStr) return false;
+      const parts = dobStr.split('-');
+      if (parts.length < 2) return false;
+      const day = parseInt(parts[0], 10);
+      const monthStr = parts[1].toLowerCase();
+
+      const now = new Date();
+      const currentDay = now.getDate();
+      const currentMonthIndex = now.getMonth(); // 0-11
+
+      const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+      const birthMonthIndex = months.indexOf(monthStr);
+
+      return day === currentDay && birthMonthIndex === currentMonthIndex;
+    };
+
     // Use employee_records instead of users
-    if (role === 'super_admin' || role === 'admin') {
+    if (['super_admin', 'admin', 'developer'].includes(role)) {
       const [[{ totalEmployees }]] = await pool.query(
         'SELECT COUNT(*) AS totalEmployees FROM employee_records'
       );
@@ -288,49 +320,76 @@ async function getDashboard(req, res) {
       );
       return res.json({
         role,
+        profile: myProfile,
         widgets: { totalEmployees, recentEmployees: employees }
       });
     }
 
     if (role === 'manager' || role === 'zone_manager' || role === 'director') {
-      // If you later add manager → employee relationships, filter here.
-      const [[{ totalEmployees }]] = await pool.query(
-        'SELECT COUNT(*) AS totalEmployees FROM employee_records'
-      );
-      const [team] = await pool.query(
-        `SELECT ${BASE_EMP_FIELDS}
-           FROM employee_records
-          ORDER BY id DESC
-          LIMIT 25`
-      );
+      const [[me]] = await pool.query("SELECT Department FROM employee_records WHERE id = ?", [userId]);
+      const myDept = me?.Department || null;
+
+      let countQuery = 'SELECT COUNT(*) AS totalEmployees FROM employee_records';
+      let teamQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1 AND id != ?`;
+      let params = [];
+      let teamParams = [userId];
+
+      if (myDept) {
+        countQuery += ' WHERE Department = ?';
+        params.push(myDept);
+        teamQuery += ' AND Department = ?';
+        teamParams.push(myDept);
+      }
+
+      const [[{ totalEmployees }]] = await pool.query(countQuery, params);
+      const [team] = await pool.query(teamQuery + " ORDER BY id DESC LIMIT 25", teamParams);
+
       return res.json({
         role,
+        profile: myProfile,
         widgets: { totalEmployees, teamRecent: team }
       });
     }
 
     if (role === 'hr') {
-      const [[{ totalEmployees }]] = await pool.query(
-        'SELECT COUNT(*) AS totalEmployees FROM employee_records'
-      );
-      const [recentHires] = await pool.query(
-        `SELECT ${BASE_EMP_FIELDS}
-           FROM employee_records
-          ORDER BY id DESC
-          LIMIT 20`
-      );
+      const [[me]] = await pool.query("SELECT Department FROM employee_records WHERE id = ?", [userId]);
+      const myDept = me?.Department || null;
+
+      let countQuery = 'SELECT COUNT(*) AS totalEmployees FROM employee_records';
+      let hireQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1`;
+      let params = [];
+
+      if (myDept) {
+        countQuery += ' WHERE Department = ?';
+        hireQuery += ' AND Department = ?';
+        params.push(myDept);
+      }
+
+      const [[{ totalEmployees }]] = await pool.query(countQuery, params);
+      const [recentHires] = await pool.query(hireQuery + " ORDER BY id DESC LIMIT 20", params);
+
       return res.json({
         role,
+        profile: myProfile,
         widgets: { totalEmployees, recentHires }
       });
     }
 
     if (role === 'accounts' || role === 'payroll') {
-      const [[{ totalEmployees }]] = await pool.query(
-        'SELECT COUNT(*) AS totalEmployees FROM employee_records'
-      );
+      const [[me]] = await pool.query("SELECT Department FROM employee_records WHERE id = ?", [userId]);
+      const myDept = me?.Department || null;
+
+      let countQuery = 'SELECT COUNT(*) AS totalEmployees FROM employee_records';
+      let params = [];
+      if (myDept) {
+        countQuery += ' WHERE Department = ?';
+        params.push(myDept);
+      }
+
+      const [[{ totalEmployees }]] = await pool.query(countQuery, params);
       return res.json({
         role,
+        profile: myProfile,
         widgets: {
           totalEmployees,
           payrollPanel: { lastRun: null, pending: 0 }
@@ -338,19 +397,40 @@ async function getDashboard(req, res) {
       });
     }
 
-    // default: self-profile from employee_records
-    const [meRows] = await pool.execute(
-      `SELECT ${BASE_EMP_FIELDS}
-         FROM employee_records
-        WHERE id = ?
-        LIMIT 1`,
-      [userId]
-    );
+    const isMyBirthday = isBirthdayToday(myProfile?.Date_of_Birth);
+
+    // Fetch teammates' birthdays (same department only)
+    let birthQuery = "SELECT id, Employee_Name, Date_of_Birth, profile_img FROM employee_records WHERE is_active = 1";
+    let birthParams = [];
+    if (myDept) {
+      birthQuery += " AND Department = ?";
+      birthParams.push(myDept);
+    }
+    const [allEmpDOBs] = await pool.query(birthQuery, birthParams);
+
+    const colleaguesBirthdays = allEmpDOBs
+      .filter(e => e.id !== userId && isBirthdayToday(e.Date_of_Birth))
+      .map(e => ({ name: e.Employee_Name, id: e.id, profile_img: e.profile_img }));
+
+    // Fetch team members (same department only)
+    let teamQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1 AND id != ?`;
+    let teamParams = [userId];
+    if (myDept) {
+      teamQuery += " AND Department = ?";
+      teamParams.push(myDept);
+    }
+    teamQuery += " LIMIT 10";
+
+    const [team] = await pool.query(teamQuery, teamParams);
+
     return res.json({
       role,
-      profile: meRows[0] || null,
+      profile: myProfile,
       widgets: {
-        tips: ['Complete your profile', 'Change your password regularly']
+        tips: ['Complete your profile', 'Change your password regularly'],
+        birthdayToday: isMyBirthday,
+        colleaguesBirthdays,
+        team
       }
     });
   } catch (err) {
@@ -363,8 +443,13 @@ async function getDashboard(req, res) {
 async function listAllUsers(req, res) {
   const { roles } = getSessionRoleInfo(req);
   const lowerRoles = roles.map(r => String(r).toLowerCase());
-  if (!lowerRoles.includes('admin') && !lowerRoles.includes('super_admin')) {
-    return res.status(403).json({ message: 'Forbidden' });
+  if (
+    !lowerRoles.includes("admin") &&
+    !lowerRoles.includes("super_admin") &&
+    !lowerRoles.includes("hr") &&
+    !lowerRoles.includes("developer")
+  ) {
+    return res.status(403).json({ message: "Forbidden" });
   }
 
   try {

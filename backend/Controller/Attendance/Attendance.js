@@ -66,7 +66,7 @@ function toYMD(d = new Date()) {
 
 function isAdminLike(user) {
   const level = Number(user?.flags?.level || 0);
-  const roles = Array.isArray(user?.roles) ? user.roles : [];
+  const roles = (Array.isArray(user?.roles) ? user.roles : []).map(r => String(r).toLowerCase());
   return (
     level > 6 ||
     roles.includes("super_admin") ||
@@ -76,12 +76,30 @@ function isAdminLike(user) {
 }
 
 /**
+ * Haversine formula to calculate distance between two points in meters
+ */
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // Earth radius in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+/**
  * GET /attendance/offices
  */
 const listOffices = async (req, res) => {
   try {
     const [rows] = await pool.execute(
-      `SELECT id, name, code
+      `SELECT id, name, code, latitude, longitude, allowed_radius_meters
        FROM offices
        WHERE is_active = 1
        ORDER BY id ASC`
@@ -140,12 +158,16 @@ const punch = async (req, res) => {
     const sessionUser = req.session?.user;
     if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
 
-    const { office_id, punch_type, employee_id, note, clientTime } = req.body || {};
+    const { office_id, punch_type, employee_id, note, clientTime, latitude, longitude } = req.body || {};
 
     if (!office_id) return res.status(400).json({ message: "office_id is required" });
     if (!punch_type || !["IN", "OUT"].includes(punch_type)) {
       return res.status(400).json({ message: "punch_type must be IN or OUT" });
     }
+
+    // Admin can punch for others; normal user only for self
+    const targetEmployeeId =
+      employee_id && isAdminLike(sessionUser) ? Number(employee_id) : Number(sessionUser.id);
 
     // --- SECURITY CHECK: CLOCK MANIPULATION ---
     const now = new Date();
@@ -160,13 +182,7 @@ const punch = async (req, res) => {
             `INSERT INTO attendance_security_violations 
               (employee_id, server_time, client_time, drift_minutes, punch_type)
              VALUES (?, ?, ?, ?, ?)`,
-            [
-              employee_id || sessionUser.id,
-              now,
-              cTime,
-              Math.round(diffMin),
-              punch_type
-            ]
+            [targetEmployeeId, now, cTime, Math.round(diffMin), punch_type]
           );
         } catch (logErr) {
           console.error("Failed to log security violation:", logErr);
@@ -180,11 +196,56 @@ const punch = async (req, res) => {
         });
       }
     }
+
+    // --- GPS VALIDATION ---
+    const [allOffices] = await conn.execute(
+      "SELECT id, name, latitude, longitude, allowed_radius_meters FROM offices WHERE is_active = 1"
+    );
+
+    const targetOffice = allOffices.find(o => o.id === Number(office_id));
+    if (!targetOffice) return res.status(400).json({ message: "Invalid office selection" });
+
+    let isInside = false;
+    let distToTarget = Infinity;
+
+    if (latitude && longitude && targetOffice.latitude && targetOffice.longitude) {
+      distToTarget = calculateDistance(latitude, longitude, Number(targetOffice.latitude), Number(targetOffice.longitude));
+      if (distToTarget <= (targetOffice.allowed_radius_meters || 200)) {
+        isInside = true;
+      }
+    }
+
+    // If not admin and not inside the selected office, reject
+    const isAdmin = isAdminLike(sessionUser);
+    if (!isAdmin && !isInside) {
+      // Log rejection
+      try {
+        await conn.execute(
+          `INSERT INTO attendance_rejections (employee_id, latitude, longitude, reason)
+           VALUES (?, ?, ?, ?)`,
+          [
+            targetEmployeeId,
+            latitude || null,
+            longitude || null,
+            latitude ? `Outside radius for ${targetOffice.name}` : "Missing GPS coordinates"
+          ]
+        );
+      } catch (logErr) {
+        console.error("Failed to log rejection:", logErr);
+      }
+
+      let msg = "";
+      if (!latitude || !longitude) {
+        msg = "Location permission is required to mark attendance.";
+      } else {
+        msg = `You are not within the authorized radius for ${targetOffice.name}. (Distance: ${Math.round(distToTarget)}m). Please move closer to this office to mark attendance.`;
+      }
+
+      return res.status(403).json({ message: msg });
+    }
+
     // ------------------------------------------
 
-    // Admin can punch for others; normal user only for self
-    const targetEmployeeId =
-      employee_id && isAdminLike(sessionUser) ? Number(employee_id) : Number(sessionUser.id);
     const today = toYMD(now);
     const shift = await resolveShiftForDate(today);
     if (!shift) return res.status(400).json({ message: "No active shift configured" });
@@ -198,18 +259,22 @@ const punch = async (req, res) => {
     await conn.execute(
       `
       INSERT INTO attendance_punches
-        (employee_id, office_id, punch_type, punched_at, source, marked_by_employee_id, note)
+        (employee_id, office_id, punch_type, punched_at, source, marked_by_employee_id, note, latitude, longitude, distance_from_office, matched_office_id)
       VALUES
-        (?, ?, ?, ?, ?, ?, ?)
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         targetEmployeeId,
         Number(office_id),
         punch_type,
         now,
-        employee_id && isAdminLike(sessionUser) ? "ADMIN" : "WEB",
-        employee_id && isAdminLike(sessionUser) ? sessionUser.id : null,
+        isAdmin ? "ADMIN" : "WEB",
+        isAdmin ? sessionUser.id : null,
         note ? String(note).slice(0, 255) : null,
+        latitude || null,
+        longitude || null,
+        isInside ? distToTarget : null,
+        isInside ? targetOffice.id : null,
       ]
     );
 
@@ -374,9 +439,62 @@ const adminMissing = async (req, res) => {
   }
 };
 
+/**
+ * GET /attendance/summary/personal
+ * Returns counts (Present, Absent, Leave, etc.) and missing records for current month
+ */
+const getPersonalSummary = async (req, res) => {
+  try {
+    const user = req.session?.user;
+    if (!user?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth() + 1;
+
+    // 1. Get Summary Counts
+    const [counts] = await pool.execute(
+      `
+      SELECT status, COUNT(*) as count
+      FROM attendance_daily
+      WHERE employee_id = ? 
+        AND YEAR(attendance_date) = ? 
+        AND MONTH(attendance_date) = ?
+      GROUP BY status
+      `,
+      [user.id, year, month]
+    );
+
+    // 2. Get Missing/Incomplete Attendance
+    // We look for rows where first_in is NULL or last_out is NULL for dates <= today
+    const [missing] = await pool.execute(
+      `
+      SELECT attendance_date as date, first_in as \`in\`, last_out as \`out\`, status
+      FROM attendance_daily
+      WHERE employee_id = ?
+        AND YEAR(attendance_date) = ?
+        AND MONTH(attendance_date) = ?
+        AND attendance_date <= CURRENT_DATE
+        AND (first_in IS NULL OR last_out IS NULL)
+      ORDER BY attendance_date DESC
+      `,
+      [user.id, year, month]
+    );
+
+    return res.json({
+      summary: counts,
+      missing: missing
+    });
+  } catch (e) {
+    console.error("getPersonalSummary error:", e);
+    return res.status(500).json({ message: "Failed to load attendance summary" });
+  }
+};
+
 module.exports = {
   listOffices,
   getToday,
   punch,
   adminMissing,
+  getPersonalSummary,
 };
