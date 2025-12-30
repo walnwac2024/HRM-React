@@ -34,7 +34,8 @@ const login = async (req, res) => {
           e.password_hash,
           e.can_login,
           e.is_active,
-          e.profile_img
+          e.profile_img,
+          e.Department
        FROM employee_records e
        WHERE e.can_login = 1
          AND e.Official_Email = ?
@@ -117,6 +118,12 @@ const login = async (req, res) => {
 
     let features = permRows.map((r) => r.code);
 
+    // ✅ Fallback: Level 10+ (Super Admin/HR Manager) gets all permissions
+    if (level >= 10) {
+      const [allPerms] = await pool.execute("SELECT code FROM permissions");
+      features = [...new Set([...features, ...allPerms.map(p => p.code)])];
+    }
+
     const avatarPath = emp.profile_img || null;
 
     const payload = {
@@ -130,6 +137,7 @@ const login = async (req, res) => {
 
       role: roles[0] || null,
       roles,
+      Department: emp.Department,
 
       flags: {
         level,
@@ -300,11 +308,32 @@ async function uploadAvatar(req, res) {
   }
 }
 
+/**
+ * POST /api/v1/auth/heartbeat
+ * Update last_login_at to show user is active
+ */
+async function heartbeat(req, res) {
+  const userId = req.session?.user?.id;
+  if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+  try {
+    await pool.execute(
+      "UPDATE employee_records SET last_login_at = NOW() WHERE id = ?",
+      [userId]
+    );
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("heartbeat error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
 module.exports = {
-  register,
   login,
-  me,
   logout,
+  me,
+  register,
+  heartbeat,
   changePassword,
   uploadAvatar,
 };
