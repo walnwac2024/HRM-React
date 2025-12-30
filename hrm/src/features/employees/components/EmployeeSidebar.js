@@ -1,5 +1,6 @@
 import React from "react";
 import SharedSidebar from "../../../components/common/SharedSidebar";
+import { useAuth } from "../../../context/AuthContext";
 
 const icons = {
   list: (
@@ -49,12 +50,13 @@ const icons = {
 };
 
 const MENU_ITEMS = [
-  { id: "employee-list", label: "Employee List", icon: icons.list },
-  { id: "employee-profile-request", label: "Profile Request", status: "working", icon: icons.profile },
-  { id: "employee-transfer", label: "Employee Transfer", status: "working", icon: icons.transfer },
+  { id: "employee-list", label: "Employee List", permission: "employee_view", icon: icons.list },
+  { id: "employee-profile-request", label: "Profile Request", permission: "employee_view", status: "working", icon: icons.profile },
+  { id: "employee-transfer", label: "Employee Transfer", permission: "employee_edit", status: "working", icon: icons.transfer },
   {
     id: "employee-role",
     label: "Employee Role",
+    permission: "employee_edit",
     status: "working",
     icon: icons.role,
     subItems: [
@@ -62,19 +64,20 @@ const MENU_ITEMS = [
       { id: "employee-role/copy", label: "Copy Role" },
     ]
   },
-  { id: "employee-info-request", label: "Info Request", status: "working", icon: icons.info },
-  { id: "employee-approvals", label: "Approvals", status: "working", icon: icons.approvals },
-  { id: "employee-settings", label: "Settings", status: "working", icon: icons.settings },
+  { id: "employee-info-request", label: "Info Request", permission: "employee_view", status: "working", icon: icons.info },
+  { id: "employee-approvals", label: "Approvals", permission: "employee_edit", status: "working", icon: icons.approvals },
+  { id: "employee-settings", label: "Settings", permission: "employee_settings", status: "working", icon: icons.settings },
 ];
 
 export default function EmployeeSidebar({ activeKey, onNavigate }) {
+  const { user } = useAuth();
   return (
     <SharedSidebar
       title="EMPLOYEE"
       items={MENU_ITEMS}
       activeKey={activeKey}
       onNavigate={onNavigate}
-      isAdminUser={true}
+      userPermissions={user?.features || []}
     />
   );
 }

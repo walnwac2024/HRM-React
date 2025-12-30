@@ -1,11 +1,12 @@
-// src/features/leave/LeavePage.js
 import React, { useState, useEffect } from "react";
+import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import LeaveSidebar from "./components/LeaveSidebar";
 import {
     getLeaveTypes,
     getMyLeaves,
     applyLeave,
+    getLeaveBalances,
     getAllLeavesAdmin,
     approveLeaveAdmin,
     createLeaveType,
@@ -18,6 +19,7 @@ export default function LeavePage() {
     const [activeKey, setActiveKey] = useState("my-leaves");
     const [leaveTypes, setLeaveTypes] = useState([]);
     const [myLeaves, setMyLeaves] = useState([]);
+    const [balances, setBalances] = useState([]);
     const [allLeaves, setAllLeaves] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -43,8 +45,9 @@ export default function LeavePage() {
             const types = await getLeaveTypes();
             setLeaveTypes(types);
             if (activeKey === "my-leaves") {
-                const my = await getMyLeaves();
+                const [my, bal] = await Promise.all([getMyLeaves(), getLeaveBalances()]);
                 setMyLeaves(my);
+                setBalances(bal);
             } else if (activeKey === "leave-approvals") {
                 const all = await getAllLeavesAdmin();
                 setAllLeaves(all);
@@ -59,6 +62,7 @@ export default function LeavePage() {
     useEffect(() => {
         if (activeKey === "my-leaves") {
             getMyLeaves().then(setMyLeaves);
+            getLeaveBalances().then(setBalances);
         } else if (activeKey === "leave-approvals") {
             getAllLeavesAdmin().then(setAllLeaves);
         } else if (activeKey === "leave-settings") {
@@ -70,23 +74,31 @@ export default function LeavePage() {
         e.preventDefault();
         try {
             await applyLeave(formData);
-            alert("Leave applied successfully");
+            toast.success("Leave applied successfully");
             setActiveKey("my-leaves");
             setFormData({ leave_type_id: "", start_date: "", end_date: "", reason: "" });
             getMyLeaves().then(setMyLeaves);
+            getLeaveBalances().then(setBalances);
         } catch (e) {
-            alert("Failed to apply leave");
+            const msg = e.response?.data?.message || "Failed to apply leave";
+            toast.error(msg);
         }
     };
 
     const handleStatusUpdate = async (id, status) => {
         try {
-            await approveLeaveAdmin(id, { status, comment: "" });
-            alert(`Leave ${status}`);
+            const comment = status === "rejected"
+                ? window.prompt("Enter rejection reason:")
+                : window.prompt("Optional comment:");
+
+            if (status === "rejected" && !comment) return; // Rejection requires reason
+
+            await approveLeaveAdmin(id, { status, comment: comment || "" });
+            toast.success(`Leave ${status} successfully`);
             const all = await getAllLeavesAdmin();
             setAllLeaves(all);
         } catch (e) {
-            alert("Failed to update status");
+            toast.error("Failed to update status");
         }
     };
 
@@ -123,7 +135,7 @@ export default function LeavePage() {
             <LeaveSidebar
                 activeKey={activeKey}
                 onNavigate={setActiveKey}
-                userRole={user?.role}
+                user={user}
             />
 
             <section className="flex-1">
@@ -148,25 +160,27 @@ export default function LeavePage() {
                         {activeKey === "my-leaves" && (
                             <div className="space-y-6">
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="bg-emerald-50/50 border border-emerald-100 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Approved</div>
-                                        <div className="text-2xl font-black text-emerald-700 mt-1">
-                                            {myLeaves.filter(l => l.status === 'approved').length}
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {balances.map(b => (
+                                        <div key={b.id} className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate mb-1" title={b.leave_type_name}>
+                                                {b.leave_type_name}
+                                            </div>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className="text-2xl font-black text-slate-800">{Number(b.balance)}</span>
+                                                <span className="text-[10px] text-slate-400 font-medium">/{Number(b.entitlement)}</span>
+                                            </div>
+                                            <div className="mt-2 h-1 w-full bg-slate-50 rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full transition-all duration-500 ${Number(b.balance) < 2 ? 'bg-rose-400' : 'bg-emerald-400'}`}
+                                                    style={{ width: `${(Number(b.balance) / Number(b.entitlement)) * 100}%` }}
+                                                ></div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="bg-amber-50/50 border border-amber-100 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-bold text-amber-600 tracking-wider">Pending</div>
-                                        <div className="text-2xl font-black text-amber-700 mt-1">
-                                            {myLeaves.filter(l => l.status === 'pending').length}
-                                        </div>
-                                    </div>
-                                    <div className="bg-rose-50/50 border border-rose-100 p-4 rounded-2xl">
-                                        <div className="text-[10px] uppercase font-bold text-rose-600 tracking-wider">Rejected</div>
-                                        <div className="text-2xl font-black text-rose-700 mt-1">
-                                            {myLeaves.filter(l => l.status === 'rejected').length}
-                                        </div>
-                                    </div>
+                                    ))}
+                                    {balances.length === 0 && !loading && (
+                                        <div className="col-span-full py-4 text-center text-slate-400 text-xs italic">No balances found for the current year.</div>
+                                    )}
                                 </div>
 
                                 <div className="overflow-x-auto">
@@ -182,11 +196,23 @@ export default function LeavePage() {
                                         <tbody className="divide-y divide-slate-50">
                                             {myLeaves.map((l) => (
                                                 <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-4 py-4 font-medium text-slate-700">{l.leave_type_name}</td>
-                                                    <td className="px-4 py-4 text-slate-600">
-                                                        {new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}
+                                                    <td className="px-4 py-4 font-medium text-slate-700">
+                                                        {l.leave_type_name}
+                                                        {l.approver_name && (
+                                                            <div className="text-[10px] text-slate-400 mt-0.5">
+                                                                {l.status === 'approved' ? 'Approved' : 'Rejected'} by {l.approver_name}
+                                                            </div>
+                                                        )}
                                                     </td>
-                                                    <td className="px-4 py-4 text-slate-600">{l.total_days}</td>
+                                                    <td className="px-4 py-4 text-slate-600 font-medium">
+                                                        <div className="text-[13px]">{new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}</div>
+                                                        {l.rejection_reason && (
+                                                            <div className="text-[10px] text-rose-500 mt-1 italic font-medium max-w-[200px] truncate" title={l.rejection_reason}>
+                                                                Reason: {l.rejection_reason}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-slate-600 font-bold">{l.total_days}</td>
                                                     <td className="px-4 py-4">
                                                         <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${l.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 shadow-sm shadow-emerald-50' :
                                                             l.status === 'rejected' ? 'bg-rose-50 text-rose-600 border border-rose-100' :
@@ -217,8 +243,10 @@ export default function LeavePage() {
                                         required
                                     >
                                         <option value="">Select Type</option>
-                                        {leaveTypes.map((t) => (
-                                            <option key={t.id} value={t.id}>{t.name} ({t.entitlement_days} days)</option>
+                                        {balances.map((b) => (
+                                            <option key={b.id} value={b.leave_type_id}>
+                                                {b.leave_type_name} (Balance: {Number(b.balance)} days)
+                                            </option>
                                         ))}
                                     </select>
                                 </div>
@@ -268,7 +296,7 @@ export default function LeavePage() {
                                 <table className="w-full text-sm text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
-                                            <th className="px-4 py-3 font-semibold">Employee</th>
+                                            <th className="px-4 py-3 font-semibold">Employee Info</th>
                                             <th className="px-4 py-3 font-semibold">Type</th>
                                             <th className="px-4 py-3 font-semibold">Dates & Days</th>
                                             <th className="px-4 py-3 font-semibold">Status</th>
@@ -279,13 +307,24 @@ export default function LeavePage() {
                                         {allLeaves.map((l) => (
                                             <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-4 py-4 text-slate-700">
-                                                    <div className="font-bold">{l.Employee_Name}</div>
-                                                    <div className="text-[10px] text-slate-400 font-medium uppercase">{l.employee_code}</div>
+                                                    <div className="font-bold flex items-center gap-2">
+                                                        {l.Employee_Name}
+                                                        <span className="px-1.5 py-0.5 bg-slate-100 text-[9px] rounded uppercase text-slate-500">{l.employee_code}</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-slate-500 font-medium leading-tight mt-1">
+                                                        {l.Designations} <br />
+                                                        <span className="text-slate-400 font-normal">{l.Department}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-4 py-4 text-slate-600 font-medium">{l.leave_type_name}</td>
                                                 <td className="px-4 py-4 text-slate-600">
                                                     <div className="font-medium text-[13px]">{new Date(l.start_date).toLocaleDateString()} - {new Date(l.end_date).toLocaleDateString()}</div>
                                                     <div className="text-[11px] text-slate-400">{l.total_days} days</div>
+                                                    {l.reason && (
+                                                        <div className="text-[10px] text-slate-500 mt-1 italic leading-tight border-l-2 border-slate-100 pl-2">
+                                                            "{l.reason}"
+                                                        </div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${l.status === 'approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
@@ -294,6 +333,9 @@ export default function LeavePage() {
                                                         }`}>
                                                         {l.status}
                                                     </span>
+                                                    {l.handled_by && (
+                                                        <div className="text-[9px] text-slate-400 mt-1 uppercase">By {l.handled_by}</div>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-4 text-right space-x-2">
                                                     {l.status === "pending" && (

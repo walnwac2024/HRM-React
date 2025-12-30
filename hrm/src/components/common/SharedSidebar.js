@@ -14,6 +14,7 @@ export default function SharedSidebar({
     title = "MENU",
     onNavigate,
     isAdminUser = false,
+    userPermissions = [],
 }) {
     const badgeSuffix = (
         <span className="ml-auto px-1.5 py-0.5 rounded bg-amber-50 text-[9px] text-amber-600 font-bold uppercase border border-amber-200 shrink-0">
@@ -21,7 +22,18 @@ export default function SharedSidebar({
         </span>
     );
 
-    const filteredItems = items.filter((it) => !it.isAdmin || isAdminUser);
+    const filteredItems = items.filter((it) => {
+        // 1. If item has a specific permission code, check it
+        if (it.permission) {
+            return userPermissions.includes(it.permission);
+        }
+        // 2. Fallback to isAdmin check for backward compatibility
+        if (it.isAdmin) {
+            return isAdminUser;
+        }
+        // 3. Public item
+        return true;
+    });
 
     return (
         <aside className="sidebar">

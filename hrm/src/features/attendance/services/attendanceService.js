@@ -31,13 +31,23 @@ export async function getTodayAttendance() {
   return data;
 }
 
-export async function punchAttendance({ office_id, punch_type, employee_id, note, clientTime }) {
+export async function punchAttendance({
+  office_id,
+  punch_type,
+  employee_id,
+  note,
+  clientTime,
+  latitude,
+  longitude
+}) {
   const { data } = await api.post("/attendance/punch", {
     office_id,
     punch_type,
     employee_id,
     note,
     clientTime,
+    latitude,
+    longitude,
   });
   return data;
 }
@@ -68,5 +78,10 @@ export async function getAttendanceRules() {
 
 export async function updateActiveAttendanceRule(payload) {
   const { data } = await api.put("/attendance/settings/rules/active", payload);
+  return data;
+}
+
+export async function getPersonalAttendanceSummary() {
+  const { data } = await api.get("/attendance/summary/personal");
   return data;
 }

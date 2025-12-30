@@ -30,23 +30,20 @@ const icons = {
 };
 
 const LEAVE_MENU = [
-    { id: "my-leaves", label: "My Leaves", icon: icons.myLeaves },
-    { id: "apply-leave", label: "Apply Leave", icon: icons.apply },
-    { id: "leave-approvals", label: "Leave Approvals", isAdmin: true, icon: icons.approvals },
-    { id: "leave-settings", label: "Leave Settings", isAdmin: true, icon: icons.settings },
+    { id: "my-leaves", label: "My Leaves", permission: "leave_view", icon: icons.myLeaves },
+    { id: "apply-leave", label: "Apply Leave", permission: "leave_request", icon: icons.apply },
+    { id: "leave-approvals", label: "Leave Approvals", permission: "leave_approve", icon: icons.approvals },
+    { id: "leave-settings", label: "Leave Settings", permission: "leave_settings", icon: icons.settings },
 ];
 
-export default function LeaveSidebar({ activeKey, onNavigate, userRole }) {
-    // Access restricted to Super Admin, Admin, and HR
-    const isAdminLike = ["super_admin", "admin", "hr"].includes(userRole?.toLowerCase());
-
+export default function LeaveSidebar({ activeKey, onNavigate, user }) {
     return (
         <SharedSidebar
             title="LEAVE"
             items={LEAVE_MENU}
             activeKey={activeKey}
             onNavigate={onNavigate}
-            isAdminUser={isAdminLike}
+            userPermissions={user?.features || []}
         />
     );
 }
