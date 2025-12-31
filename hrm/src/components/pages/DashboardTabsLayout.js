@@ -16,6 +16,7 @@ export default function DashboardTabsLayout() {
     { label: "Payroll Dashboard", to: "/dashboard/payroll", code: "payroll_dashboard" },
     { label: "Recruitment Dashboard", to: "/dashboard/recruitment", code: "recruitment_dashboard" },
     { label: "Organcogram", to: "/dashboard/organcogram", code: "organogram_view" },
+    { label: "News", to: "/dashboard/news" },
   ];
 
   // Filter tabs: Show if Admin OR has the specific feature code

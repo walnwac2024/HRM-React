@@ -26,6 +26,7 @@ import AttendanceSettings from "./features/attendance/components/AttendanceSetti
 import ProfilePage from "./features/profile/ProfilePage";
 import LeavePage from "./features/leave/LeavePage";
 import PermissionsPage from "./features/permissions/PermissionsPage";
+import NewsPage from "./features/news/NewsPage";
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -93,6 +94,7 @@ export default function App() {
               <Route path="payroll" element={<PayrollDashboard />} />
               <Route path="recruitment" element={<RecruitmentDashboard />} />
               <Route path="organcogram" element={<Organcogram />} />
+              <Route path="news" element={<NewsPage />} />
             </Route>
 
             {/* Other top-level pages */}
