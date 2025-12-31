@@ -12,6 +12,9 @@ import {
   getLeaveDashboardStats
 } from "../features/leave/services/leaveService";
 import { getDashboardData } from "../features/dashboard/services/dashboardService";
+import { listNews } from "../features/news/newsService";
+import { Megaphone, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const BACKEND_URL = "http://localhost:5000";
 
@@ -79,6 +82,7 @@ function badge(status) {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const [loadingAttendance, setLoadingAttendance] = useState(true);
   const [offices, setOffices] = useState([]);
@@ -94,6 +98,7 @@ export default function Dashboard() {
   const [missingAttendance, setMissingAttendance] = useState([]);
   const [rightTab, setRightTab] = useState("requests"); // "requests" or "approvals"
   const [dashboardData, setDashboardData] = useState(null);
+  const [news, setNews] = useState([]);
 
   const kpiRows = [
     "Working Hour",
@@ -139,13 +144,14 @@ export default function Dashboard() {
       setLoadingAttendance(true);
       setError("");
 
-      const [officeList, today, balances, stats, summaryData, dbData] = await Promise.all([
+      const [officeList, today, balances, stats, summaryData, dbData, newsData] = await Promise.all([
         getAttendanceOffices(),
         getTodayAttendance(),
         getLeaveBalances(),
         getLeaveDashboardStats(),
         getPersonalAttendanceSummary(),
         getDashboardData(),
+        listNews(),
       ]);
 
       setOffices(officeList);
@@ -155,6 +161,10 @@ export default function Dashboard() {
       setAttendanceSummary(summaryData.summary || []);
       setMissingAttendance(summaryData.missing || []);
       setDashboardData(dbData);
+      const userRoles = (user?.roles || []).map(r => String(r).toLowerCase());
+      if (user?.role) userRoles.push(user.role.toLowerCase());
+      const isStaff = userRoles.some(r => ["admin", "super_admin", "hr", "developer"].includes(r));
+      setNews((isStaff ? newsData : (newsData || []).filter(n => n.is_published)).slice(0, 3));
 
       const inOfficeId = today?.attendance?.office_id_first_in;
       if (inOfficeId) setSelectedOfficeId(String(inOfficeId));
@@ -691,11 +701,39 @@ export default function Dashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow border overflow-hidden">
-          <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-[12px] sm:text-[13px] font-semibold text-gray-700">
-            News
+          <div className="px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between border-b">
+            <div className="text-[12px] sm:text-[13px] font-semibold text-gray-700 flex items-center gap-2">
+              <Megaphone size={16} className="text-customRed" />
+              NEWS
+            </div>
+            <button
+              onClick={() => navigate("/dashboard/news")}
+              className="text-[10px] text-customRed font-bold hover:underline flex items-center shrink-0"
+            >
+              VIEW ALL <ChevronRight size={12} />
+            </button>
           </div>
-          <div className="px-3 sm:px-4 pb-3 sm:pb-4 text-xs text-gray-500">
-            No record found
+          <div className="divide-y max-h-[300px] overflow-y-auto custom-scrollbar">
+            {news.length === 0 ? (
+              <div className="px-3 sm:px-4 py-6 text-center">
+                <p className="text-xs text-gray-400">No recent announcements</p>
+              </div>
+            ) : (
+              news.map((item) => (
+                <div key={item.id} className="p-3 sm:p-4 hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => navigate("/dashboard/news")}>
+                  <div className="text-[13px] font-bold text-gray-800 line-clamp-1 mb-1">
+                    {item.title}
+                  </div>
+                  <div className="text-[11px] text-gray-500 line-clamp-2 mb-2 leading-relaxed">
+                    {item.content}
+                  </div>
+                  <div className="text-[10px] text-gray-400 flex items-center justify-between uppercase tracking-tighter font-semibold">
+                    <span>{item.author_name}</span>
+                    <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>
