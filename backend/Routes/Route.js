@@ -4,6 +4,7 @@ const path = require("path");
 const multer = require("multer");
 const fs = require("fs");
 const router = express.Router();
+const upload = require('../Middleware/uploadMiddleware');
 
 // ---------- AUTH CONTROLLERS ----------
 const {
@@ -76,6 +77,9 @@ const {
   updateTypePermissions,
 } = require("../Controller/UserDeatils/PermissionController");
 
+// ---------- NEWS CONTROLLERS ----------
+const News = require("../Controller/News/NewsController");
+
 // ---------- MIDDLEWARE ----------
 const {
   isAuthenticated,
@@ -95,24 +99,11 @@ router.get("/csrf", (req, res) => {
 
 /*
 |--------------------------------------------------------------------------|
-| MULTER CONFIG FOR UPLOADS                                                |
+| MULTER CONFIG FOR EMPLOYEE DOCUMENTS                                    |
 |--------------------------------------------------------------------------|
 */
 const uploadDir = path.join(__dirname, "..", "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    const base = path
-      .basename(file.originalname, ext)
-      .replace(/\s+/g, "-")
-      .toLowerCase();
-    cb(null, `${Date.now()}-${base}${ext}`);
-  },
-});
-const upload = multer({ storage });
 
 const docsDir = path.join(uploadDir, "documents");
 if (!fs.existsSync(docsDir)) fs.mkdirSync(docsDir, { recursive: true });
@@ -438,5 +429,21 @@ router.delete(
   requireRole("hr", "admin", "super_admin"),
   Leave.deleteLeaveType
 );
+
+/*
+|--------------------------------------------------------------------------|
+| NEWS & NOTIFICATIONS                                                     |
+|--------------------------------------------------------------------------|
+*/
+router.get("/news", isAuthenticated, News.listNews);
+router.post("/news", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), upload.single('image'), News.createNews);
+router.patch("/news/:id", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), upload.single('image'), News.updateNews);
+router.delete("/news/:id", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.deleteNews);
+router.get("/news/whatsapp/status", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.getWHStatus);
+router.post("/news/whatsapp/init", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.initWH);
+router.post("/news/whatsapp/settings", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.setWHSettings);
+router.post("/news/whatsapp/sync", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.syncWHGroups);
+
+// (End of News routes)
 
 module.exports = router;

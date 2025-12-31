@@ -312,16 +312,31 @@ async function getDashboard(req, res) {
       const [[{ totalEmployees }]] = await pool.query(
         'SELECT COUNT(*) AS totalEmployees FROM employee_records'
       );
-      const [employees] = await pool.execute(
-        `SELECT ${BASE_EMP_FIELDS}
-           FROM employee_records
-          ORDER BY id DESC
-          LIMIT 50`
+
+      let teamQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1 AND id != ?`;
+      let teamParams = [userId];
+
+      if (myDept) {
+        teamQuery += " AND Department = ?";
+        teamParams.push(myDept);
+      } else {
+        // If no dept, show nobody in "My Team" but keep recentEmployees empty or similar
+        teamQuery += " AND 1=0";
+      }
+
+      const [team] = await pool.execute(
+        teamQuery + " ORDER BY id DESC LIMIT 25",
+        teamParams
       );
+
       return res.json({
         role,
         profile: myProfile,
-        widgets: { totalEmployees, recentEmployees: employees }
+        widgets: {
+          totalEmployees,
+          recentEmployees: team, // Matches the frontend expectation in Dashbord.js line 593-596
+          teamRecent: team
+        }
       });
     }
 

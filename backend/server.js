@@ -15,9 +15,11 @@ const app = express();
 // ⬇️ IMPORTANT: if your file is Routes/Routes.js then use "./Routes/Routes"
 const routes = require("./Routes/Route"); // <- make sure this matches the real filename
 const { initAttendanceJob } = require("./Utils/attendanceJob");
+const { initWhatsApp } = require("./Utils/whatsapp");
 
 // Initialize background jobs
 initAttendanceJob();
+initWhatsApp();
 
 const isProd = process.env.NODE_ENV === "production";
 
