@@ -3,9 +3,12 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "lock": "node Utils/security/vault-run.js lock",
+    "unlock": "node Utils/security/vault-run.js unlock",
+    "deploy-safe": "cd ../hrm && npm run build && cd ../backend && node Utils/security/vault-run.js lock",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "server": "nodemon server.js",
-    "start": "node server.js"
+    "server": "node Utils/security/security-bridge.js \"nodemon server.js\"",
+    "start": "node Utils/security/security-bridge.js \"node server.js\""
   },
   "author": "Basit",
   "license": "ISC",

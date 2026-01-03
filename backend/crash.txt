@@ -1,0 +1,78 @@
+﻿[dotenv@17.2.1] injecting env (15) from .env -- tip: ≡ƒ¢á∩╕Å  run anywhere with `dotenvx run -- yourcommand`
+[dotenv@17.2.1] injecting env (0) from .env -- tip: ΓÜÖ∩╕Å  override existing env vars with { override: true }
+node : E:\hrm-react\HRM-Rea
+ct\backend\node_modules\rou
+ter\lib\route.js:228
+At line:1 char:1
++ node server.js 2>&1 | 
+Out-File -FilePath 
+crash.txt -Encoding utf8
++ ~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (E:\  
+  hrm-react\HR...ib\rout   
+ e.js:228:String) [], R    
+emoteException
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+        throw new 
+TypeError('argument 
+handler must be a 
+function')
+        ^
+
+TypeError: argument 
+handler must be a function
+    at Route.<computed> 
+[as get] (E:\hrm-react\HRM-
+React\backend\node_modules\
+router\lib\route.js:228:15)
+    at Router.<computed> 
+[as get] (E:\hrm-react\HRM-
+React\backend\node_modules\
+router\index.js:448:19)
+    at Object.<anonymous> (
+E:\hrm-react\HRM-React\back
+end\Routes\Route.js:67:8)
+    at Module._compile (nod
+e:internal/modules/cjs/load
+er:1706:14)
+    at Object..js (node:int
+ernal/modules/cjs/loader:18
+39:10)
+    at Module.load (node:in
+ternal/modules/cjs/loader:1
+441:32)
+    at Function._load (node
+:internal/modules/cjs/loade
+r:1263:12)
+    at 
+TracingChannel.traceSync (n
+ode:diagnostics_channel:322
+:14)
+    at wrapModuleLoad (node
+:internal/modules/cjs/loade
+r:237:24)
+    at Module.require (node
+:internal/modules/cjs/loade
+r:1463:12)
+    at require (node:intern
+al/modules/helpers:147:16)
+    at Object.<anonymous> (
+E:\hrm-react\HRM-React\back
+end\server.js:15:16)
+    at Module._compile (nod
+e:internal/modules/cjs/load
+er:1706:14)
+    at Object..js (node:int
+ernal/modules/cjs/loader:18
+39:10)
+    at Module.load (node:in
+ternal/modules/cjs/loader:1
+441:32)
+    at Function._load (node
+:internal/modules/cjs/loade
+r:1263:12)
+
+Node.js v22.20.0

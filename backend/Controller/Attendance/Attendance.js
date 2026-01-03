@@ -491,10 +491,68 @@ const getPersonalSummary = async (req, res) => {
   }
 };
 
+/**
+ * GET /attendance/report/monthly?employee_id=X&year=YYYY&month=M
+ * Accessible to self AND Authorities
+ */
+const getMonthlyReport = async (req, res) => {
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    let { employee_id, year, month } = req.query;
+    const targetId = employee_id ? Number(employee_id) : sessionUser.id;
+
+    // Authorization check: if targeting someone else, must be admin-like
+    if (targetId !== sessionUser.id && !isAdminLike(sessionUser)) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const y = Number(year) || new Date().getFullYear();
+    const m = Number(month) || (new Date().getMonth() + 1);
+
+    const [rows] = await pool.execute(
+      `
+      SELECT 
+        d.id,
+        d.attendance_date,
+        d.first_in,
+        d.last_out,
+        d.status,
+        d.late_minutes,
+        d.worked_minutes,
+        s.name as shift_name,
+        o_in.name as office_in,
+        o_out.name as office_out
+      FROM attendance_daily d
+      LEFT JOIN attendance_shifts s ON d.shift_id = s.id
+      LEFT JOIN offices o_in ON d.office_id_first_in = o_in.id
+      LEFT JOIN offices o_out ON d.office_id_last_out = o_out.id
+      WHERE d.employee_id = ? 
+        AND YEAR(d.attendance_date) = ? 
+        AND MONTH(d.attendance_date) = ?
+      ORDER BY d.attendance_date ASC
+      `,
+      [targetId, y, m]
+    );
+
+    return res.json({
+      employee_id: targetId,
+      year: y,
+      month: m,
+      report: rows
+    });
+  } catch (e) {
+    console.error("getMonthlyReport error:", e);
+    return res.status(500).json({ message: "Failed to generate monthly report" });
+  }
+};
+
 module.exports = {
   listOffices,
   getToday,
   punch,
   adminMissing,
   getPersonalSummary,
+  getMonthlyReport,
 };

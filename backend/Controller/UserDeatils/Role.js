@@ -212,14 +212,14 @@ const { pool } = require('../../Utils/db');
 
 // Adjusted for employee_records
 const BASE_EMP_FIELDS = `
-  id,
-  Employee_ID      AS employee_code,
-  Employee_Name    AS name,
-  Official_Email   AS email,
-  Department,
-  Designations     AS designation,
-  profile_img,
-  last_login_at
+  e.id,
+  e.Employee_ID      AS employee_code,
+  e.Employee_Name    AS name,
+  e.Official_Email   AS email,
+  e.Department,
+  e.Designations     AS designation,
+  e.profile_img,
+  e.last_login_at
 `;
 
 // Utility: build tabs from features (super_admin, admin, and hr see all)
@@ -280,9 +280,9 @@ async function getDashboard(req, res) {
   try {
     // 0. Fetch logged-in user profile (ALWAYS included)
     const [meRows] = await pool.execute(
-      `SELECT ${BASE_EMP_FIELDS}, Date_of_Birth, profile_img
-         FROM employee_records
-        WHERE id = ?
+      `SELECT ${BASE_EMP_FIELDS}, e.Date_of_Birth
+         FROM employee_records e
+        WHERE e.id = ?
         LIMIT 1`,
       [userId]
     );
@@ -313,19 +313,22 @@ async function getDashboard(req, res) {
         'SELECT COUNT(*) AS totalEmployees FROM employee_records'
       );
 
-      let teamQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1 AND id != ?`;
+      let teamQuery = `
+        SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
+        FROM employee_records e
+        LEFT JOIN attendance_daily ad ON ad.employee_id = e.id AND ad.attendance_date = CURDATE()
+        WHERE e.is_active = 1 AND e.id != ?`;
       let teamParams = [userId];
 
       if (myDept) {
-        teamQuery += " AND Department = ?";
+        teamQuery += " AND e.Department = ?";
         teamParams.push(myDept);
       } else {
-        // If no dept, show nobody in "My Team" but keep recentEmployees empty or similar
         teamQuery += " AND 1=0";
       }
 
       const [team] = await pool.execute(
-        teamQuery + " ORDER BY id DESC LIMIT 25",
+        teamQuery + " ORDER BY e.id DESC LIMIT 25",
         teamParams
       );
 
@@ -357,7 +360,14 @@ async function getDashboard(req, res) {
       }
 
       const [[{ totalEmployees }]] = await pool.query(countQuery, params);
-      const [team] = await pool.query(teamQuery + " ORDER BY id DESC LIMIT 25", teamParams);
+      const [team] = await pool.query(
+        `SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
+         FROM employee_records e
+         LEFT JOIN attendance_daily ad ON ad.employee_id = e.id AND ad.attendance_date = CURDATE()
+         WHERE e.is_active = 1 AND e.id != ? ${myDept ? 'AND e.Department = ?' : ''}
+         ORDER BY e.id DESC LIMIT 25`,
+        teamParams
+      );
 
       return res.json({
         role,
@@ -381,7 +391,14 @@ async function getDashboard(req, res) {
       }
 
       const [[{ totalEmployees }]] = await pool.query(countQuery, params);
-      const [recentHires] = await pool.query(hireQuery + " ORDER BY id DESC LIMIT 20", params);
+      const [recentHires] = await pool.query(
+        `SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
+         FROM employee_records e
+         LEFT JOIN attendance_daily ad ON ad.employee_id = e.id AND ad.attendance_date = CURDATE()
+         WHERE e.is_active = 1 ${myDept ? 'AND e.Department = ?' : ''}
+         ORDER BY e.id DESC LIMIT 20`,
+        params
+      );
 
       return res.json({
         role,
@@ -428,10 +445,14 @@ async function getDashboard(req, res) {
       .map(e => ({ name: e.Employee_Name, id: e.id, profile_img: e.profile_img }));
 
     // Fetch team members (same department only)
-    let teamQuery = `SELECT ${BASE_EMP_FIELDS} FROM employee_records WHERE is_active = 1 AND id != ?`;
+    let teamQuery = `
+      SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
+      FROM employee_records e
+      LEFT JOIN attendance_daily ad ON ad.employee_id = e.id AND ad.attendance_date = CURDATE()
+      WHERE e.is_active = 1 AND e.id != ?`;
     let teamParams = [userId];
     if (myDept) {
-      teamQuery += " AND Department = ?";
+      teamQuery += " AND e.Department = ?";
       teamParams.push(myDept);
     }
     teamQuery += " LIMIT 10";
@@ -470,8 +491,8 @@ async function listAllUsers(req, res) {
   try {
     const [rows] = await pool.execute(
       `SELECT ${BASE_EMP_FIELDS}
-         FROM employee_records
-        ORDER BY id DESC`
+         FROM employee_records e
+        ORDER BY e.id DESC`
     );
     return res.json(rows);
   } catch (err) {

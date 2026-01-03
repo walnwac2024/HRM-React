@@ -1,5 +1,5 @@
 const { pool } = require("../../Utils/db");
-const { pushToWhatsApp, getWhatsAppStatus, initWhatsApp, syncGroups } = require("../../Utils/whatsapp");
+const { pushToWhatsApp, getWhatsAppStatus, initWhatsApp, syncGroups, logoutWhatsApp } = require("../../Utils/whatsapp");
 const fs = require('fs');
 const path = require('path');
 
@@ -229,6 +229,16 @@ async function syncWHGroups(req, res) {
     return res.json({ message: "Groups synced", groups });
 }
 
+/**
+ * POST /api/v1/news/whatsapp/logout
+ */
+async function logoutWH(req, res) {
+    const { hardReset } = req.body;
+    // Trigger logout in background and return immediately for better UX
+    logoutWhatsApp(hardReset === true).catch(err => console.error("Background logout error:", err));
+    return res.json({ message: hardReset ? "WhatsApp hard reset initiated" : "WhatsApp logout initiated" });
+}
+
 module.exports = {
     listNews,
     createNews,
@@ -238,4 +248,5 @@ module.exports = {
     initWH,
     setWHSettings,
     syncWHGroups,
+    logoutWH,
 };
