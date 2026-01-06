@@ -103,7 +103,7 @@ export default function Topbar({ logoSrc }) {
       const interval = setInterval(fetchNotifications, 300000); // 5 mins
       return () => clearInterval(interval);
     }
-  }, [user]);
+  }, [user, fetchNotifications]);
 
   useEffect(() => {
     function onDocClick(e) {
@@ -234,7 +234,7 @@ export default function Topbar({ logoSrc }) {
                 alt="HRM Logo"
                 className="h-8 sm:h-9 w-auto drop-shadow-sm"
                 onError={(e) => {
-                  if (e.currentTarget.src !== fallbackLogo) e.currentTarget.src = fallbackLogo;
+                  e.target.src = fallbackLogo;
                 }}
               />
             </Link>

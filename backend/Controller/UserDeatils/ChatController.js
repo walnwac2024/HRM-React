@@ -106,7 +106,7 @@ async function sendMessage(req, res) {
             for (const m of members) {
                 await pool.execute(
                     "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'chat')",
-                    [m.id, `New message in ${deptName}`, `${senderName} sent a message in ${deptName} chat.`, 'chat']
+                    [m.id, `New message in ${deptName}`, `${senderName} sent a message in ${deptName} chat.`]
                 );
             }
         } else if (isAuthRoom) {
