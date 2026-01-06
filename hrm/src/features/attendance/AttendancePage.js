@@ -276,10 +276,10 @@ export default function AttendancePage() {
 
   return (
     <div className="bg-slate-50/50 min-h-screen">
-      <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
+      <div className="flex flex-col lg:flex-row gap-6">
         <Sidebar items={nav} onNavigate={handleNavigate} />
 
-        <div className="flex flex-col gap-6">
+        <div className="flex-1 flex flex-col gap-6 min-w-0">
           {activeId === 'attendance-request' && (
             <>
               <Filters
@@ -366,7 +366,7 @@ export default function AttendancePage() {
             <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />
           )}
         </div>
-      </main>
+      </div>
 
       {/* Modals */}
       <AddRequestModal open={modal === 'attendance'} onClose={() => setModal(null)} />

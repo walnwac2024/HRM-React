@@ -1,5 +1,5 @@
-// src/features/employees/components/Filters.jsx
 import React, { useCallback } from "react";
+import SharedDropdown from "../../../components/common/SharedDropdown";
 
 const LabeledInput = ({
   label,
@@ -51,30 +51,18 @@ const LabeledSelect = ({
   onChange,
   options = [],
   className = "",
+  searchable = false
 }) => {
-  const handleChange = useCallback(
-    (e) => {
-      onChange?.(name, e.target.value);
-    },
-    [name, onChange]
-  );
-
   return (
-    <label className={`block ${className}`}>
-      <div className="text-[12px] text-slate-600 mb-1">{label}</div>
-      <select
-        name={name}
-        value={value ?? ""}
-        onChange={handleChange}
-        className="select"
-      >
-        {options.map((o) => (
-          <option key={o.value ?? o} value={o.value ?? o}>
-            {o.label ?? o}
-          </option>
-        ))}
-      </select>
-    </label>
+    <SharedDropdown
+      label={label}
+      value={value}
+      onChange={(val) => onChange?.(name, val)}
+      options={options}
+      className={className}
+      searchable={searchable}
+      clearable
+    />
   );
 };
 
@@ -100,7 +88,8 @@ function Filters({ filters, onChange, options }) {
         name="station"
         value={filters.station}
         onChange={onChange}
-        options={[{ value: "", label: "" }, ...asSimpleOptions(stations)]}
+        options={asSimpleOptions(stations)}
+        searchable
       />
 
       <LabeledSelect
@@ -109,7 +98,8 @@ function Filters({ filters, onChange, options }) {
         name="department"
         value={filters.department}
         onChange={onChange}
-        options={[{ value: "", label: "" }, ...asSimpleOptions(departments)]}
+        options={asSimpleOptions(departments)}
+        searchable
       />
 
       <LabeledSelect
@@ -118,7 +108,7 @@ function Filters({ filters, onChange, options }) {
         name="employee_group"
         value={filters.employee_group}
         onChange={onChange}
-        options={[{ value: "", label: "" }, ...asSimpleOptions(groups)]}
+        options={asSimpleOptions(groups)}
       />
 
       <LabeledSelect
@@ -127,7 +117,8 @@ function Filters({ filters, onChange, options }) {
         name="designation"
         value={filters.designation}
         onChange={onChange}
-        options={[{ value: "", label: "" }, ...asSimpleOptions(designations)]}
+        options={asSimpleOptions(designations)}
+        searchable
       />
 
       {/* Row 2 */}
@@ -161,7 +152,7 @@ function Filters({ filters, onChange, options }) {
         name="status"
         value={filters.status}
         onChange={onChange}
-        options={[{ value: "", label: "" }, ...asSimpleOptions(statuses)]}
+        options={asSimpleOptions(statuses)}
       />
 
       {/* Row 3 */}
@@ -180,10 +171,8 @@ function Filters({ filters, onChange, options }) {
         name="role_template"
         value={filters.role_template}
         onChange={onChange}
-        options={[
-          { value: "", label: "" },
-          ...asSimpleOptions(roleTemplates),
-        ]}
+        options={asSimpleOptions(roleTemplates)}
+        searchable
       />
 
       <LabeledInput

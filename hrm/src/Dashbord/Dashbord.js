@@ -74,7 +74,7 @@ function badge(status) {
     default:
       return (
         <span className={`${base} bg-gray-50 text-gray-700 border border-gray-200`}>
-          Not Marked
+          Not marked yet
         </span>
       );
   }
@@ -180,6 +180,13 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user?.id) return;
     loadAttendance();
+
+    // Real-time polling for team status (every 30 seconds)
+    const interval = setInterval(() => {
+      loadAttendance();
+    }, 30000);
+
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
@@ -189,21 +196,35 @@ export default function Dashboard() {
         reject(new Error("Geolocation is not supported by your browser."));
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve(pos.coords),
-        (err) => {
-          let msg = "Location permission is required to mark attendance.";
-          if (err.code === err.PERMISSION_DENIED) {
-            msg = "Location permission was denied. Please enable it in your browser settings.";
-          } else if (err.code === err.POSITION_UNAVAILABLE) {
-            msg = "Location information is unavailable.";
-          } else if (err.code === err.TIMEOUT) {
-            msg = "Location request timed out.";
-          }
-          reject(new Error(msg));
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-      );
+
+      const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+
+      const success = (pos) => resolve(pos.coords);
+      const failure = (err) => {
+        if (err.code === err.TIMEOUT && options.enableHighAccuracy) {
+          // Fallback to lower accuracy if high accuracy times out
+          console.warn("High accuracy timed out, falling back to standard accuracy.");
+          options.enableHighAccuracy = false;
+          options.timeout = 10000;
+          navigator.geolocation.getCurrentPosition(success, finalFailure, options);
+          return;
+        }
+        finalFailure(err);
+      };
+
+      const finalFailure = (err) => {
+        let msg = "Location permission is required to mark attendance.";
+        if (err.code === err.PERMISSION_DENIED) {
+          msg = "Location permission was denied. Please enable it in your browser settings.";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          msg = "Location information is unavailable.";
+        } else if (err.code === err.TIMEOUT) {
+          msg = "Location request timed out. Please ensure your device location is on and try again.";
+        }
+        reject(new Error(msg));
+      };
+
+      navigator.geolocation.getCurrentPosition(success, failure, options);
     });
   };
 
@@ -480,7 +501,7 @@ export default function Dashboard() {
               </div>
               <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
                 <div className="overflow-x-auto rounded border">
-                  <table className="min-w-[520px] w-full text-[11px] sm:text-[12px]">
+                  <table className="min-w-[400px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
                         <th className="p-2 text-left">Date</th>
@@ -520,7 +541,7 @@ export default function Dashboard() {
               </div>
               <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
                 <div className="overflow-x-auto rounded border">
-                  <table className="min-w-[420px] w-full text-[11px] sm:text-[12px]">
+                  <table className="min-w-[320px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
                         <th className="p-2 text-left">Title</th>
@@ -564,7 +585,7 @@ export default function Dashboard() {
           </div>
           <div className="p-2.5 sm:p-3">
             <div className="overflow-x-auto rounded border">
-              <table className="min-w-[520px] w-full text-[11px] sm:text-[12px]">
+              <table className="min-w-[320px] w-full text-[11px] sm:text-[12px]">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>
                     <th className="p-2 text-left">Description</th>
@@ -642,16 +663,7 @@ export default function Dashboard() {
                           </div>
                         </div>
                       </div>
-                      {(() => {
-                        const lastLogin = m.last_login_at ? new Date(m.last_login_at) : null;
-                        const isOnline = lastLogin && (new Date() - lastLogin) < 300000; // 5 minutes
-                        return (
-                          <div
-                            className={`w-2 h-2 rounded-full shadow-[0_0_5px_rgba(74,222,128,0.5)] ${isOnline ? 'bg-green-400' : 'bg-gray-300'}`}
-                            title={isOnline ? "Online" : "Away"}
-                          />
-                        );
-                      })()}
+                      {badge(m.attendance_status || "NOT_MARKED")}
                     </div>
                   ))}
                 </>

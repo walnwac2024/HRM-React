@@ -31,7 +31,7 @@ const TAB_META = {
   performance: { to: "/performance", Icon: FaChartLine, label: "Performance" },
   payroll: { to: "/payroll", Icon: FaThLarge, label: "Payroll" },
   reports: { to: "/reports", Icon: FaChartBar, label: "Reports" },
-  permissions: { to: "/permissions", Icon: FaShieldAlt, label: "Permissions" },
+  permissions: { to: "/dashboard/permissions", Icon: FaShieldAlt, label: "Permissions" },
 };
 
 function getInitials(nameOrEmail = "User") {
@@ -63,6 +63,9 @@ export default function Topbar({ logoSrc }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
   const btnRef = useRef(null);
+
+  // ✅ Mobile Drawer state
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   const fetchNotifications = async () => {
     try {
@@ -116,6 +119,7 @@ export default function Topbar({ logoSrc }) {
       if (e.key === "Escape") {
         setOpen(false);
         setShowNotifications(false);
+        setShowMobileMenu(false);
       }
     }
 
@@ -134,18 +138,27 @@ export default function Topbar({ logoSrc }) {
 
   // Build menu
   const safeTabs = Array.isArray(tabs) ? tabs : [];
-  const menu = safeTabs.map((t) => {
-    const meta = TAB_META[t.key] || {};
-    return {
-      key: t.key,
-      label: t.label || meta.label || t.key,
-      to: meta.to || `/${t.key}`,
-      Icon: meta.Icon || FaHome,
-    };
-  });
+  const menu = safeTabs
+    .map((t) => {
+      const meta = TAB_META[t.key] || {};
+      return {
+        key: t.key,
+        label: t.label || meta.label || t.key,
+        to: meta.to || `/${t.key}`,
+        Icon: meta.Icon || FaHome,
+      };
+    })
+    .filter((m) => m.key !== "permissions");
 
   const activeMenu = menu.find((m) => location.pathname.startsWith(m.to));
-  const activeLabel = activeMenu?.label ?? "";
+  let activeLabel = activeMenu?.label ?? "";
+
+  // ✅ Fallback for pages not in the main tab menu
+  if (!activeLabel) {
+    if (location.pathname.startsWith("/profile")) activeLabel = "Profile";
+    else if (location.pathname.startsWith("/settings")) activeLabel = "Settings";
+    else activeLabel = "Dashboard";
+  }
 
   const userName = user?.name || user?.email || "User";
   const initials = getInitials(userName);
@@ -168,6 +181,7 @@ export default function Topbar({ logoSrc }) {
       console.error(e);
     } finally {
       setOpen(false);
+      setShowMobileMenu(false);
       navigate("/login", { replace: true });
     }
   };
@@ -175,89 +189,143 @@ export default function Topbar({ logoSrc }) {
   const isAuthed = !!user;
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-  return (
-    <header className="w-full">
-      {/* Top white bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="mx-auto max-w-screen-2xl h-14 px-4 flex items-center">
-          {/* Logo */}
-          <Link to="/dashboard" className="flex items-center shrink-0 mr-5" aria-label="Go to dashboard">
-            <img
-              src={logo}
-              alt="HRM Logo"
-              className="h-8 w-auto"
-              onError={(e) => {
-                if (e.currentTarget.src !== fallbackLogo) e.currentTarget.src = fallbackLogo;
-              }}
-            />
-          </Link>
+  // ✅ Bell Animation Trigger Logic
+  const [animateBell, setAnimateBell] = useState(false);
+  const prevCountRef = useRef(unreadCount);
 
-          {/* Menu */}
-          <nav className="hidden md:flex flex-wrap justify-center items-end gap-6 text-slate-500 flex-1">
-            {menu.map((item) => {
-              const isActive = location.pathname.startsWith(item.to);
-              const Icon = item.Icon;
-              return (
-                <Link
-                  key={item.key}
-                  to={item.to}
-                  className={`group mx-auto flex flex-col items-center justify-center leading-none px-2 ${isActive ? "text-customRed" : "hover:text-customRed"}`}
-                >
-                  <Icon className={`text-[18px] mb-1 ${isActive ? "text-customRed" : "text-slate-500 opacity-80 group-hover:text-customRed"}`} />
-                  <span className="text-[10px] uppercase tracking-wide">{item.label}</span>
-                  {isActive ? (
-                    <span className="mt-1 h-0.5 w-8 bg-customRed rounded-full" />
-                  ) : (
-                    <span className="mt-1 h-0.5 w-8 bg-transparent group-hover:bg-customRed rounded-full" />
-                  )}
-                </Link>
-              );
-            })}
+  useEffect(() => {
+    if (unreadCount > prevCountRef.current) {
+      setAnimateBell(true);
+      const timer = setTimeout(() => setAnimateBell(false), 1000);
+      return () => clearTimeout(timer);
+    }
+    prevCountRef.current = unreadCount;
+  }, [unreadCount]);
+
+  return (
+    <header className="w-full relative sticky top-0 z-[100]">
+      {/* Drawer Overlay */}
+      {showMobileMenu && (
+        <div
+          className="drawer-overlay block md:hidden"
+          onClick={() => setShowMobileMenu(false)}
+        />
+      )}
+
+      {/* Main Top Bar */}
+      <div className="bg-white/80 backdrop-blur-md border-b border-slate-200/60 shadow-sm transition-all duration-300 relative z-20">
+        <div className="mx-auto max-w-screen-2xl h-[72px] px-4 sm:px-6 flex items-center justify-between">
+
+          {/* Left: Logo & Mobile Toggle */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowMobileMenu(true)}
+              className="p-2 -ml-2 text-slate-500 hover:text-customRed md:hidden transition-colors rounded-xl hover:bg-red-50"
+              aria-label="Open menu"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16m-7 6h7" />
+              </svg>
+            </button>
+
+            <Link to="/dashboard" className="flex items-center shrink-0" aria-label="Go to dashboard">
+              <img
+                src={logo}
+                alt="HRM Logo"
+                className="h-8 sm:h-9 w-auto drop-shadow-sm"
+                onError={(e) => {
+                  if (e.currentTarget.src !== fallbackLogo) e.currentTarget.src = fallbackLogo;
+                }}
+              />
+            </Link>
+          </div>
+
+          {/* Center: Premium Desktop Navigation (High Performance) */}
+          <nav className="hidden lg:flex items-center justify-center flex-1 mx-2 overflow-hidden">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-1 px-1">
+              {menu.map((item) => {
+                const isActive = location.pathname.startsWith(item.to);
+                const Icon = item.Icon;
+                return (
+                  <Link
+                    key={item.key}
+                    to={item.to}
+                    className={`group relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl transition-all duration-200 whitespace-nowrap
+                      ${isActive
+                        ? "bg-customRed text-white shadow-md shadow-red-500/10 scale-[1.02] z-10"
+                        : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                      }`}
+                  >
+                    <Icon className={`text-[15px] transition-all duration-200 
+                      ${isActive ? "scale-105" : "opacity-70 group-hover:opacity-100 group-hover:scale-105"}`}
+                    />
+                    <span className="text-[10px] font-bold uppercase tracking-tight">
+                      {item.label}
+                    </span>
+
+                    {isActive && (
+                      <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 h-1 w-1 bg-white rounded-full" />
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
           </nav>
 
-          {/* Right: bell + user */}
-          <div className="ml-5 pl-5 border-l border-gray-200 flex items-center gap-4 relative">
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3 shrink-0 ml-1">
+
+            {/* Notifications */}
             <div className="relative" ref={notifyRef}>
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                className="relative text-slate-500 hover:text-customLightGrey pt-1.5"
+                className={`relative p-2 rounded-xl transition-all duration-200 
+                  ${showNotifications ? "bg-customRed/10 text-customRed" : "text-slate-500 hover:text-customRed hover:bg-slate-50"}`}
                 aria-label="Notifications"
                 type="button"
               >
-                <FaBell className="text-[18px]" />
+                <FaBell className={`text-[19px] ${animateBell ? "animate-bell" : ""}`} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-0 -right-1 min-w-[14px] h-[14px] flex items-center justify-center bg-red-600 text-white text-[8px] font-bold rounded-full px-0.5">
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 flex items-center justify-center bg-red-600 text-white text-[8px] font-bold rounded-full border border-white shadow-sm mb-1 mr-1">
                     {unreadCount > 9 ? "9+" : unreadCount}
                   </span>
                 )}
               </button>
 
               {showNotifications && (
-                <div className="absolute right-0 top-10 w-72 sm:w-80 rounded-md border border-gray-200 bg-white shadow-lg z-50 overflow-hidden">
-                  <div className="px-3 py-2 border-b bg-gray-50 flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-700">Notifications</span>
+                <div className="absolute right-0 top-[calc(100%+8px)] w-[300px] rounded-[24px] border border-slate-200 bg-white shadow-2xl z-50 overflow-hidden animate-slide-up">
+                  {/* Arrow pointer */}
+                  <div className="absolute -top-1.5 right-4 w-3 h-3 bg-white border-t border-l border-slate-200 rotate-45 z-[-1]" />
+                  <div className="px-4 py-3 border-b bg-slate-50/50 flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-[0.15em] text-slate-800">Notifications</span>
                     {unreadCount > 0 && (
-                      <button onClick={markAllRead} className="text-[10px] text-customRed hover:underline">
-                        Mark all as read
+                      <button onClick={markAllRead} className="text-[9px] text-customRed font-black uppercase tracking-wider hover:underline">
+                        Clear All
                       </button>
                     )}
                   </div>
-                  <div className="max-h-72 overflow-y-auto custom-scrollbar">
+                  <div className="max-h-[350px] overflow-y-auto custom-scrollbar">
                     {notifications.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-gray-400">No notifications</div>
+                      <div className="px-6 py-10 text-center">
+                        <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                          <FaBell className="text-xl text-slate-200" />
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Everything is quiet</div>
+                      </div>
                     ) : (
                       notifications.map((n) => (
                         <div
                           key={n.id}
                           onClick={() => !n.is_read && markRead(n.id)}
-                          className={`px-3 py-2.5 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${!n.is_read ? "bg-red-50/30" : ""}`}
+                          className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50/80 transition-colors ${!n.is_read ? "bg-red-50/10" : ""}`}
                         >
-                          <div className="flex items-start gap-2">
-                            <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${!n.is_read ? "bg-red-500" : "bg-gray-200"}`} />
+                          <div className="flex items-start gap-3">
+                            <div className={`mt-1.5 h-2 w-2 rounded-full shrink-0 shadow-sm ${!n.is_read ? "bg-customRed animate-pulse" : "bg-slate-200"}`} />
                             <div className="min-w-0 flex-1">
-                              <div className="text-[11px] font-bold text-gray-800 leading-tight mb-0.5">{n.title}</div>
-                              <div className="text-[11px] text-gray-600 leading-normal line-clamp-2">{n.message}</div>
-                              <div className="text-[9px] text-gray-400 mt-1">
+                              <div className="text-[11px] font-bold text-slate-800 leading-tight mb-0.5">{n.title}</div>
+                              <div className="text-[11px] text-slate-500 leading-relaxed font-medium line-clamp-2">{n.message}</div>
+                              <div className="text-[8px] text-slate-400 mt-1.5 uppercase font-black tracking-widest flex items-center gap-1">
+                                <FaClock className="text-[9px]" />
                                 {new Date(n.created_at).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}
                               </div>
                             </div>
@@ -270,78 +338,170 @@ export default function Topbar({ logoSrc }) {
               )}
             </div>
 
+            {/* Profile Menu */}
             {isAuthed && (
-              <>
+              <div className="relative" ref={dropdownRef}>
                 <button
                   ref={btnRef}
                   onClick={() => setOpen((v) => !v)}
-                  className="flex items-center gap-2 focus:outline-none"
+                  className={`flex items-center gap-3 p-1.5 pr-4 rounded-2xl border transition-all duration-200
+                    ${open ? "bg-customRed/5 border-customRed/20 ring-4 ring-customRed/5" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}
                   aria-haspopup="menu"
                   aria-expanded={open}
                   aria-label="User menu"
                   type="button"
                 >
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="User" className="h-7 w-7 rounded-full object-cover border border-red-200" />
-                  ) : (
-                    <span className="inline-flex items-center justify-center h-7 w-7 rounded-full bg-red-600 text-white text-[11px] font-bold">
-                      {initials}
-                    </span>
-                  )}
-                  <span className="hidden sm:block text-xs text-slate-700 max-w-[140px] truncate">{userName}</span>
+                  <div className="relative shrink-0">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="User" className="h-9 w-9 rounded-xl object-cover border border-slate-100 shadow-sm" />
+                    ) : (
+                      <span className="inline-flex items-center justify-center h-9 w-9 rounded-xl bg-gradient-to-br from-customRed to-red-600 text-white text-[12px] font-black shadow-md shadow-red-500/20 uppercase">
+                        {initials}
+                      </span>
+                    )}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" title="Online" />
+                  </div>
+                  <div className="hidden lg:block text-left min-w-0">
+                    <p className="text-[13px] font-bold text-slate-900 truncate leading-none mb-1">{userName}</p>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest truncate leading-none">{user?.role || 'Authorized'}</p>
+                  </div>
                 </button>
 
                 {open && (
-                  <div ref={dropdownRef} role="menu" className="absolute right-0 top-10 w-48 rounded-md border border-gray-200 bg-white shadow-lg z-50">
-                    <div className="px-3 py-2 border-b">
-                      <div className="text-xs text-slate-500">Signed in as</div>
-                      <div className="text-sm font-medium text-slate-800 truncate">{userName}</div>
-                      {user?.role && <div className="text-[11px] text-slate-500" aria-label="Role">{user.role}</div>}
+                  <div className="absolute right-0 top-[calc(100%+8px)] w-[190px] rounded-[20px] border border-slate-200 bg-white shadow-2xl z-50 overflow-hidden ring-1 ring-slate-900/5 animate-slide-up">
+                    {/* Arrow pointer */}
+                    <div className="absolute -top-1.5 right-6 w-3 h-3 bg-white border-t border-l border-slate-200 rotate-45 z-[-1]" />
+                    <div className="px-4 py-3 border-b bg-slate-50/50">
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-[0.15em] mb-0.5">Signed in as</p>
+                      <p className="text-[12px] font-bold text-slate-800 truncate leading-tight">{userName}</p>
                     </div>
 
-                    <Link
-                      to="/profile"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
-                      role="menuitem"
-                    >
-                      <FaUser className="opacity-70" />
-                      My Profile
-                    </Link>
+                    <div className="p-1.5 space-y-0.5">
+                      <Link
+                        to="/profile"
+                        onClick={() => setOpen(false)}
+                        className="group flex items-center gap-2.5 px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 hover:text-customRed rounded-xl transition-all"
+                        role="menuitem"
+                      >
+                        <div className="h-7 w-7 bg-slate-50 rounded-lg flex items-center justify-center transition-colors group-hover:bg-customRed/10">
+                          <FaUser className="text-[14px] text-slate-400 group-hover:text-customRed" />
+                        </div>
+                        My Profile
+                      </Link>
 
-                    <Link
-                      to="/settings"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-slate-50"
-                      role="menuitem"
-                    >
-                      <FaCog className="opacity-70" />
-                      Settings
-                    </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setOpen(false)}
+                        className="group flex items-center gap-2.5 px-3 py-2 text-[12px] font-bold text-slate-600 hover:bg-slate-50 hover:text-customRed rounded-xl transition-all"
+                        role="menuitem"
+                      >
+                        <div className="h-7 w-7 bg-slate-50 rounded-lg flex items-center justify-center transition-colors group-hover:bg-customRed/10">
+                          <FaCog className="text-[14px] text-slate-400 group-hover:text-customRed" />
+                        </div>
+                        Settings
+                      </Link>
+                    </div>
 
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
-                      role="menuitem"
-                      type="button"
-                    >
-                      <FaSignOutAlt />
-                      Logout
-                    </button>
+                    <div className="px-1.5 pt-1 pb-1.5 border-t border-slate-100">
+                      <button
+                        onClick={handleLogout}
+                        className="group w-full flex items-center gap-2.5 px-3 py-2 text-[12px] font-black text-red-600 hover:bg-red-50 rounded-xl transition-all uppercase tracking-widest"
+                        role="menuitem"
+                        type="button"
+                      >
+                        <div className="h-7 w-7 bg-red-50 rounded-lg flex items-center justify-center">
+                          <FaSignOutAlt className="text-[14px]" />
+                        </div>
+                        Logout
+                      </button>
+                    </div>
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Bottom strip */}
-      <div className="bg-customRed text-white h-7 text-xs">
-        <div className="mx-auto max-w-screen-2xl h-full px-4 flex items-center">
-          <span className="uppercase tracking-wide">{activeLabel}</span>
+      {/* Sub-Header / Perspective Bar */}
+      <div className="bg-customRed text-white overflow-hidden shadow-sm relative z-10">
+        <div className="absolute inset-0 bg-gradient-to-r from-black/10 via-transparent to-black/10" />
+
+        <div className="mx-auto max-w-[1600px] h-7 px-4 sm:px-8 flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white/95">{activeLabel}</span>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight">
+            <div className="flex items-center gap-2 pr-4 border-r border-white/20">
+              <span className="text-white/60 tracking-widest">Status</span>
+              <div className="flex items-center gap-1.5">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                <span className="text-white">Online</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-white/60 tracking-widest">Last Sync</span>
+              <span className="text-white">{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
         </div>
       </div>
-    </header>
+
+      {/* Mobile Drawer (Refined) */}
+      <div className={`fixed top-0 left-0 h-full w-[300px] bg-white z-[110] shadow-[30px_0_60px_rgba(0,0,0,0.1)] transform transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] md:hidden ${showMobileMenu ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white relative">
+          <img src={logo} alt="Logo" className="h-8 w-auto" />
+          <button
+            onClick={() => setShowMobileMenu(false)}
+            className="p-2 text-slate-400 hover:text-customRed hover:bg-red-50 rounded-xl transition-all"
+            aria-label="Close menu"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <nav className="p-4 space-y-1.5 overflow-y-auto max-h-[calc(100vh-180px)] custom-scrollbar">
+          {menu.map((item) => {
+            const isActive = location.pathname.startsWith(item.to);
+            const Icon = item.Icon;
+            return (
+              <Link
+                key={item.key}
+                to={item.to}
+                onClick={() => setShowMobileMenu(false)}
+                className={`flex items-center gap-4 px-5 py-4 rounded-2xl text-[13px] font-bold transition-all
+                  ${isActive
+                    ? "bg-customRed/5 text-customRed shadow-sm shadow-red-500/5 ring-1 ring-customRed/10"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  }`}
+              >
+                <div className={`p-2 rounded-xl transition-colors ${isActive ? "bg-customRed/10" : "bg-slate-50"}`}>
+                  <Icon className={`text-[20px] ${isActive ? "text-customRed" : "text-slate-400"}`} />
+                </div>
+                <span className="uppercase tracking-widest">{item.label}</span>
+                {isActive && <div className="ml-auto w-2 h-2 rounded-full bg-customRed shadow-[0_0_10px_rgba(221,4,28,0.5)]" />}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 w-full p-6 border-t bg-slate-50/50 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-customRed flex items-center justify-center text-white font-black text-sm uppercase shadow-lg shadow-red-500/30">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[14px] font-black text-slate-800 truncate leading-none mb-1.5">{userName}</div>
+              <div className="text-[10px] text-slate-500 font-black uppercase tracking-[0.2em]">{user?.role || 'authorized personnel'}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header >
   );
+
 }

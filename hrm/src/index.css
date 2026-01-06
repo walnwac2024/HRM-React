@@ -9,8 +9,8 @@
   /* -------- page + card -------- */
   /* -------- page + card -------- */
   .page {
-    /* Page padding 24px (px-6) top/bottom can be adjusted */
-    @apply mx-auto max-w-screen-2xl px-6 py-6;
+    /* Responsive Page Padding */
+    @apply mx-auto max-w-screen-2xl px-4 sm:px-6 py-4 sm:py-6;
   }
 
   .card {
@@ -56,31 +56,35 @@
   /* -------- inputs (Premium Standard: 40px height, radius 12) -------- */
   .input {
     /* h-10 is 40px. rounded-xl is 12px. */
-    @apply w-full h-10 rounded-xl border border-slate-300 bg-white px-3 text-[14px] outline-none focus:border-customRed focus:ring-1 focus:ring-customRed/20 transition-all shadow-sm;
+    @apply w-full h-10 rounded-xl border border-slate-300 bg-white px-4 text-[14px] outline-none transition-all duration-200 shadow-sm;
+  }
+
+  .input:focus {
+    @apply border-customRed ring-4 ring-customRed/10;
   }
 
   .select {
-    @apply input appearance-none bg-no-repeat bg-right pr-8;
+    @apply input appearance-none bg-no-repeat bg-right pr-10;
     background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-size: 1.5em 1.5em;
+    background-position: right 0.75rem center;
+    background-size: 1.25em 1.25em;
   }
 
   .textarea {
-    @apply input h-auto py-2;
+    @apply input h-auto py-3 leading-relaxed;
   }
 
   /* -------- buttons (Unified Premium: 40px height, radius 12) -------- */
   .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-6 h-10 text-[14px] font-bold uppercase tracking-wider transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed shadow-sm active:scale-95;
+    @apply inline-flex items-center justify-center rounded-xl px-6 h-10 text-[13px] font-bold uppercase tracking-[0.1em] transition-all duration-200 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap;
   }
 
   .btn-primary {
-    @apply btn bg-customRed text-white hover:bg-customRed/90 hover:shadow-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-customRed;
+    @apply btn bg-customRed text-white hover:bg-customRed/90 hover:shadow-lg hover:shadow-red-500/10 focus-visible:ring-4 focus-visible:ring-customRed/10;
   }
 
   .btn-outline {
-    @apply btn border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50;
+    @apply btn border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900;
   }
 
   .btn-ghost {
@@ -189,9 +193,143 @@
   .kebab {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-customRed text-customRed hover:bg-customRed/10;
   }
+
+  /* Transition utilities for drawers */
+  .drawer-enter {
+    transform: translateX(-100%);
+  }
+
+  .drawer-enter-active {
+    transform: translateX(0);
+    transition: transform 300ms ease-in-out;
+  }
+
+  .drawer-exit {
+    transform: translateX(0);
+  }
+
+  .drawer-exit-active {
+    transform: translateX(-100%);
+    transition: transform 300ms ease-in-out;
+  }
+
+  /* Overlay */
+  .drawer-overlay {
+    @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] transition-opacity duration-300;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* -------- Modals & Special Sections -------- */
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-hidden;
+  }
+
+  .modal-content {
+    @apply relative bg-white w-full max-h-full flex flex-col rounded-[32px] shadow-2xl border border-white/20 overflow-hidden;
+    animation: modal-in 0.3s ease-out;
+  }
+
+  @keyframes modal-in {
+    from {
+      transform: scale(0.98) translateY(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes slide-up {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+
+  .modal-header {
+    @apply px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30;
+  }
+
+  .modal-body {
+    @apply flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar;
+  }
+
+  .modal-footer {
+    @apply px-8 py-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-white;
+  }
+
+  .section-divider {
+    @apply flex items-center gap-3 mb-5;
+  }
+
+  .section-indicator {
+    @apply h-6 w-1 bg-customRed rounded-full;
+  }
+
+  .section-title {
+    @apply text-xs font-black uppercase tracking-[0.2em] text-slate-800;
+  }
 }
 
 @tailwind utilities;
+
+/* Notification Bell animation (Runs once) */
+@keyframes bell-ring {
+
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: rotate(-12deg);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: rotate(12deg);
+  }
+}
+
+.animate-bell {
+  animation: bell-ring 0.6s ease-in-out;
+  transform-origin: top center;
+}
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {

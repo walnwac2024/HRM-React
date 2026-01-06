@@ -1,5 +1,6 @@
 // src/features/employees/components/NewEmployeeModal.jsx
 import React, { useState, useMemo } from "react";
+import SharedDropdown from "../../../components/common/SharedDropdown";
 
 function NewEmployeeModal({ open, onClose, onSave }) {
   const [form, setForm] = useState({
@@ -244,18 +245,11 @@ function NewEmployeeModal({ open, onClose, onSave }) {
                 required
                 error={showError("status") && errors.status}
               >
-                <select
-                  className={`${baseInput} ${borderClass("status")} pr-8`}
+                <SharedDropdown
                   value={form.status}
-                  onChange={set("status")}
-                  onBlur={markTouched("status")}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Probation">Probation</option>
-                  <option value="Notice Period">Notice Period</option>
-                  <option value="Left">Left</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+                  onChange={(val) => set("status")(val)}
+                  options={["Active", "Probation", "Notice Period", "Left", "Inactive"]}
+                />
               </Field>
             </div>
           </section>
@@ -300,17 +294,11 @@ function NewEmployeeModal({ open, onClose, onSave }) {
                   required
                   error={showError("gender") && errors.gender}
                 >
-                  <select
-                    className={`${baseInput} ${borderClass("gender")} pr-8`}
+                  <SharedDropdown
                     value={form.gender}
-                    onChange={set("gender")}
-                    onBlur={markTouched("gender")}
-                  >
-                    <option value="">Select</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    onChange={(val) => set("gender")(val)}
+                    options={["Male", "Female", "Other"]}
+                  />
                 </Field>
 
                 <Field label="Blood Group">
@@ -332,18 +320,11 @@ function NewEmployeeModal({ open, onClose, onSave }) {
                 </Field>
 
                 <Field label="Marital Status">
-                  <select
-                    className={`${baseInput} ${normalBorder} pr-8`}
+                  <SharedDropdown
                     value={form.maritalStatus}
-                    onChange={set("maritalStatus")}
-                    onBlur={markTouched("maritalStatus")}
-                  >
-                    <option value="">Select</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                  </select>
+                    onChange={(val) => set("maritalStatus")(val)}
+                    options={["Single", "Married", "Divorced", "Widowed"]}
+                  />
                 </Field>
 
                 <Field label="Address">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useAuth } from "../../context/AuthContext";
 import LeaveSidebar from "./components/LeaveSidebar";
+import SharedDropdown from "../../components/common/SharedDropdown";
 import {
     getLeaveTypes,
     getMyLeaves,
@@ -131,14 +132,14 @@ export default function LeavePage() {
     };
 
     return (
-        <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
+        <div className="flex flex-col lg:flex-row gap-6">
             <LeaveSidebar
                 activeKey={activeKey}
                 onNavigate={setActiveKey}
                 user={user}
             />
 
-            <section className="flex-1">
+            <section className="flex-1 min-w-0">
                 <div className="card min-h-[500px]">
                     <div className="card-header">
                         <h2 className="card-title">
@@ -160,7 +161,7 @@ export default function LeavePage() {
                         {activeKey === "my-leaves" && (
                             <div className="space-y-6">
                                 {/* Summary Cards */}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                     {balances.map(b => (
                                         <div key={b.id} className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
                                             <div className="text-[10px] uppercase font-bold text-slate-500 tracking-wider truncate mb-1" title={b.leave_type_name}>
@@ -198,7 +199,7 @@ export default function LeavePage() {
                                                 <tr key={l.id} className="hover:bg-slate-50/50 transition-colors">
                                                     <td className="px-4 py-4 font-medium text-slate-700">
                                                         {l.leave_type_name}
-                                                        {l.approver_name && (
+                                                        {l.approver_name && (l.status === 'approved' || l.status === 'rejected') && (
                                                             <div className="text-[10px] text-slate-400 mt-0.5">
                                                                 {l.status === 'approved' ? 'Approved' : 'Rejected'} by {l.approver_name}
                                                             </div>
@@ -235,20 +236,16 @@ export default function LeavePage() {
                         {activeKey === "apply-leave" && (
                             <form onSubmit={handleApply} className="max-w-md space-y-5 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                                 <div>
-                                    <label className="form-label uppercase text-[11px] font-bold">Leave Type</label>
-                                    <select
-                                        className="select h-11"
+                                    <SharedDropdown
+                                        label="Leave Type"
                                         value={formData.leave_type_id}
-                                        onChange={(e) => setFormData({ ...formData, leave_type_id: e.target.value })}
-                                        required
-                                    >
-                                        <option value="">Select Type</option>
-                                        {balances.map((b) => (
-                                            <option key={b.id} value={b.leave_type_id}>
-                                                {b.leave_type_name} (Balance: {Number(b.balance)} days)
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onChange={(val) => setFormData({ ...formData, leave_type_id: val })}
+                                        options={balances.map((b) => ({
+                                            value: b.leave_type_id,
+                                            label: `${b.leave_type_name} (Balance: ${Number(b.balance)} days)`
+                                        }))}
+                                        placeholder="Select Type"
+                                    />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
@@ -448,6 +445,6 @@ export default function LeavePage() {
                     </div>
                 </div>
             </section>
-        </main>
+        </div>
     );
 }

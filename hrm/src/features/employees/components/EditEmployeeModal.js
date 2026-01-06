@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import api from "../../../utils/api";
 import useEmployee from "../hooks/useEmployee";
 import { useAuth } from "../../../context/AuthContext";
+import SharedDropdown from "../../../components/common/SharedDropdown";
 
 const DOC_TYPES = [
   "CNIC",
@@ -400,14 +401,12 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
   else if (lower === "left" || lower === "inactive") statusDot = "bg-red-500";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="flex max-h-[90vh] w-[1200px] flex-col rounded-2xl bg-white shadow-xl">
+    <div className="modal-overlay">
+      <div className="modal-content max-w-6xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <div className="modal-header">
           <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              Edit Employee
-            </h2>
+            <h2 className="h2 text-slate-900">Edit Employee</h2>
             <p className="mt-0.5 text-xs text-slate-500">
               {profileForm.name || "—"} ·{" "}
               <span className="font-medium">{profileForm.employeeCode}</span>
@@ -421,7 +420,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
             <button
               type="button"
               onClick={() => onClose(false)}
-              className="rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
             >
               ✕
             </button>
@@ -429,281 +428,431 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="grid flex-1 gap-6 overflow-y-auto p-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
-          {/* LEFT: Profile / general */}
-          <form onSubmit={handleSaveProfile} className="space-y-5">
-            <div className="flex items-center gap-6 mb-4">
-              <div className="relative group">
-                <div className="h-16 w-16 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden flex-shrink-0">
-                  {profileForm.profile_img ? (
-                    <img
-                      src={`${FILE_BASE}${profileForm.profile_img}`}
-                      alt="Avatar"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-400">
-                      NO PHOTO
+        <div className="modal-body">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
+            {/* LEFT: Profile / general */}
+            <form onSubmit={handleSaveProfile} className="space-y-5">
+              <div className="flex items-center gap-6 mb-4">
+                <div className="relative group">
+                  <div className="h-16 w-16 rounded-full bg-slate-100 border-2 border-slate-200 overflow-hidden flex-shrink-0">
+                    {profileForm.profile_img ? (
+                      <img
+                        src={`${FILE_BASE}${profileForm.profile_img}`}
+                        alt="Avatar"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-slate-400">
+                        NO PHOTO
+                      </div>
+                    )}
+                  </div>
+                  {avatarUploading && (
+                    <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-full">
+                      <div className="h-4 w-4 border-2 border-customRed border-t-transparent animate-spin rounded-full" />
                     </div>
                   )}
                 </div>
-                {avatarUploading && (
-                  <div className="absolute inset-0 bg-white/60 flex items-center justify-center rounded-full">
-                    <div className="h-4 w-4 border-2 border-customRed border-t-transparent animate-spin rounded-full" />
-                  </div>
-                )}
+                <div>
+                  <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase mb-1">
+                    Employee Photo
+                  </h3>
+                  <label className="cursor-pointer inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 transition-colors">
+                    {avatarUploading ? "Uploading..." : "Change Photo"}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      disabled={avatarUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleUpdateAvatar(file);
+                      }}
+                    />
+                  </label>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase mb-1">
-                  Employee Photo
-                </h3>
-                <label className="cursor-pointer inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 transition-colors">
-                  {avatarUploading ? "Uploading..." : "Change Photo"}
+
+              <div className="section-divider">
+                <div className="section-indicator" />
+                <h3 className="section-title">Profile Information</h3>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="Employee Name:" required>
                   <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    disabled={avatarUploading}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUpdateAvatar(file);
-                    }}
+                    type="text"
+                    name="name"
+                    value={profileForm.name}
+                    onChange={onProfileChange}
+                    className="input"
                   />
-                </label>
+                </Field>
+
+                <Field label="Employee Code:">
+                  <input
+                    type="text"
+                    name="employeeCode"
+                    value={profileForm.employeeCode}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Department:">
+                  <input
+                    type="text"
+                    name="department"
+                    value={profileForm.department}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Designation:">
+                  <input
+                    type="text"
+                    name="designation"
+                    value={profileForm.designation}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Station:">
+                  <input
+                    type="text"
+                    name="station"
+                    value={profileForm.station}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Status:">
+                  <SharedDropdown
+                    value={profileForm.status}
+                    onChange={(val) => setProfileForm(p => ({ ...p, status: val }))}
+                    options={statuses}
+                    placeholder="Select Status"
+                  />
+                </Field>
+
+                <Field label="Date of Birth:">
+                  <input
+                    type="date"
+                    name="dateOfBirth"
+                    value={profileForm.dateOfBirth || ""}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Date of Joining:">
+                  <input
+                    type="date"
+                    name="dateOfJoining"
+                    value={profileForm.dateOfJoining || ""}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="CNIC:">
+                  <input
+                    type="text"
+                    name="cnic"
+                    value={profileForm.cnic}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Gender:">
+                  <input
+                    type="text"
+                    name="gender"
+                    value={profileForm.gender}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Blood Group:">
+                  <input
+                    type="text"
+                    name="bloodGroup"
+                    value={profileForm.bloodGroup}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Official Email:">
+                  <input
+                    type="email"
+                    name="officialEmail"
+                    value={profileForm.officialEmail}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Personal Email:">
+                  <input
+                    type="email"
+                    name="personalEmail"
+                    value={profileForm.personalEmail}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Contact:">
+                  <input
+                    type="text"
+                    name="contact"
+                    value={profileForm.contact}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
+
+                <Field label="Emergency Contact:">
+                  <input
+                    type="text"
+                    name="emergencyContact"
+                    value={profileForm.emergencyContact}
+                    onChange={onProfileChange}
+                    className="input"
+                  />
+                </Field>
               </div>
-            </div>
 
-            <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
-              Profile Information
-            </h3>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field label="Employee Name:" required>
-                <input
-                  type="text"
-                  name="name"
-                  value={profileForm.name}
+              <Field label="Address:">
+                <textarea
+                  name="address"
+                  value={profileForm.address}
                   onChange={onProfileChange}
-                  className="input"
+                  className="textarea"
+                  rows={3}
                 />
               </Field>
 
-              <Field label="Employee Code:">
-                <input
-                  type="text"
-                  name="employeeCode"
-                  value={profileForm.employeeCode}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
+              {/* ---------------- DOCUMENTS SECTION (NEW) ---------------- */}
+              <div className="pt-4">
+                <div className="flex items-center justify-between section-divider">
+                  <div className="flex items-center gap-3">
+                    <div className="section-indicator" />
+                    <h3 className="section-title">Documents</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addNewDocRow}
+                    disabled={!canAddMoreNewDocs}
+                    className="btn-outline h-8 px-4 text-[10px] uppercase font-bold tracking-widest rounded-xl"
+                  >
+                    + Add Document
+                  </button>
+                </div>
 
-              <Field label="Department:">
-                <input
-                  type="text"
-                  name="department"
-                  value={profileForm.department}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
+                <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  {docsLoading ? (
+                    <div className="text-xs text-slate-600">Loading documents…</div>
+                  ) : docsError ? (
+                    <div className="text-xs text-red-600">{docsError}</div>
+                  ) : docs.length === 0 ? (
+                    <div className="text-xs text-slate-500">No documents uploaded.</div>
+                  ) : (
+                    <div className="space-y-3">
+                      {docs.map((doc) => {
+                        const viewUrl = doc.path ? `${FILE_BASE}${doc.path}` : "#";
+                        const busy =
+                          docSavingId === doc.id ||
+                          docReplacingId === doc.id ||
+                          docDeletingId === doc.id;
 
-              <Field label="Designation:">
-                <input
-                  type="text"
-                  name="designation"
-                  value={profileForm.designation}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
+                        return (
+                          <div
+                            key={doc.id}
+                            className="rounded-xl border border-slate-200 bg-white p-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  <Field label="Title">
+                                    <input
+                                      type="text"
+                                      className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                      value={doc.title || ""}
+                                      onChange={(e) =>
+                                        updateDocLocal(doc.id, { title: e.target.value })
+                                      }
+                                    />
+                                  </Field>
 
-              <Field label="Station:">
-                <input
-                  type="text"
-                  name="station"
-                  value={profileForm.station}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
+                                  <Field label="Type">
+                                    <SharedDropdown
+                                      value={doc.type || ""}
+                                      onChange={(val) => updateDocLocal(doc.id, { type: val })}
+                                      options={DOC_TYPES}
+                                      placeholder="Select Type"
+                                    />
+                                  </Field>
 
-              <Field label="Status:">
-                <select
-                  name="status"
-                  value={profileForm.status}
-                  onChange={onProfileChange}
-                  className="select"
-                >
-                  <option value="">Select Status</option>
-                  {statuses.map((s) => (
-                    <option key={s} value={s}>{s}</option>
-                  ))}
-                  {!statuses.includes(profileForm.status) && profileForm.status && (
-                    <option value={profileForm.status}>{profileForm.status}</option>
+                                  <Field label="Issued At">
+                                    <input
+                                      type="date"
+                                      className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                      value={toDateInputValue(doc.issuedAt)}
+                                      onChange={(e) =>
+                                        updateDocLocal(doc.id, { issuedAt: e.target.value })
+                                      }
+                                    />
+                                  </Field>
+
+                                  <Field label="Expires At">
+                                    <input
+                                      type="date"
+                                      className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                                      value={toDateInputValue(doc.expiresAt)}
+                                      onChange={(e) =>
+                                        updateDocLocal(doc.id, { expiresAt: e.target.value })
+                                      }
+                                    />
+                                  </Field>
+                                </div>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <a
+                                    href={viewUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50"
+                                  >
+                                    View
+                                  </a>
+
+                                  <a
+                                    href={`${API_BASE}/employees/${employeeId}/documents/${doc.id}/download`}
+                                    className="inline-flex h-8 px-3 items-center justify-center rounded border border-customRed text-customRed text-[11px] font-medium hover:bg-customRed/10"
+                                  >
+                                    Download
+                                  </a>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 flex flex-col gap-2">
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => handleSaveDocMeta(doc)}
+                                  className="h-8 px-3 rounded bg-slate-900 text-white text-[11px] font-semibold hover:bg-black disabled:opacity-60"
+                                >
+                                  {docSavingId === doc.id ? "Saving…" : "Save"}
+                                </button>
+
+                                <label className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center justify-center">
+                                  {docReplacingId === doc.id ? "Replacing…" : "Replace file"}
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    disabled={busy}
+                                    onChange={(e) => {
+                                      const file = e.target.files?.[0];
+                                      e.target.value = "";
+                                      if (file) handleReplaceDocFile(doc.id, file);
+                                    }}
+                                  />
+                                </label>
+
+                                <button
+                                  type="button"
+                                  disabled={busy}
+                                  onClick={() => handleDeleteDoc(doc.id)}
+                                  className="h-8 px-3 rounded border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 disabled:opacity-60"
+                                >
+                                  {docDeletingId === doc.id ? "Deleting…" : "Delete"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
-                </select>
-              </Field>
 
-              <Field label="Date of Birth:">
-                <input
-                  type="date"
-                  name="dateOfBirth"
-                  value={profileForm.dateOfBirth || ""}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Date of Joining:">
-                <input
-                  type="date"
-                  name="dateOfJoining"
-                  value={profileForm.dateOfJoining || ""}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="CNIC:">
-                <input
-                  type="text"
-                  name="cnic"
-                  value={profileForm.cnic}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Gender:">
-                <input
-                  type="text"
-                  name="gender"
-                  value={profileForm.gender}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Blood Group:">
-                <input
-                  type="text"
-                  name="bloodGroup"
-                  value={profileForm.bloodGroup}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Official Email:">
-                <input
-                  type="email"
-                  name="officialEmail"
-                  value={profileForm.officialEmail}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Personal Email:">
-                <input
-                  type="email"
-                  name="personalEmail"
-                  value={profileForm.personalEmail}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Contact:">
-                <input
-                  type="text"
-                  name="contact"
-                  value={profileForm.contact}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-
-              <Field label="Emergency Contact:">
-                <input
-                  type="text"
-                  name="emergencyContact"
-                  value={profileForm.emergencyContact}
-                  onChange={onProfileChange}
-                  className="input"
-                />
-              </Field>
-            </div>
-
-            <Field label="Address:">
-              <textarea
-                name="address"
-                value={profileForm.address}
-                onChange={onProfileChange}
-                className="textarea"
-                rows={3}
-              />
-            </Field>
-
-            {/* ---------------- DOCUMENTS SECTION (NEW) ---------------- */}
-            <div className="pt-2">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
-                  Documents
-                </h3>
-                <button
-                  type="button"
-                  onClick={addNewDocRow}
-                  disabled={!canAddMoreNewDocs}
-                  className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 disabled:opacity-50"
-                >
-                  + Add Document
-                </button>
-              </div>
-
-              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                {docsLoading ? (
-                  <div className="text-xs text-slate-600">Loading documents…</div>
-                ) : docsError ? (
-                  <div className="text-xs text-red-600">{docsError}</div>
-                ) : docs.length === 0 ? (
-                  <div className="text-xs text-slate-500">No documents uploaded.</div>
-                ) : (
-                  <div className="space-y-3">
-                    {docs.map((doc) => {
-                      const viewUrl = doc.path ? `${FILE_BASE}${doc.path}` : "#";
-                      const busy =
-                        docSavingId === doc.id ||
-                        docReplacingId === doc.id ||
-                        docDeletingId === doc.id;
-
-                      return (
-                        <div
-                          key={doc.id}
-                          className="rounded-xl border border-slate-200 bg-white p-3"
+                  {/* NEW DOCS UPLOAD (UI IMPROVED ONLY) */}
+                  {newDocs.length > 0 ? (
+                    <div className="mt-5 border-t border-slate-200 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs font-semibold text-slate-700">
+                          Upload new document(s)
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleUploadNewDocs}
+                          disabled={docsLoading}
+                          className="h-8 px-3 rounded bg-customRed text-white text-[11px] font-semibold hover:bg-customRed/90 disabled:opacity-60"
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <div className="grid gap-3 md:grid-cols-2">
-                                <Field label="Title">
+                          {docsLoading ? "Uploading…" : "Upload"}
+                        </button>
+                      </div>
+
+                      <div className="mt-3 space-y-3">
+                        {newDocs.map((d, idx) => {
+                          const fileName = d.file?.name || "";
+                          return (
+                            <div
+                              key={idx}
+                              className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                            >
+                              {/* top row */}
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <div className="text-[11px] font-semibold text-slate-700">
+                                    New document #{idx + 1}
+                                  </div>
+                                  <div className="mt-0.5 text-[11px] text-slate-500 truncate">
+                                    {fileName ? fileName : "No file selected"}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => removeNewDocRow(idx)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                                  title="Remove row"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+
+                              {/* fields */}
+                              <div className="mt-3 grid gap-3 md:grid-cols-12">
+                                {/* Title */}
+                                <div className="md:col-span-4">
+                                  <MiniLabel>Title</MiniLabel>
                                   <input
                                     type="text"
-                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                                    value={doc.title || ""}
+                                    value={d.title}
                                     onChange={(e) =>
-                                      updateDocLocal(doc.id, { title: e.target.value })
+                                      updateNewDocField(idx, "title", e.target.value)
                                     }
+                                    className={InputBase}
+                                    placeholder="e.g. CNIC Front, Passport Bio Page"
                                   />
-                                </Field>
+                                </div>
 
-                                <Field label="Type">
+                                {/* Type */}
+                                <div className="md:col-span-3">
+                                  <MiniLabel>Type</MiniLabel>
                                   <select
-                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                                    value={doc.type || ""}
+                                    value={d.type}
                                     onChange={(e) =>
-                                      updateDocLocal(doc.id, { type: e.target.value })
+                                      updateNewDocField(idx, "type", e.target.value)
                                     }
+                                    className={InputBase}
                                   >
                                     <option value="">Select</option>
                                     {DOC_TYPES.map((t) => (
@@ -712,382 +861,220 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                                       </option>
                                     ))}
                                   </select>
-                                </Field>
-
-                                <Field label="Issued At">
-                                  <input
-                                    type="date"
-                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                                    value={toDateInputValue(doc.issuedAt)}
-                                    onChange={(e) =>
-                                      updateDocLocal(doc.id, { issuedAt: e.target.value })
-                                    }
-                                  />
-                                </Field>
-
-                                <Field label="Expires At">
-                                  <input
-                                    type="date"
-                                    className="w-full h-9 rounded border border-slate-300 px-3 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                                    value={toDateInputValue(doc.expiresAt)}
-                                    onChange={(e) =>
-                                      updateDocLocal(doc.id, { expiresAt: e.target.value })
-                                    }
-                                  />
-                                </Field>
-                              </div>
-
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <a
-                                  href={viewUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex h-8 px-3 items-center justify-center rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50"
-                                >
-                                  View
-                                </a>
-
-                                <a
-                                  href={`${API_BASE}/employees/${employeeId}/documents/${doc.id}/download`}
-                                  className="inline-flex h-8 px-3 items-center justify-center rounded border border-customRed text-customRed text-[11px] font-medium hover:bg-customRed/10"
-                                >
-                                  Download
-                                </a>
-                              </div>
-                            </div>
-
-                            <div className="shrink-0 flex flex-col gap-2">
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => handleSaveDocMeta(doc)}
-                                className="h-8 px-3 rounded bg-slate-900 text-white text-[11px] font-semibold hover:bg-black disabled:opacity-60"
-                              >
-                                {docSavingId === doc.id ? "Saving…" : "Save"}
-                              </button>
-
-                              <label className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center justify-center">
-                                {docReplacingId === doc.id ? "Replacing…" : "Replace file"}
-                                <input
-                                  type="file"
-                                  className="hidden"
-                                  disabled={busy}
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    e.target.value = "";
-                                    if (file) handleReplaceDocFile(doc.id, file);
-                                  }}
-                                />
-                              </label>
-
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => handleDeleteDoc(doc.id)}
-                                className="h-8 px-3 rounded border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 disabled:opacity-60"
-                              >
-                                {docDeletingId === doc.id ? "Deleting…" : "Delete"}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* NEW DOCS UPLOAD (UI IMPROVED ONLY) */}
-                {newDocs.length > 0 ? (
-                  <div className="mt-5 border-t border-slate-200 pt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-semibold text-slate-700">
-                        Upload new document(s)
-                      </div>
-                      <button
-                        type="button"
-                        onClick={handleUploadNewDocs}
-                        disabled={docsLoading}
-                        className="h-8 px-3 rounded bg-customRed text-white text-[11px] font-semibold hover:bg-customRed/90 disabled:opacity-60"
-                      >
-                        {docsLoading ? "Uploading…" : "Upload"}
-                      </button>
-                    </div>
-
-                    <div className="mt-3 space-y-3">
-                      {newDocs.map((d, idx) => {
-                        const fileName = d.file?.name || "";
-                        return (
-                          <div
-                            key={idx}
-                            className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
-                          >
-                            {/* top row */}
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="min-w-0">
-                                <div className="text-[11px] font-semibold text-slate-700">
-                                  New document #{idx + 1}
                                 </div>
-                                <div className="mt-0.5 text-[11px] text-slate-500 truncate">
-                                  {fileName ? fileName : "No file selected"}
-                                </div>
-                              </div>
 
-                              <button
-                                type="button"
-                                onClick={() => removeNewDocRow(idx)}
-                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                                title="Remove row"
-                              >
-                                ✕
-                              </button>
-                            </div>
+                                {/* File */}
+                                <div className="md:col-span-5">
+                                  <MiniLabel>File</MiniLabel>
+                                  <div className="flex gap-2">
+                                    <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
+                                      Choose file
+                                      <input
+                                        type="file"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0] || null;
+                                          updateNewDocField(idx, "file", file);
+                                          e.target.value = "";
+                                          if (file && !d.title.trim()) {
+                                            updateNewDocField(idx, "title", file.name);
+                                          }
+                                        }}
+                                      />
+                                    </label>
 
-                            {/* fields */}
-                            <div className="mt-3 grid gap-3 md:grid-cols-12">
-                              {/* Title */}
-                              <div className="md:col-span-4">
-                                <MiniLabel>Title</MiniLabel>
-                                <input
-                                  type="text"
-                                  value={d.title}
-                                  onChange={(e) =>
-                                    updateNewDocField(idx, "title", e.target.value)
-                                  }
-                                  className={InputBase}
-                                  placeholder="e.g. CNIC Front, Passport Bio Page"
-                                />
-                              </div>
-
-                              {/* Type */}
-                              <div className="md:col-span-3">
-                                <MiniLabel>Type</MiniLabel>
-                                <select
-                                  value={d.type}
-                                  onChange={(e) =>
-                                    updateNewDocField(idx, "type", e.target.value)
-                                  }
-                                  className={InputBase}
-                                >
-                                  <option value="">Select</option>
-                                  {DOC_TYPES.map((t) => (
-                                    <option key={t} value={t}>
-                                      {t}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-
-                              {/* File */}
-                              <div className="md:col-span-5">
-                                <MiniLabel>File</MiniLabel>
-                                <div className="flex gap-2">
-                                  <label className="inline-flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-slate-300 bg-white px-3 text-[11px] font-semibold text-slate-700 hover:bg-slate-50">
-                                    Choose file
-                                    <input
-                                      type="file"
-                                      className="hidden"
-                                      onChange={(e) => {
-                                        const file = e.target.files?.[0] || null;
-                                        updateNewDocField(idx, "file", file);
-                                        e.target.value = "";
-                                        if (file && !d.title.trim()) {
-                                          updateNewDocField(idx, "title", file.name);
-                                        }
-                                      }}
-                                    />
-                                  </label>
-
-                                  <div className="flex-1 min-w-0">
-                                    <div
-                                      className={`h-9 w-full rounded-lg border px-3 text-xs flex items-center ${fileName
-                                        ? "border-slate-300 text-slate-800"
-                                        : "border-slate-200 text-slate-400"
-                                        }`}
-                                      title={fileName || "No file selected"}
-                                    >
-                                      <span className="truncate">
-                                        {fileName || "No file selected"}
-                                      </span>
+                                    <div className="flex-1 min-w-0">
+                                      <div
+                                        className={`h-9 w-full rounded-lg border px-3 text-xs flex items-center ${fileName
+                                          ? "border-slate-300 text-slate-800"
+                                          : "border-slate-200 text-slate-400"
+                                          }`}
+                                        title={fileName || "No file selected"}
+                                      >
+                                        <span className="truncate">
+                                          {fileName || "No file selected"}
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
 
-                              {/* Issued */}
-                              <div className="md:col-span-3">
-                                <MiniLabel>Issued</MiniLabel>
-                                <input
-                                  type="date"
-                                  value={d.issuedAt || ""}
-                                  onChange={(e) =>
-                                    updateNewDocField(idx, "issuedAt", e.target.value)
-                                  }
-                                  className={InputBase}
-                                />
-                              </div>
+                                {/* Issued */}
+                                <div className="md:col-span-3">
+                                  <MiniLabel>Issued</MiniLabel>
+                                  <input
+                                    type="date"
+                                    value={d.issuedAt || ""}
+                                    onChange={(e) =>
+                                      updateNewDocField(idx, "issuedAt", e.target.value)
+                                    }
+                                    className={InputBase}
+                                  />
+                                </div>
 
-                              {/* Expires */}
-                              <div className="md:col-span-3">
-                                <MiniLabel>Expires</MiniLabel>
-                                <input
-                                  type="date"
-                                  value={d.expiresAt || ""}
-                                  onChange={(e) =>
-                                    updateNewDocField(idx, "expiresAt", e.target.value)
-                                  }
-                                  className={InputBase}
-                                />
-                              </div>
+                                {/* Expires */}
+                                <div className="md:col-span-3">
+                                  <MiniLabel>Expires</MiniLabel>
+                                  <input
+                                    type="date"
+                                    value={d.expiresAt || ""}
+                                    onChange={(e) =>
+                                      updateNewDocField(idx, "expiresAt", e.target.value)
+                                    }
+                                    className={InputBase}
+                                  />
+                                </div>
 
-                              {/* Small hint row */}
-                              <div className="md:col-span-6 flex items-end">
-                                <div className="text-[11px] text-slate-500">
-                                  Tip: Title auto-fills from file name if left empty.
+                                {/* Small hint row */}
+                                <div className="md:col-span-6 flex items-end">
+                                  <div className="text-[11px] text-slate-500">
+                                    Tip: Title auto-fills from file name if left empty.
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ) : null}
+                  ) : null}
+                </div>
               </div>
-            </div>
-            {/* -------------------------------------------------------- */}
+              {/* -------------------------------------------------------- */}
 
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onClose(false)}
-                className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="h-9 px-4 rounded bg-customRed text-xs font-semibold text-white hover:bg-customRed/90 disabled:opacity-60"
-              >
-                {savingProfile ? "Saving…" : "Update Employee Info"}
-              </button>
-            </div>
-          </form>
-
-          {/* RIGHT: Vault / Login */}
-          <form onSubmit={handleSaveVault} className="space-y-5">
-            <div>
-              <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
-                Vault / Login Info
-              </h3>
-              <p className="mt-1 text-[11px] text-slate-500">
-                Only admins and HR can change login access and reset password.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <Field label="Login / Official Email:">
-                <input
-                  type="email"
-                  name="officialEmail"
-                  value={vaultForm.officialEmail}
-                  onChange={onVaultChange}
-                  disabled={!canEditVault}
-                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
-                    ? "border-slate-300 focus:border-customRed focus:ring-customRed"
-                    : "border-slate-200 bg-slate-50 text-slate-500"
-                    }`}
-                />
-              </Field>
-
-              <Field label="User Type:">
-                <select
-                  name="userType"
-                  value={vaultForm.userType}
-                  onChange={onVaultChange}
-                  disabled={!canEditVault}
-                  className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
-                    ? "border-slate-300 focus:border-customRed focus:ring-customRed"
-                    : "border-slate-200 bg-slate-50 text-slate-500"
-                    }`}
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onClose(false)}
+                  className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
                 >
-                  <option value="">Select user type</option>
-                  {userTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingProfile}
+                  className="h-9 px-4 rounded bg-customRed text-xs font-semibold text-white hover:bg-customRed/90 disabled:opacity-60"
+                >
+                  {savingProfile ? "Saving…" : "Update Employee Info"}
+                </button>
+              </div>
+            </form>
 
-              <div className="flex items-center justify-between">
-                <label className="inline-flex items-center gap-2 text-xs text-slate-700">
+            {/* RIGHT: Vault / Login */}
+            <form onSubmit={handleSaveVault} className="space-y-5">
+              <div>
+                <h3 className="text-xs font-semibold tracking-wide text-slate-700 uppercase">
+                  Vault / Login Info
+                </h3>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Only admins and HR can change login access and reset password.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <Field label="Login / Official Email:">
                   <input
-                    type="checkbox"
-                    name="canLogin"
-                    checked={vaultForm.canLogin}
+                    type="email"
+                    name="officialEmail"
+                    value={vaultForm.officialEmail}
                     onChange={onVaultChange}
                     disabled={!canEditVault}
+                    className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
+                      ? "border-slate-300 focus:border-customRed focus:ring-customRed"
+                      : "border-slate-200 bg-slate-50 text-slate-500"
+                      }`}
                   />
-                  <span>Allow this employee to log in</span>
-                </label>
-              </div>
+                </Field>
 
-              {canEditVault && (
-                <Field label="Reset Password:">
-                  <div className="space-y-2">
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="password"
-                        value={vaultForm.password}
-                        onChange={onVaultChange}
-                        placeholder="Leave blank to keep current password"
-                        className="w-full h-9 rounded border border-slate-300 px-3 pr-10 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
-                      />
+                <Field label="User Type:">
+                  <select
+                    name="userType"
+                    value={vaultForm.userType}
+                    onChange={onVaultChange}
+                    disabled={!canEditVault}
+                    className={`w-full h-9 rounded border px-3 text-xs focus:outline-none focus:ring-1 ${canEditVault
+                      ? "border-slate-300 focus:border-customRed focus:ring-customRed"
+                      : "border-slate-200 bg-slate-50 text-slate-500"
+                      }`}
+                  >
+                    <option value="">Select user type</option>
+                    {userTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+
+                <div className="flex items-center justify-between">
+                  <label className="inline-flex items-center gap-2 text-xs text-slate-700">
+                    <input
+                      type="checkbox"
+                      name="canLogin"
+                      checked={vaultForm.canLogin}
+                      onChange={onVaultChange}
+                      disabled={!canEditVault}
+                    />
+                    <span>Allow this employee to log in</span>
+                  </label>
+                </div>
+
+                {canEditVault && (
+                  <Field label="Reset Password:">
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          name="password"
+                          value={vaultForm.password}
+                          onChange={onVaultChange}
+                          placeholder="Leave blank to keep current password"
+                          className="w-full h-9 rounded border border-slate-300 px-3 pr-10 text-xs focus:border-customRed focus:outline-none focus:ring-1 focus:ring-customRed"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute inset-y-0 right-0 flex items-center px-3 text-[11px] text-slate-500 hover:text-slate-700"
+                        >
+                          {showPassword ? "Hide" : "Show"}
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute inset-y-0 right-0 flex items-center px-3 text-[11px] text-slate-500 hover:text-slate-700"
+                        onClick={handleGeneratePassword}
+                        className="text-[11px] font-medium text-customRed hover:text-customRed/80"
                       >
-                        {showPassword ? "Hide" : "Show"}
+                        Generate random password
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGeneratePassword}
-                      className="text-[11px] font-medium text-customRed hover:text-customRed/80"
-                    >
-                      Generate random password
-                    </button>
-                  </div>
-                </Field>
-              )}
+                  </Field>
+                )}
 
-              {!canEditVault && (
-                <p className="text-[11px] text-slate-400">
-                  You don't have permission to modify login credentials.
-                </p>
-              )}
-            </div>
+                {!canEditVault && (
+                  <p className="text-[11px] text-slate-400">
+                    You don't have permission to modify login credentials.
+                  </p>
+                )}
+              </div>
 
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => onClose(false)}
-                className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingVault || !canEditVault}
-                className="h-9 px-4 rounded bg-slate-900 text-xs font-semibold text-white hover:bg-black disabled:opacity-60"
-              >
-                {savingVault ? "Updating…" : "Update Vault Info"}
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => onClose(false)}
+                  className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingVault || !canEditVault}
+                  className="h-9 px-4 rounded bg-slate-900 text-xs font-semibold text-white hover:bg-black disabled:opacity-60"
+                >
+                  {savingVault ? "Updating…" : "Update Vault Info"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
     </div>

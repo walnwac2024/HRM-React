@@ -17,6 +17,7 @@ export default function DashboardTabsLayout() {
     { label: "Recruitment Dashboard", to: "/dashboard/recruitment", code: "recruitment_dashboard" },
     { label: "Organcogram", to: "/dashboard/organcogram", code: "organogram_view" },
     { label: "News", to: "/dashboard/news" },
+    { label: "Permissions", to: "/dashboard/permissions", code: "permissions_view" },
   ];
 
   // Filter tabs: Show if Admin OR has the specific feature code
@@ -24,20 +25,18 @@ export default function DashboardTabsLayout() {
 
   return (
     <>
-      <div className="bg-white border-b rounded-t-xl mb-3 sm:mb-4">
-        <div className="px-2 sm:px-4 py-1.5 sm:py-2 flex gap-2 overflow-x-auto">
+      <div className="bg-white/50 backdrop-blur-md border border-slate-200 shadow-sm rounded-2xl mb-8 p-1.5 flex items-center overflow-hidden">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar w-full">
           {tabs.map(({ label, to }) => (
             <NavLink
               key={to}
               to={to}
               end={to === "/dashboard"}
               className={({ isActive }) =>
-                [
-                  "px-3 sm:px-4 py-1.5 text-[11px] sm:text-[12px] uppercase tracking-wide rounded-t-md border transition-colors whitespace-nowrap",
-                  isActive
-                    ? "bg-customRed text-white border-customRed shadow-sm"
-                    : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100",
-                ].join(" ")
+                `px-5 py-2.5 text-[12px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 whitespace-nowrap 
+                 ${isActive
+                  ? "bg-customRed text-white shadow-lg shadow-customRed/20 scale-[1.02]"
+                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"}`
               }
             >
               {label}

@@ -8,7 +8,6 @@ export const ATTENDANCE_NAV = [
   { id: 'amend-attendance', label: 'Amend Attendance', status: 'working' },
   { id: 'amend-employee-shift', label: 'Amend Employee Shift', status: 'working' },
   { id: 'attendance-approval', label: 'Attendance Approval', status: 'working' },
-  { id: 'schedule', label: 'Schedule', status: 'working' },
   { id: 'attendance-settings', label: 'Attendance Settings', active: true },
 ];
 
@@ -48,7 +47,7 @@ export const FLAG_TYPES = ['--ALL--', 'Normal', 'Critical'];
 export const WORKSHEET_ACTIONS = ['ALL', 'Created', 'Updated', 'Deleted'];
 export const WORKSHEET_YEARS = [
   '--ALL--',
-  '2025', '2024', '2023', '2022', '2021'
+  '2030', '2029', '2028', '2027', '2026', '2025', '2024', '2023', '2022', '2021'
 ];
 export const WORKSHEET_MONTHS = [
   '--ALL--', 'January', 'February', 'March', 'April', 'May', 'June',

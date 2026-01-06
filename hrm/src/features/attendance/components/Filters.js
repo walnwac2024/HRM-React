@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SharedDropdown from '../../../components/common/SharedDropdown';
 import {
   STATIONS, DEPARTMENTS, SUB_DEPARTMENTS, EMPLOYEE_GROUPS, EMPLOYEES,
   STATUSES, REQUEST_TYPES, FLAGS, MARK_FROM_DASHBOARD,
@@ -24,10 +25,10 @@ export default function Filters({
   title = 'Attendance Request',
   onApply,
   perPage = 10,
-  onPerPageChange = () => {},
-  onUploadExcel = () => {},
-  onAddNew = () => {},
-  onAddIrregular = () => {},
+  onPerPageChange = () => { },
+  onUploadExcel = () => { },
+  onAddNew = () => { },
+  onAddIrregular = () => { },
 }) {
   const isExemption = mode === 'exemption';
   const isWorksheet = mode === 'worksheet';
@@ -56,7 +57,7 @@ export default function Filters({
     action: 'ALL',
   });
 
-  const set = (k) => (e) => setVals((v) => ({ ...v, [k]: e.target.value }));
+  const set = (k) => (val) => setVals((v) => ({ ...v, [k]: val }));
 
   const resetVals = () =>
     setVals({
@@ -88,39 +89,48 @@ export default function Filters({
 
       <div className="card-body">
         {/* Row 1 (shared) */}
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-          <Field label="Station">
-            <select className="select" value={vals.station} onChange={set('station')}>
-              {STATIONS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <SharedDropdown
+            label="Station"
+            value={vals.station}
+            onChange={set('station')}
+            options={STATIONS}
+            searchable
+          />
 
-          <Field label="Department">
-            <select className="select" value={vals.department} onChange={set('department')}>
-              {DEPARTMENTS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          <SharedDropdown
+            label="Department"
+            value={vals.department}
+            onChange={set('department')}
+            options={DEPARTMENTS}
+            searchable
+          />
 
-          <Field label="Sub Department">
-            <select className="select" value={vals.subDepartment} onChange={set('subDepartment')}>
-              {SUB_DEPARTMENTS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          <SharedDropdown
+            label="Sub Department"
+            value={vals.subDepartment}
+            onChange={set('subDepartment')}
+            options={SUB_DEPARTMENTS}
+            searchable
+          />
 
-          <Field label="Employee Group">
-            <select className="select" value={vals.employeeGroup} onChange={set('employeeGroup')}>
-              {EMPLOYEE_GROUPS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          <SharedDropdown
+            label="Employee Group"
+            value={vals.employeeGroup}
+            onChange={set('employeeGroup')}
+            options={EMPLOYEE_GROUPS}
+          />
         </div>
 
         {/* Row 2 */}
-        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <Field label="Employee">
-            <select className="select" value={vals.employee} onChange={set('employee')}>
-              {EMPLOYEES.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
+          <SharedDropdown
+            label="Employee"
+            value={vals.employee}
+            onChange={set('employee')}
+            options={EMPLOYEES}
+            searchable
+          />
 
           {/* Attendance/Exemption/Remote/Shift show date; Worksheet has its own fields */}
           {!isWorksheet && (
@@ -128,26 +138,28 @@ export default function Filters({
               <Field
                 label={
                   isExemption ? 'Exemption Date'
-                  : isRemote   ? 'Remote Work Date'
-                  : isShift    ? 'Shift Date'
-                  : 'Attendance Date'
+                    : isRemote ? 'Remote Work Date'
+                      : isShift ? 'Shift Date'
+                        : 'Attendance Date'
                 }
               >
                 <input type="date" className="input" value={vals.date} onChange={set('date')} />
               </Field>
 
-              <Field label="Status">
-                <select className="select" value={vals.status} onChange={set('status')}>
-                  {STATUSES.map((x) => <option key={x}>{x}</option>)}
-                </select>
-              </Field>
+              <SharedDropdown
+                label="Status"
+                value={vals.status}
+                onChange={set('status')}
+                options={STATUSES}
+              />
 
               {isExemption ? (
-                <Field label="Flag Type">
-                  <select className="select" value={vals.flagType} onChange={set('flagType')}>
-                    {FLAG_TYPES.map((x) => <option key={x}>{x}</option>)}
-                  </select>
-                </Field>
+                <SharedDropdown
+                  label="Flag Type"
+                  value={vals.flagType}
+                  onChange={set('flagType')}
+                  options={FLAG_TYPES}
+                />
               ) : (
                 // Show Employee Code for Attendance AND Shift; hide for Exemption/Remote
                 (mode === 'attendance' || isShift) && (
@@ -176,17 +188,19 @@ export default function Filters({
                 />
               </Field>
 
-              <Field label="Year">
-                <select className="select" value={vals.year} onChange={set('year')}>
-                  {WORKSHEET_YEARS.map((x) => <option key={x}>{x}</option>)}
-                </select>
-              </Field>
+              <SharedDropdown
+                label="Year"
+                value={vals.year}
+                onChange={set('year')}
+                options={WORKSHEET_YEARS}
+              />
 
-              <Field label="Month">
-                <select className="select" value={vals.month} onChange={set('month')}>
-                  {WORKSHEET_MONTHS.map((x) => <option key={x}>{x}</option>)}
-                </select>
-              </Field>
+              <SharedDropdown
+                label="Month"
+                value={vals.month}
+                onChange={set('month')}
+                options={WORKSHEET_MONTHS}
+              />
             </>
           )}
         </div>
@@ -202,17 +216,19 @@ export default function Filters({
             />
           </Field>
 
-          <Field label="Request Type">
-            <select className="select" value={vals.requestType} onChange={set('requestType')}>
-              {REQUEST_TYPES.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          <SharedDropdown
+            label="Request Type"
+            value={vals.requestType}
+            onChange={set('requestType')}
+            options={REQUEST_TYPES}
+          />
 
-          <Field label="Flag">
-            <select className="select" value={vals.flag} onChange={set('flag')}>
-              {FLAGS.map((x) => <option key={x}>{x}</option>)}
-            </select>
-          </Field>
+          <SharedDropdown
+            label="Flag"
+            value={vals.flag}
+            onChange={set('flag')}
+            options={FLAGS}
+          />
 
           {/* Attendance-only control */}
           {!isExemption && !isWorksheet && !isRemote && !isShift && (
@@ -228,24 +244,24 @@ export default function Filters({
           )}
 
           {isWorksheet && (
-            <Field label="Action">
-              <select className="select" value={vals.action} onChange={set('action')}>
-                {WORKSHEET_ACTIONS.map((x) => <option key={x}>{x}</option>)}
-              </select>
-            </Field>
+            <SharedDropdown
+              label="Action"
+              value={vals.action}
+              onChange={set('action')}
+              options={WORKSHEET_ACTIONS}
+            />
           )}
         </div>
 
         {/* Row 4 (attendance/exemption types only) */}
         {!isWorksheet && !isRemote && !isShift && (
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-            <Field label={isExemption ? 'Exemption Type' : 'Attendance Type'}>
-              <select className="select" value={vals.type} onChange={set('type')}>
-                {(isExemption ? EXEMPTION_TYPES : ATTENDANCE_TYPES).map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
-              </select>
-            </Field>
+            <SharedDropdown
+              label={isExemption ? 'Exemption Type' : 'Attendance Type'}
+              value={vals.type}
+              onChange={set('type')}
+              options={isExemption ? EXEMPTION_TYPES : ATTENDANCE_TYPES}
+            />
           </div>
         )}
 

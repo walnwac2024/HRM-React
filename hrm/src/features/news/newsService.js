@@ -40,3 +40,8 @@ export const syncWhatsAppGroups = async () => {
     const res = await api.post(`${API_URL}/whatsapp/sync`);
     return res.data;
 };
+
+export const logoutWhatsAppSession = async (hardReset = false) => {
+    const res = await api.post(`${API_URL}/whatsapp/logout`, { hardReset });
+    return res.data;
+};

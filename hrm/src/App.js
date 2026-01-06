@@ -27,6 +27,7 @@ import ProfilePage from "./features/profile/ProfilePage";
 import LeavePage from "./features/leave/LeavePage";
 import PermissionsPage from "./features/permissions/PermissionsPage";
 import NewsPage from "./features/news/NewsPage";
+import ReportsPage from "./features/reports/ReportsPage";
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -95,6 +96,7 @@ export default function App() {
               <Route path="recruitment" element={<RecruitmentDashboard />} />
               <Route path="organcogram" element={<Organcogram />} />
               <Route path="news" element={<NewsPage />} />
+              <Route path="permissions" element={<PermissionsPage />} />
             </Route>
 
             {/* Other top-level pages */}
@@ -113,8 +115,7 @@ export default function App() {
             <Route path="/leave" element={<LeavePage />} />
             <Route path="/performance" element={<div className="p-4">Performance</div>} />
             <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
-            <Route path="/reports" element={<div className="p-4">Reports</div>} />
-            <Route path="/permissions" element={<PermissionsPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
 
             {/* 👇 NEW: profile route */}
             <Route path="/profile" element={<ProfilePage />} />

@@ -85,3 +85,8 @@ export async function getPersonalAttendanceSummary() {
   const { data } = await api.get("/attendance/summary/personal");
   return data;
 }
+
+export async function getMonthlyAttendanceReport(params) {
+  const { data } = await api.get("/attendance/report/monthly", { params });
+  return data;
+}

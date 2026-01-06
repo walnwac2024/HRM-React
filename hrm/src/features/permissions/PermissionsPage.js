@@ -76,7 +76,7 @@ export default function PermissionsPage() {
                 <button
                     onClick={handleSave}
                     disabled={saving || !selectedType}
-                    className="px-6 py-2 bg-slate-900 text-white rounded-lg hover:bg-black disabled:opacity-50 transition-all font-semibold"
+                    className="btn-primary"
                 >
                     {saving ? "Saving..." : "Save Changes"}
                 </button>
@@ -84,21 +84,24 @@ export default function PermissionsPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 {/* User Types Sidebar */}
-                <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                    <div className="p-4 bg-slate-50 border-b border-slate-100">
-                        <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">User Types</h2>
+                <div className="lg:col-span-1 bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
+                    <div className="p-5 bg-slate-50/50 border-b border-slate-100">
+                        <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">User Types</h2>
                     </div>
-                    <div className="divide-y divide-slate-50">
+                    <div className="p-2 space-y-1">
                         {userTypes.map((t) => (
                             <button
                                 key={t.id}
                                 onClick={() => handleSelectType(t)}
-                                className={`w-full text-left px-4 py-3 text-sm transition-colors ${selectedType?.id === t.id
-                                    ? "bg-customRed/5 text-customRed font-bold border-r-4 border-customRed"
+                                className={`w-full text-left px-4 py-2.5 text-[13px] rounded-2xl transition-all duration-200 ${selectedType?.id === t.id
+                                    ? "bg-customRed/5 text-customRed font-bold"
                                     : "text-slate-600 hover:bg-slate-50"
-                                    }`}
+                                    } relative overflow-hidden`}
                             >
-                                {t.type}
+                                {selectedType?.id === t.id && (
+                                    <span className="absolute left-0 top-2.5 bottom-2.5 w-[4px] bg-customRed rounded-r-full shadow-[2px_0_8px_rgba(239,68,68,0.4)]" />
+                                )}
+                                <span className={selectedType?.id === t.id ? "ml-2" : ""}>{t.type}</span>
                             </button>
                         ))}
                     </div>

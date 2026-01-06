@@ -18,9 +18,8 @@ function EmployeesTable({
     const parts = name.trim().split(" ").filter(Boolean);
     if (parts.length === 0) return "";
     if (parts.length === 1) return parts[0][0]?.toUpperCase() || "";
-    return `${parts[0][0]?.toUpperCase() || ""}${
-      parts[1][0]?.toUpperCase() || ""
-    }`;
+    return `${parts[0][0]?.toUpperCase() || ""}${parts[1][0]?.toUpperCase() || ""
+      }`;
   };
 
   // Use same base-url logic as profile/topbar
@@ -29,17 +28,17 @@ function EmployeesTable({
   const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100/80 border-b border-slate-200">
-            <tr className="text-left text-[11px] font-semibold text-slate-600 uppercase tracking-wide">
-              <th className="px-4 py-2 w-12">S#</th>
-              <th className="px-4 py-2">Employee</th>
-              <th className="px-4 py-2">Department</th>
-              <th className="px-4 py-2">Station</th>
-              <th className="px-4 py-2">Designation</th>
-              <th className="px-4 py-2 w-16 text-right">Action</th>
+    <div className="card overflow-hidden">
+      <div className="overflow-x-auto -mx-1 sm:mx-0">
+        <table className="min-w-full text-sm table-auto sm:table-fixed">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <th className="px-4 py-3 w-12 hidden sm:table-cell">S#</th>
+              <th className="px-4 py-3 min-w-[200px]">Employee</th>
+              <th className="px-4 py-3 hidden md:table-cell w-[150px]">Department</th>
+              <th className="px-4 py-3 hidden lg:table-cell w-[120px]">Station</th>
+              <th className="px-4 py-3 hidden xl:table-cell w-[180px]">Designation</th>
+              <th className="px-4 py-3 w-16 text-right sticky right-0 bg-slate-50 shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.1)] sm:shadow-none">Action</th>
             </tr>
           </thead>
 
@@ -48,9 +47,14 @@ function EmployeesTable({
               <tr>
                 <td
                   colSpan={6}
-                  className="px-4 py-8 text-center text-sm text-slate-500"
+                  className="px-4 py-12 text-center"
                 >
-                  No employees found.
+                  <div className="flex flex-col items-center justify-center text-slate-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 mb-2 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <span className="text-sm font-medium">No employees found.</span>
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -81,11 +85,9 @@ function EmployeesTable({
                 return (
                   <tr
                     key={row.id ?? `${firstItem}-${idx}`}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      isInactive ? "opacity-70" : ""
-                    }`}
+                    className={`hover:bg-slate-50/80 transition-colors border-b last:border-0 ${isInactive ? "opacity-70" : ""}`}
                   >
-                    <td className="px-4 py-3 align-top text-xs text-slate-500">
+                    <td className="px-4 py-4 align-top text-xs text-slate-400 hidden sm:table-cell font-mono">
                       {firstItem + idx}
                     </td>
 
@@ -96,46 +98,53 @@ function EmployeesTable({
                           <img
                             src={avatarUrl}
                             alt={name}
-                            className="mt-0.5 h-9 w-9 rounded-full object-cover border"
+                            className="mt-0.5 h-10 w-10 rounded-full object-cover border border-slate-100 shadow-sm"
                           />
                         ) : (
-                          <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-[11px] font-semibold text-slate-600 uppercase">
+                          <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600 uppercase">
                             {initials}
                           </div>
                         )}
 
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <div className="font-medium text-slate-800 leading-snug truncate">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <div className="font-bold text-slate-800 leading-tight truncate text-[14px]">
                               {name}
                             </div>
 
                             {isInactive && (
-                              <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-700">
+                              <span className="inline-flex items-center rounded-full bg-red-50 px-2 py-0.5 text-[9px] font-bold text-red-600 uppercase tracking-wider">
                                 Inactive
                               </span>
                             )}
                           </div>
 
-                          <div className="mt-0.5 text-xs text-slate-500">
-                            <span className="font-medium text-slate-600">
-                              Code:
-                            </span>{" "}
-                            {code}
+                          <div className="mt-1 text-[11px] text-slate-500 font-medium">
+                            <span className="opacity-60">ID:</span> {code}
+                          </div>
+
+                          {/* Mobile-only info */}
+                          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 md:hidden">
+                            <div className="text-[10px] text-slate-400 font-medium truncate max-w-[120px]">
+                              {department}
+                            </div>
+                            <div className="text-[10px] text-slate-400 font-medium">
+                              • {station}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-4 py-3 align-top text-sm text-slate-700">
+                    <td className="px-4 py-4 align-middle text-sm text-slate-600 hidden md:table-cell">
                       {department}
                     </td>
 
-                    <td className="px-4 py-3 align-top text-sm text-slate-700">
+                    <td className="px-4 py-4 align-middle text-sm text-slate-600 hidden lg:table-cell">
                       {station}
                     </td>
 
-                    <td className="px-4 py-3 align-top text-sm text-slate-700">
+                    <td className="px-4 py-4 align-middle text-sm text-slate-600 hidden xl:table-cell">
                       {designation}
                     </td>
 
@@ -143,18 +152,16 @@ function EmployeesTable({
                       <button
                         type="button"
                         onClick={() => toggleMenu(row.id)}
-                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full border border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200 hover:bg-slate-50 transition ${
-                          isOpen ? "bg-slate-100 text-slate-700" : ""
-                        }`}
+                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full border border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-200 hover:bg-slate-50 transition ${isOpen ? "bg-slate-100 text-slate-700" : ""
+                          }`}
                         aria-haspopup="menu"
                         aria-expanded={isOpen}
                       >
                         <span className="sr-only">Actions</span>
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
-                          className={`h-4 w-4 transition-transform ${
-                            isOpen ? "rotate-90" : ""
-                          }`}
+                          className={`h-4 w-4 transition-transform ${isOpen ? "rotate-90" : ""
+                            }`}
                           viewBox="0 0 20 20"
                           fill="currentColor"
                         >
@@ -232,9 +239,8 @@ function EmployeesTable({
 
                           <button
                             type="button"
-                            className={`flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${
-                              isInactive ? "text-emerald-600" : "text-red-600"
-                            }`}
+                            className={`flex w-full items-center gap-2 px-3 py-2 text-xs hover:bg-slate-50 ${isInactive ? "text-emerald-600" : "text-red-600"
+                              }`}
                             onClick={() => {
                               setOpenRowId(null);
                               onMarkInactive?.(row); // ✅ parent toggles based on row.isActive

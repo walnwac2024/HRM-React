@@ -7,7 +7,7 @@ module.exports = {
         sans: ['Outfit', 'sans-serif'],
       },
       colors: {
-        customRed: '#E11D48',
+        customRed: '#E02D3D',
         customLightGrey: '#94A3B8',
       },
     },

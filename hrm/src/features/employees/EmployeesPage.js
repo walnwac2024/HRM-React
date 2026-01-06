@@ -294,9 +294,9 @@ export default function EmployeesPage() {
   };
 
   return (
-    <main className="page grid grid-cols-1 gap-6 lg:grid-cols-[16rem_1fr]">
+    <div className="flex flex-col lg:flex-row gap-6">
       <EmployeeSidebar activeKey={active} onNavigate={setActive} />
-      <section className="flex-1 min-w-0">{renderMain()}</section>
-    </main>
+      <section className="flex-1 min-w-0 w-full overflow-hidden">{renderMain()}</section>
+    </div>
   );
 }

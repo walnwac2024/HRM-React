@@ -40,7 +40,7 @@ export default function Layout() {
   return (
     <>
       <Topbar userName={userName} logoSrc="/hrm-logo.png" />
-      <main className="p-4 max-w-screen-2xl mx-auto">
+      <main className="page">
         <Outlet />
       </main>
       <ChatPopup />

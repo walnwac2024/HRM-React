@@ -130,7 +130,7 @@ export default function AttendanceSettings() {
               <button
                 onClick={saveRule}
                 disabled={savingRule || loading}
-                className="btn-primary h-9 px-6 text-[11px] uppercase tracking-widest"
+                className="btn-primary"
               >
                 {savingRule ? "Saving..." : "Save Rule"}
               </button>
@@ -195,9 +195,9 @@ export default function AttendanceSettings() {
 
           {/* SHIFTS */}
           <div className="rounded-2xl border border-slate-100 overflow-hidden bg-white shadow-sm">
-            <div className="px-6 py-4 bg-slate-50/50 flex items-center justify-between border-b border-slate-100">
+            <div className="px-6 py-5 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100">
               <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Shifts</div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-white/60 px-2 py-1 rounded-md border border-slate-100 shadow-sm self-start sm:self-auto">
                 Auto-detected by date range (RAMADAN &gt; SUMMER &gt; WINTER)
               </div>
             </div>
@@ -300,10 +300,7 @@ export default function AttendanceSettings() {
                           <button
                             onClick={() => saveShift(s)}
                             disabled={savingShiftId === s.id}
-                            className={`px-4 py-2 rounded-lg text-sm text-white ${savingShiftId === s.id
-                              ? "bg-gray-300 cursor-not-allowed"
-                              : "bg-customRed hover:opacity-95"
-                              }`}
+                            className={`btn-primary h-9 px-4 text-xs ${savingShiftId === s.id ? "opacity-30" : ""}`}
                           >
                             {savingShiftId === s.id ? "Saving..." : "Save"}
                           </button>
