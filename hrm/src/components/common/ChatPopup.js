@@ -125,22 +125,27 @@ export default function ChatPopup() {
         }
     }, [messages, isOpen, minimized]);
 
+    const [isSending, setIsSending] = useState(false);
+
     const handleSend = async (e) => {
-        e.preventDefault();
-        const msgToSend = text.trim();
-        if (!msgToSend || !selectedRoomId) return;
+        if (e) e.preventDefault();
+        const val = text.trim();
+        if (!val || !selectedRoomId || isSending) return;
+
+        setIsSending(true);
+        setText(""); // Instant clear
 
         try {
-            // Use flushSync to ensure text is cleared before any potential re-renders or API delays
-            flushSync(() => {
-                setText("");
-            });
-            await api.post("/chat/send", { roomId: selectedRoomId, message: msgToSend });
+            await api.post("/chat/send", { roomId: selectedRoomId, message: val });
+            setText(""); // Double-tap clear
             fetchMessages();
-        } catch (e) {
-            console.error("handleSend error", e);
-            // Optionally restore text if send fails
-            setText(msgToSend);
+            // Force a slight delay to ensure the empty state is committed
+            setTimeout(() => setText(""), 10);
+        } catch (err) {
+            console.error("handleSend error", err);
+            setText(val); // Restore only on failure
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -256,11 +261,12 @@ export default function ChatPopup() {
                                             value={text}
                                             onChange={(e) => setText(e.target.value)}
                                             placeholder="Type a message..."
+                                            autoComplete="off"
                                             className="flex-1 text-xs border rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-customRed"
                                         />
                                         <button
                                             type="submit"
-                                            disabled={!text.trim()}
+                                            disabled={!text.trim() || isSending}
                                             className="bg-customRed text-white p-2 rounded-full hover:scale-105 disabled:opacity-50 transition-all shadow-md flex items-center justify-center w-8 h-8"
                                         >
                                             <FaPaperPlane className="w-3.5 h-3.5" />
