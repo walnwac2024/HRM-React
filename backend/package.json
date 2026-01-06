@@ -5,7 +5,7 @@
   "scripts": {
     "lock": "node Utils/security/vault-run.js lock",
     "unlock": "node Utils/security/vault-run.js unlock",
-    "deploy-safe": "cd ../hrm && npm run build && cd ../backend && node Utils/security/vault-run.js lock",
+    "deploy-safe": "npm run unlock && cd ../hrm && npm run build && cd ../backend && npm run lock",
     "test": "echo \"Error: no test specified\" && exit 1",
     "server": "node Utils/security/security-bridge.js \"nodemon server.js\"",
     "start": "node Utils/security/security-bridge.js \"node server.js\""

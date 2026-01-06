@@ -7,6 +7,7 @@ const helmet = require("helmet");
 const dotenv = require("dotenv");
 const csurf = require("csurf");
 const path = require("path");
+const fs = require("fs");
 
 dotenv.config();
 
@@ -20,6 +21,16 @@ const { initWhatsApp } = require("./Utils/whatsapp");
 initAttendanceJob();
 initWhatsApp();
 
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    const log = `${new Date().toISOString()} - ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)\n`;
+    fs.appendFileSync(path.join(__dirname, "debug_requests.log"), log);
+  });
+  next();
+});
+
 const isProd = process.env.NODE_ENV === "production";
 
 app.use(
@@ -28,8 +39,23 @@ app.use(
   })
 );
 
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:5000",
+  "http://127.0.0.1:5000",
+];
+
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: [
@@ -106,7 +132,9 @@ const buildPath = path.join(__dirname, "../hrm/build");
 app.use(express.static(buildPath));
 
 app.get("*any", (req, res) => {
-  if (req.path.startsWith("/api/v1")) return;
+  if (req.path.startsWith("/api/v1")) {
+    return res.status(404).json({ message: "API endpoint not found" });
+  }
   res.sendFile(path.join(buildPath, "index.html"), (err) => {
     if (err) {
       res.status(404).send("HRM Build not found.");
@@ -123,6 +151,7 @@ app.use((err, req, res, next) => {
 });
 
 const port = Number(process.env.PORT || 5000);
-app.listen(port, () => {
-  console.log(`Server listening on http://localhost:${port}`);
+const host = "0.0.0.0";
+app.listen(port, host, () => {
+  console.log(`Server listening on http://${host}:${port}`);
 });

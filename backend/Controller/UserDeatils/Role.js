@@ -313,6 +313,18 @@ async function getDashboard(req, res) {
         'SELECT COUNT(*) AS totalEmployees FROM employee_records'
       );
 
+      const [[{ presentToday }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM attendance_daily WHERE attendance_date = CURDATE() AND status IN ('PRESENT', 'LATE')"
+      );
+
+      const [[{ lateToday }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM attendance_daily WHERE attendance_date = CURDATE() AND status = 'LATE'"
+      );
+
+      const [[{ onLeave }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM leave_applications WHERE status = 'approved' AND CURDATE() BETWEEN start_date AND end_date"
+      );
+
       let teamQuery = `
         SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
         FROM employee_records e
@@ -332,13 +344,21 @@ async function getDashboard(req, res) {
         teamParams
       );
 
+      const [news] = await pool.query(
+        "SELECT n.*, e.Employee_Name as author_name FROM news n LEFT JOIN employee_records e ON n.author_id = e.id WHERE n.is_published = 1 ORDER BY n.created_at DESC LIMIT 5"
+      );
+
       return res.json({
         role,
         profile: myProfile,
         widgets: {
           totalEmployees,
-          recentEmployees: team, // Matches the frontend expectation in Dashbord.js line 593-596
-          teamRecent: team
+          presentToday,
+          lateToday,
+          onLeave,
+          recentEmployees: team, // Matches the frontend expectation
+          teamRecent: team,
+          news
         }
       });
     }
@@ -390,7 +410,21 @@ async function getDashboard(req, res) {
         params.push(myDept);
       }
 
+      // 1. Total counts for overview
       const [[{ totalEmployees }]] = await pool.query(countQuery, params);
+
+      const [[{ presentToday }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM attendance_daily WHERE attendance_date = CURDATE() AND status IN ('PRESENT', 'LATE')"
+      );
+
+      const [[{ lateToday }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM attendance_daily WHERE attendance_date = CURDATE() AND status = 'LATE'"
+      );
+
+      const [[{ onLeave }]] = await pool.query(
+        "SELECT COUNT(*) as count FROM leave_applications WHERE status = 'approved' AND CURDATE() BETWEEN start_date AND end_date"
+      );
+
       const [recentHires] = await pool.query(
         `SELECT ${BASE_EMP_FIELDS}, ad.status AS attendance_status
          FROM employee_records e
@@ -400,10 +434,23 @@ async function getDashboard(req, res) {
         params
       );
 
+      const [news] = await pool.query(
+        "SELECT n.*, e.Employee_Name as author_name FROM news n LEFT JOIN employee_records e ON n.author_id = e.id WHERE n.is_published = 1 ORDER BY n.created_at DESC LIMIT 5"
+      );
+
       return res.json({
         role,
         profile: myProfile,
-        widgets: { totalEmployees, recentHires }
+        widgets: {
+          totalEmployees,
+          presentToday,
+          lateToday,
+          onLeave,
+          recentHires,
+          team: recentHires,
+          teamRecent: recentHires,
+          news
+        }
       });
     }
 

@@ -13,6 +13,13 @@ const {
     heartbeat,
     changePassword
 } = require("../Controller/UserDeatils/Login");
+const Role = require("../Controller/UserDeatils/Role");
+const Attendance = require("../Controller/Attendance/Attendance");
+const AttendanceSettings = require("../Controller/Attendance/AttendanceSettings");
+const Leave = require("../Controller/Leaves/Leave");
+const News = require("../Controller/News/NewsController");
+const Notifications = require("../Controller/UserDeatils/NotificationController");
+const Chat = require("../Controller/UserDeatils/ChatController");
 
 const {
     listEmployees,
@@ -27,23 +34,25 @@ const {
     deleteEmployeeDocument,
     replaceEmployeeDocumentFile,
     downloadEmployeeDocument,
-    updateEmployeeAvatar
+    updateEmployeeAvatar,
+    lookupStations,
+    lookupDepartments,
+    lookupGroups,
+    lookupDesignations,
+    lookupStatuses,
+    lookupRoleTemplates,
+    lookupUserTypes
 } = require("../Controller/Employees/Employees");
 
-const Attendance = require("../Controller/Attendance/Attendance");
-const Leave = require("../Controller/Leaves/Leave");
-const News = require("../Controller/News/NewsController");
-const Notifications = require("../Controller/UserDeatils/NotificationController");
-const Chat = require("../Controller/UserDeatils/ChatController");
-
-// Middleware
-const { isAuthenticated, requireRole } = require("../middlewares/middleware");
 const {
     getTypePermissions,
     updateTypePermissions,
     listUserTypes,
     listAllPermissions
 } = require("../Controller/UserDeatils/PermissionController");
+
+// Middleware
+const { isAuthenticated, requireRole } = require("../middlewares/middleware");
 
 // Multer storage for documents
 const docsDir = path.join(__dirname, "..", "uploads", "documents");
@@ -67,6 +76,8 @@ router.get("/auth/me", isAuthenticated, me);
 router.post("/auth/logout", logout);
 router.post("/auth/heartbeat", heartbeat);
 router.post("/auth/change-password", isAuthenticated, changePassword);
+router.get("/me/menu", isAuthenticated, Role.getMenu);
+router.get("/dashboard", isAuthenticated, Role.getDashboard);
 
 // Notification routes
 router.get("/notifications", isAuthenticated, Notifications.listMyNotifications);
@@ -77,7 +88,9 @@ router.patch("/notifications/read-all", isAuthenticated, Notifications.markAllAs
 router.get("/chat/rooms", isAuthenticated, Chat.getAuthorityRooms);
 router.get("/chat/messages/:roomId", isAuthenticated, Chat.getMessages);
 router.post("/chat/messages", isAuthenticated, Chat.sendMessage);
+router.post("/chat/send", isAuthenticated, Chat.sendMessage);
 router.get("/chat/unread-counts", isAuthenticated, Chat.getUnreadCounts);
+router.get("/chat/unread", isAuthenticated, Chat.getUnreadCounts);
 
 // Permission routes
 router.get("/permissions/user-types", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), listUserTypes);
@@ -87,6 +100,14 @@ router.post("/permissions/type/:typeId", isAuthenticated, requireRole("super_adm
 
 // Employee routes
 router.get("/employees", isAuthenticated, listEmployees);
+router.get("/employees/lookups/stations", isAuthenticated, lookupStations);
+router.get("/employees/lookups/departments", isAuthenticated, lookupDepartments);
+router.get("/employees/lookups/groups", isAuthenticated, lookupGroups);
+router.get("/employees/lookups/designations", isAuthenticated, lookupDesignations);
+router.get("/employees/lookups/statuses", isAuthenticated, lookupStatuses);
+router.get("/employees/lookups/role-templates", isAuthenticated, lookupRoleTemplates);
+router.get("/employees/lookups/user-types", isAuthenticated, lookupUserTypes);
+
 router.get("/employees/:id", isAuthenticated, getEmployeeById);
 router.post("/employees", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), upload.fields([{ name: "avatar", maxCount: 1 }, { name: "documents" }]), createEmployee);
 router.patch("/employees/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployee);
@@ -103,12 +124,18 @@ router.put("/employees/:id/documents/:docId/file", isAuthenticated, requireRole(
 router.get("/employees/:id/documents/:docId/download", isAuthenticated, downloadEmployeeDocument);
 
 // Attendance routes
+router.get("/attendance/offices", isAuthenticated, Attendance.listOffices);
 router.get("/attendance/today", isAuthenticated, Attendance.getToday);
 router.post("/attendance/punch", isAuthenticated, Attendance.punch);
-router.get("/attendance/admin/missing", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), Attendance.adminMissing);
+router.get("/attendance/admin/missing", isAuthenticated, Attendance.adminMissing);
 router.get("/attendance/summary/personal", isAuthenticated, Attendance.getPersonalSummary);
 router.get("/attendance/report/monthly", isAuthenticated, Attendance.getMonthlyReport);
-router.get("/attendance/offices", isAuthenticated, Attendance.listOffices);
+
+// Attendance Settings
+router.get("/attendance/settings/shifts", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.getShifts);
+router.patch("/attendance/settings/shifts/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.updateShift);
+router.get("/attendance/settings/rules", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.getRules);
+router.put("/attendance/settings/rules/active", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.updateActiveRule);
 
 // Leave routes
 router.get("/leaves/types", isAuthenticated, Leave.getLeaveTypes);
