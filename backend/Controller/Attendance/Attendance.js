@@ -1,5 +1,37 @@
 // backend/Controller/Attendance/Attendance.js
 const { pool } = require("../../Utils/db");
+const https = require("https");
+
+/**
+ * Fetch real network time to prevent system clock manipulation
+ * Returns a Date object from a reliable network source
+ */
+async function getNetworkTime() {
+  return new Promise((resolve) => {
+    // We try WorldTimeAPI first as it's dedicated for this
+    const req = https.get("https://worldtimeapi.org/api/timezone/Etc/UTC", (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          if (json && json.datetime) {
+            return resolve(new Date(json.datetime));
+          }
+          resolve(null);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    });
+
+    req.on("error", () => resolve(null));
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(null);
+    });
+  });
+}
 
 /**
  * Shift resolver: RAMADAN > SUMMER > WINTER (by date range)
@@ -169,8 +201,26 @@ const punch = async (req, res) => {
     const targetEmployeeId =
       employee_id && isAdminLike(sessionUser) ? Number(employee_id) : Number(sessionUser.id);
 
-    // --- SECURITY CHECK: CLOCK MANIPULATION ---
     const now = new Date();
+
+    // --- SECURITY CHECK 2: SERVER CLOCK MANIPULATION ---
+    // If the server itself is running on a machine with a fooled clock, we check vs Network Time
+    const netTime = await getNetworkTime();
+    if (netTime) {
+      const serverDriftMs = Math.abs(now.getTime() - netTime.getTime());
+      const serverDriftMin = serverDriftMs / 60000;
+
+      if (serverDriftMin > 10) { // 10 minutes tolerance for server vs network
+        return res.status(403).json({
+          message: "Critical Security Error: The server system clock is not synchronized with the network time. Attendance cannot be marked until the server clock is corrected.",
+          serverTime: now,
+          networkTime: netTime,
+          drift: Math.round(serverDriftMin)
+        });
+      }
+    }
+
+    // --- SECURITY CHECK 1: CLIENT CLOCK MANIPULATION ---
     if (clientTime) {
       const cTime = new Date(clientTime);
       const diffMs = Math.abs(now.getTime() - cTime.getTime());

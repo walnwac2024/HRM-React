@@ -120,11 +120,12 @@ async function sendMessage(req, res) {
                 );
             } else if (!isAdmin) {
                 // Employee sent message TO authorities
+                // Notify all users with permission_level >= 10
                 const [admins] = await pool.execute(
-                    `SELECT e.id FROM employee_records e 
+                    `SELECT DISTINCT e.id FROM employee_records e 
                      JOIN employee_user_types eut ON e.id = eut.employee_id 
                      JOIN users_types ut ON ut.id = eut.user_type_id 
-                     WHERE ut.type IN ('admin', 'super_admin', 'hr')`
+                     WHERE ut.permission_level >= 10`
                 );
                 for (const adm of admins) {
                     await pool.execute(
@@ -159,14 +160,21 @@ async function getAuthorityRooms(req, res) {
                 cm.room_id, 
                 e.Employee_Name as user_name, 
                 e.profile_img, 
+                e.Department as department,
+                e.Designations as designation,
                 MAX(cm.created_at) as last_msg_at
              FROM chat_messages cm
              JOIN employee_records e ON CONCAT('AUTH_', e.id) = cm.room_id
              WHERE cm.room_id LIKE 'AUTH_%'
-             GROUP BY cm.room_id, e.Employee_Name, e.profile_img
+             GROUP BY cm.room_id, e.Employee_Name, e.profile_img, e.Department, e.Designations
              ORDER BY last_msg_at DESC`
         );
 
+        const fs = require('fs');
+        try {
+            fs.writeFileSync('e:\\hrm-react\\HRM-React\\backend\\debug_rooms.json', JSON.stringify(rows, null, 2));
+        } catch (e) { }
+        console.log("Authority Rooms Debug Data:", rows);
         return res.json(rows);
     } catch (err) {
         console.error("getAuthorityRooms error:", err);
@@ -189,15 +197,31 @@ async function getUnreadCounts(req, res) {
 
     try {
         const results = {};
+        const userRoles = req.session?.user?.roles || [];
+        const isAdmin = userRoles.some(r => ["admin", "super_admin", "hr"].includes(r.toLowerCase()));
+
         for (let i = 0; i < rooms.length; i++) {
             const roomId = rooms[i];
             const lastId = Number(lasts[i]) || 0;
 
-            const [rows] = await pool.execute(
-                "SELECT COUNT(*) as unread FROM chat_messages WHERE room_id = ? AND id > ? AND sender_id != ?",
-                [roomId, lastId, userId]
-            );
-            results[roomId] = rows[0].unread;
+            if (roomId === "TOTAL_AUTH" && isAdmin) {
+                // Special case for admins: count all unread messages across all AUTH_ rooms
+                // except messages sent by the admin themselves.
+                // We need to compare against last seen for EACH room if strictly tracking, 
+                // but usually for a badge we can just count "new" ones or use a global last seen.
+                // For now, let's keep it simple: count messages in rooms where admin is NOT the sender.
+                const [rows] = await pool.execute(
+                    "SELECT COUNT(*) as unread FROM chat_messages WHERE room_id LIKE 'AUTH_%' AND id > ? AND sender_id != ?",
+                    [lastId, userId]
+                );
+                results[roomId] = rows[0].unread;
+            } else {
+                const [rows] = await pool.execute(
+                    "SELECT COUNT(*) as unread FROM chat_messages WHERE room_id = ? AND id > ? AND sender_id != ?",
+                    [roomId, lastId, userId]
+                );
+                results[roomId] = rows[0].unread;
+            }
         }
         return res.json(results);
     } catch (err) {

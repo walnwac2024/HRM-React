@@ -86,6 +86,7 @@ router.patch("/notifications/read-all", isAuthenticated, Notifications.markAllAs
 
 // Chat routes
 router.get("/chat/rooms", isAuthenticated, Chat.getAuthorityRooms);
+router.get("/chat/authority-rooms", isAuthenticated, Chat.getAuthorityRooms);
 router.get("/chat/messages/:roomId", isAuthenticated, Chat.getMessages);
 router.post("/chat/messages", isAuthenticated, Chat.sendMessage);
 router.post("/chat/send", isAuthenticated, Chat.sendMessage);

@@ -41,10 +41,13 @@ async function initWhatsApp() {
             clientId: "hrm-system",
             dataPath: path.join(__dirname, "../.wwebjs_auth")
         }),
+        /* 
         webVersionCache: {
             type: 'remote',
             remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1015844855-alpha.html',
         },
+        */
+        webVersionCache: { type: 'local' },
         puppeteer: {
             handleSIGINT: false,
             headless: true,
@@ -133,6 +136,14 @@ async function initWhatsApp() {
     client.initialize().catch(err => {
         console.error("WhatsApp Initialization Error:", err);
         connectionStatus = "DISCONNECTED";
+    });
+
+    // Add generic error listener to catch connection issues
+    client.on('error', (err) => {
+        console.error("WhatsApp Client Error:", err);
+        if (err.message && err.message.includes("Session closed")) {
+            connectionStatus = "DISCONNECTED";
+        }
     });
 }
 
