@@ -215,7 +215,7 @@
 
   /* Overlay */
   .drawer-overlay {
-    @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[100] transition-opacity duration-300;
+    @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[900] transition-opacity duration-300;
   }
 
   .no-scrollbar {
@@ -225,7 +225,7 @@
 
   /* -------- Modals & Special Sections -------- */
   .modal-overlay {
-    @apply fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-hidden;
+    @apply fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm overflow-hidden;
   }
 
   .modal-content {

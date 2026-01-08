@@ -39,7 +39,7 @@ export default function Layout() {
 
   return (
     <>
-      <Topbar userName={userName} logoSrc="/hrm-logo.png" />
+      <Topbar userName={userName} />
       <main className="page">
         <Outlet />
       </main>

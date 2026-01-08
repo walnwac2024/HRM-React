@@ -1,5 +1,6 @@
 // src/components/pages/Topbar/Topbar.jsx
 import React, { useEffect, useRef, useState } from "react";
+import hrmLogo from "../../../assets/hrm-logo.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FaHome,
@@ -132,9 +133,8 @@ export default function Topbar({ logoSrc }) {
   }, [open, showNotifications]);
 
   // resolve logo
-  const defaultLogo = `${process.env.PUBLIC_URL}/hrm-logo.png`;
   const fallbackLogo = `${process.env.PUBLIC_URL}/logo192.png`;
-  const logo = logoSrc || defaultLogo;
+  const logo = logoSrc || hrmLogo;
 
   // Build menu
   const safeTabs = Array.isArray(tabs) ? tabs : [];
@@ -316,7 +316,14 @@ export default function Topbar({ logoSrc }) {
                       notifications.map((n) => (
                         <div
                           key={n.id}
-                          onClick={() => !n.is_read && markRead(n.id)}
+                          onClick={() => {
+                            if (!n.is_read) markRead(n.id);
+                            if (n.title === "New Support Message") {
+                              const event = new CustomEvent("open-chat-auth");
+                              window.dispatchEvent(event);
+                              setShowNotifications(false);
+                            }
+                          }}
                           className={`px-4 py-3 border-b last:border-b-0 cursor-pointer hover:bg-slate-50/80 transition-colors ${!n.is_read ? "bg-red-50/10" : ""}`}
                         >
                           <div className="flex items-start gap-3">
@@ -450,7 +457,7 @@ export default function Topbar({ logoSrc }) {
       </div>
 
       {/* Mobile Drawer (Refined) */}
-      <div className={`fixed top-0 left-0 h-full w-[300px] bg-white z-[110] shadow-[30px_0_60px_rgba(0,0,0,0.1)] transform transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] md:hidden ${showMobileMenu ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed top-0 left-0 h-full w-[300px] bg-white z-[1001] shadow-[30px_0_60px_rgba(0,0,0,0.1)] transform transition-transform duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] md:hidden rounded-r-[32px] overflow-hidden ${showMobileMenu ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white relative">
           <img src={logo} alt="Logo" className="h-8 w-auto" />
           <button

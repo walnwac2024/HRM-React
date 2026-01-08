@@ -284,8 +284,17 @@ export default function Dashboard() {
         attendance: res.attendance,
       }));
     } catch (e) {
-      const msg = e?.response?.data?.message || "Failed to mark attendance.";
-      setError(msg);
+      if (e?.response?.status === 403) {
+        const data = e.response.data;
+        if (data.drift !== undefined) {
+          setError(`SECURITY VIOLATION: Your device time is out of sync by ~${data.drift} minutes. Attendance blocked. Please set your device to automatic time.`);
+        } else {
+          setError(data.message || "Attendance blocked due to security reasons.");
+        }
+      } else {
+        const msg = e?.response?.data?.message || "Failed to mark attendance.";
+        setError(msg);
+      }
     } finally {
       setPunching(false);
     }

@@ -3,6 +3,7 @@ import { FaComments, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaUserSh
 import { useAuth } from "../../context/AuthContext";
 import api from "../../utils/api";
 import { flushSync } from "react-dom";
+import { toast } from "react-toastify";
 
 export default function ChatPopup() {
     const { user } = useAuth();
@@ -17,9 +18,11 @@ export default function ChatPopup() {
 
     const scrollRef = useRef(null);
     const lastSeenRef = useRef({}); // { roomId: lastId }
+    const prevUnreadRef = useRef(0);
 
     const isAdmin = user?.roles?.some(r => ["admin", "super_admin", "hr"].includes(r.toLowerCase())) ||
-        ["admin", "super_admin", "hr"].includes(user?.role?.toLowerCase());
+        ["admin", "super_admin", "hr"].includes(user?.role?.toLowerCase()) ||
+        (user?.flags?.level >= 10);
 
     const deptName = user?.Department || 'General';
     const deptRoomId = `DEPT_${deptName}`;
@@ -76,8 +79,9 @@ export default function ChatPopup() {
     const fetchRooms = async () => {
         if (!isAdmin || !isOpen || activeTab !== 'auth') return;
         try {
-            const { data } = await api.get("/chat/authority-rooms");
+            const { data } = await api.get("/chat/rooms");
             setRooms(data);
+            console.log("Fetched Rooms:", data);
         } catch (e) {
             console.error("fetchRooms error", e);
         }
@@ -87,8 +91,24 @@ export default function ChatPopup() {
         // Only if closed or minimized
         if (isOpen && !minimized) return;
 
-        const roomIds = [deptRoomId, authRoomId].filter(Boolean).join(",");
-        const lastIds = [lastSeenRef.current[deptRoomId] || 0, lastSeenRef.current[authRoomId] || 0].filter((_, i) => [deptRoomId, authRoomId][i]).join(",");
+        const roomIdsList = [deptRoomId];
+        const lastIdsList = [lastSeenRef.current[deptRoomId] || 0];
+
+        if (isAdmin) {
+            roomIdsList.push("TOTAL_AUTH");
+            // For TOTAL_AUTH, we'll use a special global last seen or just latest from any AUTH room
+            // Simplest: use max of all AUTH rooms last seen
+            const authLastSeen = Object.entries(lastSeenRef.current)
+                .filter(([k]) => k.startsWith("AUTH_"))
+                .reduce((max, [_, v]) => Math.max(max, v), 0);
+            lastIdsList.push(authLastSeen);
+        } else if (authRoomId) {
+            roomIdsList.push(authRoomId);
+            lastIdsList.push(lastSeenRef.current[authRoomId] || 0);
+        }
+
+        const roomIds = roomIdsList.join(",");
+        const lastIds = lastIdsList.join(",");
 
         try {
             const { data } = await api.get(`/chat/unread?roomIds=${roomIds}&lastIds=${lastIds}`);
@@ -112,6 +132,39 @@ export default function ChatPopup() {
             return () => clearInterval(interval);
         }
     }, [selectedRoomId, isOpen, minimized, deptRoomId, authRoomId]);
+
+    // ✅ Real-time Toast Notification Logic
+    useEffect(() => {
+        if (isAdmin && unreadCount > prevUnreadRef.current) {
+            // Only toast if not already looking at the chat
+            if (!isOpen || minimized) {
+                toast.info("📩 New Support Message Received", {
+                    position: "bottom-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                    onClick: () => {
+                        setIsOpen(true);
+                        setMinimized(false);
+                        setActiveTab("auth");
+                    }
+                });
+            }
+        }
+        prevUnreadRef.current = unreadCount;
+    }, [unreadCount, isAdmin, isOpen, minimized]);
+
+    useEffect(() => {
+        const handleOpenAuth = () => {
+            setIsOpen(true);
+            setMinimized(false);
+            setActiveTab("auth");
+        };
+        window.addEventListener("open-chat-auth", handleOpenAuth);
+        return () => window.removeEventListener("open-chat-auth", handleOpenAuth);
+    }, []);
 
     useEffect(() => {
         if (isAdmin && activeTab === "auth" && isOpen) {
@@ -172,8 +225,16 @@ export default function ChatPopup() {
                     <div className="bg-customRed text-white p-3 rounded-t-xl flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2 truncate">
                             <FaComments />
-                            <span className="font-bold text-sm">
-                                {activeTab === 'dept' ? `Dept: ${deptName === 'General' ? 'Company Chat' : deptName}` : 'Higher Authorities'}
+                            <span className="font-bold text-sm truncate">
+                                {activeTab === 'dept'
+                                    ? `Dept: ${deptName === 'General' ? 'Company Chat' : deptName}`
+                                    : (isAdmin && selectedRoomId
+                                        ? (() => {
+                                            const r = rooms.find(rm => rm.room_id === selectedRoomId);
+                                            return r ? `${r.user_name} (${r.designation})` : 'Higher Authorities';
+                                        })()
+                                        : 'Higher Authorities')
+                                }
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -222,7 +283,7 @@ export default function ChatPopup() {
                                                 </div>
                                                 <div className="min-w-0 flex-1">
                                                     <div className="text-xs font-bold truncate">{r.user_name}</div>
-                                                    <div className="text-[10px] text-gray-400">ID: {r.room_id}</div>
+                                                    <div className="text-[9px] text-gray-500 truncate">{r.designation} • {r.department}</div>
                                                 </div>
                                             </button>
                                         ))
