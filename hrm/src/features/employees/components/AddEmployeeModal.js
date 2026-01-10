@@ -400,7 +400,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                   key={t.id}
                   type="button"
                   onClick={() => setActiveTab(t.id)}
-                  className={`px-8 py-4 text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-all ${activeTab === t.id
+                  className={`px-4 sm:px-8 py-4 text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border-b-2 transition-all ${activeTab === t.id
                     ? "border-customRed text-customRed bg-white"
                     : "border-transparent text-slate-500 hover:text-slate-800 hover:bg-white/50"
                     }`}
@@ -514,6 +514,18 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         </select>
                       </Field>
                     </div>
+                    <div className="mt-8 pb-8 flex md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("personal")}
+                        className="btn-outline w-full justify-between"
+                      >
+                        Proceed to Personal Details
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </section>
                 )}
 
@@ -604,6 +616,28 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         onChange={(e) => updateField("address", e.target.value)}
                       />
                     </Field>
+                    <div className="mt-8 pb-8 flex flex-col sm:flex-row gap-3 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("employment")}
+                        className="btn-ghost flex-1 justify-start px-0"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("contact")}
+                        className="btn-outline flex-[2] justify-between"
+                      >
+                        Proceed to Contact Info
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </section>
                 )}
 
@@ -669,6 +703,28 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         />
                       </Field>
                     </div>
+                    <div className="mt-8 pb-8 flex flex-col sm:flex-row gap-3 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("personal")}
+                        className="btn-ghost flex-1 justify-start px-0"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("emails")}
+                        className="btn-outline flex-[2] justify-between"
+                      >
+                        Proceed to Email Addresses
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
                   </section>
                 )}
 
@@ -705,6 +761,28 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                           <p className="mt-2 text-[10px] text-slate-500 italic">Used for system login and official communications.</p>
                         </Field>
                       </div>
+                    </div>
+                    <div className="mt-8 pb-8 flex flex-col sm:flex-row gap-3 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("contact")}
+                        className="btn-ghost flex-1 justify-start px-0"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("account")}
+                        className="btn-outline flex-[2] justify-between"
+                      >
+                        Proceed to Account & Portal
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   </section>
                 )}
@@ -764,6 +842,28 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                       <label htmlFor="allowLogin" className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
                         Enable Portal Login for this Employee
                       </label>
+                    </div>
+                    <div className="mt-8 pb-8 flex flex-col sm:flex-row gap-3 md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("emails")}
+                        className="btn-ghost flex-1 justify-start px-0"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("documents")}
+                        className="btn-outline flex-[2] justify-between"
+                      >
+                        Proceed to Documents
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
                     </div>
                   </section>
                 )}
@@ -880,17 +980,29 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         ))}
                       </div>
                     )}
+                    <div className="mt-8 pb-8 flex md:hidden">
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("account")}
+                        className="btn-ghost flex-1 justify-start px-0"
+                      >
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        Back
+                      </button>
+                    </div>
                   </section>
                 )}
               </form>
             </div>
 
             {/* Footer */}
-            <div className="modal-footer">
+            <div className="modal-footer flex-wrap justify-center sm:justify-end">
               <button
                 type="button"
                 onClick={handleClose}
-                className="btn-outline h-11 px-8 rounded-2xl"
+                className="btn-outline w-full sm:w-auto"
               >
                 Cancel
               </button>
@@ -898,7 +1010,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                 type="submit"
                 form="add-employee-form"
                 disabled={loading}
-                className="btn-primary h-11 px-10 rounded-2xl"
+                className="btn-primary w-full sm:w-auto px-10"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">

@@ -276,15 +276,15 @@
   }
 
   .modal-header {
-    @apply px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30;
+    @apply px-5 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/30;
   }
 
   .modal-body {
-    @apply flex-1 overflow-y-auto px-8 py-6 space-y-8 custom-scrollbar;
+    @apply flex-1 overflow-y-auto px-5 sm:px-8 py-6 space-y-8 custom-scrollbar;
   }
 
   .modal-footer {
-    @apply px-8 py-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-white;
+    @apply px-5 sm:px-8 py-5 border-t border-slate-100 flex items-center justify-end gap-3 bg-white;
   }
 
   .section-divider {

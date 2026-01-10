@@ -942,18 +942,18 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
               </div>
               {/* -------------------------------------------------------- */}
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex flex-wrap justify-center sm:justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => onClose(false)}
-                  className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
+                  className="btn-outline w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingProfile}
-                  className="h-9 px-4 rounded bg-customRed text-xs font-semibold text-white hover:bg-customRed/90 disabled:opacity-60"
+                  className="btn-primary w-full sm:w-auto px-6"
                 >
                   {savingProfile ? "Saving…" : "Update Employee Info"}
                 </button>
@@ -1057,18 +1057,18 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
+              <div className="flex flex-wrap justify-center sm:justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => onClose(false)}
-                  className="h-9 px-4 rounded border border-slate-300 text-xs text-slate-700 bg-white hover:bg-slate-50"
+                  className="btn-outline w-full sm:w-auto"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingVault || !canEditVault}
-                  className="h-9 px-4 rounded bg-slate-900 text-xs font-semibold text-white hover:bg-black disabled:opacity-60"
+                  className="btn-primary w-full sm:w-auto px-6"
                 >
                   {savingVault ? "Updating…" : "Update Vault Info"}
                 </button>
