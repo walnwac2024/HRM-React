@@ -553,7 +553,6 @@ const getMonthlyReport = async (req, res) => {
     let { employee_id, year, month } = req.query;
     const targetId = employee_id ? Number(employee_id) : sessionUser.id;
 
-    // Authorization check: if targeting someone else, must be admin-like
     if (targetId !== sessionUser.id && !isAdminLike(sessionUser)) {
       return res.status(403).json({ message: "Forbidden" });
     }
@@ -561,6 +560,7 @@ const getMonthlyReport = async (req, res) => {
     const y = Number(year) || new Date().getFullYear();
     const m = Number(month) || (new Date().getMonth() + 1);
 
+    // 1. Get existing records
     const [rows] = await pool.execute(
       `
       SELECT 
@@ -586,11 +586,51 @@ const getMonthlyReport = async (req, res) => {
       [targetId, y, m]
     );
 
+    // 2. Generate all dates for the month
+    const totalDays = new Date(y, m, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const report = [];
+    const existingMap = new Map();
+    rows.forEach(r => {
+      const dateStr = toYMD(new Date(r.attendance_date));
+      existingMap.set(dateStr, r);
+    });
+
+    for (let day = 1; day <= totalDays; day++) {
+      const date = new Date(y, m - 1, day);
+      const dateStr = toYMD(date);
+
+      if (existingMap.has(dateStr)) {
+        report.push(existingMap.get(dateStr));
+      } else {
+        // Only mark as ABSENT if date is in the past
+        let status = 'UNMARKED';
+        if (date < today) {
+          status = 'ABSENT';
+        }
+
+        report.push({
+          id: `virtual-${dateStr}`,
+          attendance_date: dateStr,
+          first_in: null,
+          last_out: null,
+          status: status,
+          late_minutes: 0,
+          worked_minutes: 0,
+          shift_name: null,
+          office_in: null,
+          office_out: null
+        });
+      }
+    }
+
     return res.json({
       employee_id: targetId,
       year: y,
       month: m,
-      report: rows
+      report: report
     });
   } catch (e) {
     console.error("getMonthlyReport error:", e);
