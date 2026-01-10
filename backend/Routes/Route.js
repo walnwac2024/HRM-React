@@ -72,7 +72,7 @@ const upload = require('../Middleware/uploadMiddleware');
 
 // Auth routes
 router.post("/auth/login", login);
-router.get("/auth/me", isAuthenticated, me);
+router.get("/auth/me", me);
 router.post("/auth/logout", logout);
 router.post("/auth/heartbeat", heartbeat);
 router.post("/auth/change-password", isAuthenticated, changePassword);
