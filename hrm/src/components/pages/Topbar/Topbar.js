@@ -18,7 +18,7 @@ import {
   FaShieldAlt,
 } from "react-icons/fa";
 import { useAuth } from "../../../context/AuthContext";
-import api from "../../../utils/api";
+import api, { BASE_URL } from "../../../utils/api";
 
 // Map backend keys -> route + icon + fallback label
 const TAB_META = {
@@ -163,8 +163,7 @@ export default function Topbar({ logoSrc }) {
   const userName = user?.name || user?.email || "User";
   const initials = getInitials(userName);
 
-  const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
-  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
+  const FILE_BASE = BASE_URL;
 
   // ✅ support both profile_img and profile_picture
   const rawAvatar = user?.profile_img || user?.profile_picture || null;

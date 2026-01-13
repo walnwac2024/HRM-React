@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, Calendar, User, Megaphone, RefreshCw, LogOut } from "lucide-react";
 import { listNews, createNews, updateNews, deleteNews, getWhatsAppStatus, initWhatsAppSession, updateWhatsAppSettings, syncWhatsAppGroups, logoutWhatsAppSession } from "./newsService";
+import { BASE_URL } from "../../utils/api";
 import NewsModal from "./components/NewsModal";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -452,7 +453,7 @@ export default function NewsPage() {
                                 {item.image_url && (
                                     <div className="mb-4">
                                         <img
-                                            src={`http://localhost:5000${item.image_url}`}
+                                            src={`${BASE_URL}${item.image_url}`}
                                             alt={item.title}
                                             className="w-full h-64 object-cover rounded-lg"
                                         />

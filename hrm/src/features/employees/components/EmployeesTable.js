@@ -1,4 +1,5 @@
 import React, { useState, memo } from "react";
+import { BASE_URL } from "../../../utils/api";
 
 function EmployeesTable({
   rows = [],
@@ -23,9 +24,7 @@ function EmployeesTable({
   };
 
   // Use same base-url logic as profile/topbar
-  const API_BASE =
-    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
-  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
+  const FILE_BASE = BASE_URL;
 
   return (
     <div className="card overflow-hidden">

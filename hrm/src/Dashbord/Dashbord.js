@@ -15,8 +15,9 @@ import { getDashboardData } from "../features/dashboard/services/dashboardServic
 import { listNews } from "../features/news/newsService";
 import { Megaphone, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { BASE_URL } from "../utils/api";
 
-const BACKEND_URL = "http://localhost:5000";
+const BACKEND_URL = BASE_URL;
 
 function formatTime(dt) {
   if (!dt) return "—";

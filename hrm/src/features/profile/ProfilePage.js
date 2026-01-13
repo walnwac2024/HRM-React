@@ -1,6 +1,6 @@
 // src/features/profile/ProfilePage.js
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../../utils/api";
+import api, { BASE_URL } from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
 
 function Field({ label, value, readOnly = false, onChange, type = "text" }) {
@@ -80,9 +80,7 @@ export default function ProfilePage() {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }, [employee, user]);
 
-  const API_BASE =
-    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
-  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
+  const FILE_BASE = BASE_URL;
 
   // figure out permission level & whether this user can edit everything
   const level = Number(user?.flags?.level || 0);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, Image as ImageIcon, Trash2, FileText, ImagePlus } from "lucide-react";
+import { BASE_URL } from "../../../utils/api";
 
 export default function NewsModal({ isOpen, onClose, onSave, initialData = null }) {
     const [formData, setFormData] = useState({
@@ -21,7 +22,7 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                 is_published: !!initialData.is_published,
                 post_type: initialData.post_type || "text",
             });
-            setImagePreview(initialData.image_url ? `http://localhost:5000${initialData.image_url}` : null);
+            setImagePreview(initialData.image_url ? `${BASE_URL}${initialData.image_url}` : null);
             setImageFile(null);
             setRemoveImage(false);
         } else {
@@ -97,8 +98,8 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                                 type="button"
                                 onClick={() => setFormData({ ...formData, post_type: 'text' })}
                                 className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${formData.post_type === 'text'
-                                        ? 'border-customRed bg-red-50 text-customRed'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                    ? 'border-customRed bg-red-50 text-customRed'
+                                    : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
                                 <FileText size={18} />
@@ -108,8 +109,8 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                                 type="button"
                                 onClick={() => setFormData({ ...formData, post_type: 'image' })}
                                 className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${formData.post_type === 'image'
-                                        ? 'border-customRed bg-red-50 text-customRed'
-                                        : 'border-gray-200 hover:border-gray-300'
+                                    ? 'border-customRed bg-red-50 text-customRed'
+                                    : 'border-gray-200 hover:border-gray-300'
                                     }`}
                             >
                                 <ImagePlus size={18} />
@@ -168,8 +169,8 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                             </div>
                         ) : (
                             <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${formData.post_type === 'image'
-                                    ? 'border-customRed hover:border-red-600 bg-red-50'
-                                    : 'border-gray-300 hover:border-customRed'
+                                ? 'border-customRed hover:border-red-600 bg-red-50'
+                                : 'border-gray-300 hover:border-customRed'
                                 }`}>
                                 <ImageIcon size={32} className={formData.post_type === 'image' ? 'text-customRed mb-2' : 'text-gray-400 mb-2'} />
                                 <span className={`text-sm ${formData.post_type === 'image' ? 'text-customRed font-medium' : 'text-gray-500'}`}>

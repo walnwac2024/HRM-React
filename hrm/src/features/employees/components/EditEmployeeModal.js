@@ -1,6 +1,6 @@
 // src/features/employees/components/EditEmployeeModal.jsx
 import React, { useEffect, useMemo, useState } from "react";
-import api from "../../../utils/api";
+import api, { BASE_URL } from "../../../utils/api";
 import useEmployee from "../hooks/useEmployee";
 import { useAuth } from "../../../context/AuthContext";
 import SharedDropdown from "../../../components/common/SharedDropdown";
@@ -89,12 +89,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
   const [newDocs, setNewDocs] = useState([]);
   const canAddMoreNewDocs = newDocs.length < 10;
 
-  const API_BASE =
-    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
-  const FILE_BASE = useMemo(
-    () => API_BASE.replace(/\/api\/v1\/?$/, ""),
-    [API_BASE]
-  );
+  const FILE_BASE = BASE_URL;
 
   const [avatarUploading, setAvatarUploading] = useState(false);
   const handleUpdateAvatar = async (file) => {
@@ -734,7 +729,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                                   </a>
 
                                   <a
-                                    href={`${API_BASE}/employees/${employeeId}/documents/${doc.id}/download`}
+                                    href={`${BASE_URL}/api/v1/employees/${employeeId}/documents/${doc.id}/download`}
                                     className="inline-flex h-8 px-3 items-center justify-center rounded border border-customRed text-customRed text-[11px] font-medium hover:bg-customRed/10"
                                   >
                                     Download

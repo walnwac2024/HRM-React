@@ -1,7 +1,10 @@
- 
+
 import axios from 'axios';
 
-const baseURL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1"; //"http://162.255.117.211/api" //
+const isLocal = window.location.hostname === "localhost";
+const baseURL = isLocal
+  ? "http://localhost:5000/api/v1"
+  : "https://api.propeople.cloud/api/v1";
 const apiService = axios.create({
   baseURL,
   withCredentials: true

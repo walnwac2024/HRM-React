@@ -2,7 +2,7 @@
 import React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import useEmployee from "../hooks/useEmployee";
-import api from "../../../utils/api";
+import api, { BASE_URL } from "../../../utils/api";
 
 function InfoRow({ label, value, right }) {
   return (
@@ -21,9 +21,7 @@ export default function EmployeeViewPage() {
   const { employee, loading, error } = useEmployee(id);
 
   // 🔑 Build file base URL (for /uploads/* view)
-  const API_BASE =
-    process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api/v1";
-  const FILE_BASE = API_BASE.replace(/\/api\/v1\/?$/, "");
+  const FILE_BASE = BASE_URL;
 
   const handleDownload = async (doc) => {
     try {

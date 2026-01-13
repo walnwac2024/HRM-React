@@ -1,8 +1,13 @@
 // src/utils/api.js
 import axios from "axios";
 
+const isLocal = window.location.hostname === "localhost";
+export const BASE_URL = isLocal
+  ? "http://localhost:5000"
+  : "https://api.propeople.cloud";
+
 const api = axios.create({
-  baseURL: "http://api.propeople.cloud/api/v1",
+  baseURL: `${BASE_URL}/api/v1`,
   withCredentials: true, // ✅ send session cookie always
 });
 
