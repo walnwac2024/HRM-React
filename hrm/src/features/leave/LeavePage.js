@@ -34,7 +34,7 @@ export default function LeavePage() {
 
     // Leave Settings state
     const [showTypeForm, setShowTypeForm] = useState(false);
-    const [typeFormData, setTypeFormData] = useState({ id: null, name: "", entitlement_days: "", description: "" });
+    const [typeFormData, setTypeFormData] = useState({ id: null, name: "", entitlement_days: "" });
 
     useEffect(() => {
         fetchInitialData();
@@ -114,7 +114,7 @@ export default function LeavePage() {
             }
             alert("Leave type saved");
             setShowTypeForm(false);
-            setTypeFormData({ id: null, name: "", entitlement_days: "", description: "" });
+            setTypeFormData({ id: null, name: "", entitlement_days: "" });
             getLeaveTypes().then(setLeaveTypes);
         } catch (e) {
             alert("Failed to save leave type");
@@ -147,7 +147,7 @@ export default function LeavePage() {
                         </h2>
                         {activeKey === "leave-settings" && !showTypeForm && (
                             <button
-                                onClick={() => { setTypeFormData({ id: null, name: "", entitlement_days: "", description: "" }); setShowTypeForm(true); }}
+                                onClick={() => { setTypeFormData({ id: null, name: "", entitlement_days: "" }); setShowTypeForm(true); }}
                                 className="btn-primary h-8 text-[11px] uppercase"
                             >
                                 Add Leave Type
@@ -279,10 +279,10 @@ export default function LeavePage() {
                                         ></textarea>
                                     </div>
                                 </div>
-                                <div className="flex justify-end pt-2">
+                                <div className="flex justify-end gap-3 pt-2">
                                     <button
                                         type="submit"
-                                        className="btn-primary w-full md:w-64 h-12 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
+                                        className="btn-primary w-full md:w-auto md:px-12 h-12 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
                                     >
                                         Submit Application
                                     </button>
@@ -364,41 +364,34 @@ export default function LeavePage() {
                         {activeKey === "leave-settings" && (
                             <div className="space-y-6">
                                 {showTypeForm ? (
-                                    <form onSubmit={handleSaveType} className="max-w-md space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                    <form onSubmit={handleSaveType} className="w-full space-y-6 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
                                         <h3 className="text-xs font-bold text-slate-700 uppercase mb-4">{typeFormData.id ? "Edit Leave Type" : "Add New Leave Type"}</h3>
-                                        <div>
-                                            <label className="form-label uppercase text-[10px] font-bold">Type Name</label>
-                                            <input
-                                                className="input h-10"
-                                                value={typeFormData.name}
-                                                onChange={(e) => setTypeFormData({ ...typeFormData, name: e.target.value })}
-                                                placeholder="e.g. Sick Leave"
-                                                required
-                                            />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            <div>
+                                                <label className="form-label uppercase text-[10px] font-bold">Type Name</label>
+                                                <input
+                                                    className="input h-10"
+                                                    value={typeFormData.name}
+                                                    onChange={(e) => setTypeFormData({ ...typeFormData, name: e.target.value })}
+                                                    placeholder="e.g. Sick Leave"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="form-label uppercase text-[10px] font-bold">Entitlement (Days)</label>
+                                                <input
+                                                    type="number"
+                                                    className="input h-10"
+                                                    value={typeFormData.entitlement_days}
+                                                    onChange={(e) => setTypeFormData({ ...typeFormData, entitlement_days: e.target.value })}
+                                                    placeholder="e.g. 10"
+                                                    required
+                                                />
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="form-label uppercase text-[10px] font-bold">Entitlement (Days)</label>
-                                            <input
-                                                type="number"
-                                                className="input h-10"
-                                                value={typeFormData.entitlement_days}
-                                                onChange={(e) => setTypeFormData({ ...typeFormData, entitlement_days: e.target.value })}
-                                                placeholder="e.g. 10"
-                                                required
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="form-label uppercase text-[10px] font-bold">Description</label>
-                                            <textarea
-                                                className="textarea min-h-[80px]"
-                                                value={typeFormData.description}
-                                                onChange={(e) => setTypeFormData({ ...typeFormData, description: e.target.value })}
-                                                placeholder="Optional details..."
-                                            />
-                                        </div>
-                                        <div className="flex gap-3 pt-2">
-                                            <button type="submit" className="btn-primary flex-1 h-10 text-[11px] uppercase">Save Type</button>
-                                            <button type="button" onClick={() => setShowTypeForm(false)} className="btn-outline flex-1 h-10 text-[11px] uppercase font-bold border-slate-200 text-slate-500">Cancel</button>
+                                        <div className="flex justify-end gap-3 pt-2">
+                                            <button type="button" onClick={() => setShowTypeForm(false)} className="btn-outline md:w-32 h-10 text-[11px] uppercase font-bold border-slate-200 text-slate-500 hover:bg-slate-50">Cancel</button>
+                                            <button type="submit" className="btn-primary md:w-32 h-10 text-[11px] uppercase shadow-md shadow-red-100">Save Type</button>
                                         </div>
                                     </form>
                                 ) : (
@@ -424,7 +417,14 @@ export default function LeavePage() {
                                                         </td>
                                                         <td className="px-4 py-4 text-right space-x-2">
                                                             <button
-                                                                onClick={() => { setTypeFormData(t); setShowTypeForm(true); }}
+                                                                onClick={() => {
+                                                                    setTypeFormData({
+                                                                        id: Number(t.id),
+                                                                        name: t.name || "",
+                                                                        entitlement_days: t.entitlement_days || ""
+                                                                    });
+                                                                    setShowTypeForm(true);
+                                                                }}
                                                                 className="text-slate-400 hover:text-customRed transition-colors"
                                                             >
                                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
