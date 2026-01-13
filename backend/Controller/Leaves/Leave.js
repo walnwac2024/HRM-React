@@ -276,7 +276,7 @@ const updateLeaveType = async (req, res) => {
 
         await pool.execute(
             "UPDATE leave_types SET name = ?, entitlement_days = ?, description = ?, is_active = ? WHERE id = ?",
-            [name, entitlement_days, description, is_active ?? 1, id]
+            [name, entitlement_days, description || "", is_active ?? 1, id]
         );
 
         return res.json({ message: "Leave type updated successfully" });

@@ -41,7 +41,10 @@ app.use(
 
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://propeople.cloud"
+  "http://propeople.cloud",
+  "https://propeople.cloud",
+  "http://api.propeople.cloud",
+  "https://api.propeople.cloud"
 ];
 
 const corsOptions = {
@@ -102,6 +105,7 @@ app.use(
       secure: isProd,
       sameSite: isProd ? "none" : "lax",
       maxAge: 1000 * 60 * 60 * 24 * 7,
+      domain: isProd ? ".propeople.cloud" : undefined,
     },
   })
 );
