@@ -248,14 +248,14 @@ const approveLeave = async (req, res) => {
  */
 const createLeaveType = async (req, res) => {
     try {
-        const { name, entitlement_days, description } = req.body || {};
+        const { name, entitlement_days } = req.body || {};
         if (!name || !entitlement_days) {
             return res.status(400).json({ message: "Name and entitlement days are required" });
         }
 
         await pool.execute(
-            "INSERT INTO leave_types (name, entitlement_days, description, is_active) VALUES (?, ?, ?, 1)",
-            [name, entitlement_days, description || ""]
+            "INSERT INTO leave_types (name, entitlement_days, is_active) VALUES (?, ?, 1)",
+            [name, entitlement_days]
         );
 
         return res.status(201).json({ message: "Leave type created successfully" });
@@ -272,11 +272,11 @@ const createLeaveType = async (req, res) => {
 const updateLeaveType = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, entitlement_days, description, is_active } = req.body || {};
+        const { name, entitlement_days, is_active } = req.body || {};
 
         await pool.execute(
-            "UPDATE leave_types SET name = ?, entitlement_days = ?, description = ?, is_active = ? WHERE id = ?",
-            [name, entitlement_days, description || "", is_active ?? 1, id]
+            "UPDATE leave_types SET name = ?, entitlement_days = ?, is_active = ? WHERE id = ?",
+            [name, entitlement_days, is_active ?? 1, id]
         );
 
         return res.json({ message: "Leave type updated successfully" });
