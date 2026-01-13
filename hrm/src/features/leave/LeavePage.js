@@ -234,20 +234,20 @@ export default function LeavePage() {
                         )}
 
                         {activeKey === "apply-leave" && (
-                            <form onSubmit={handleApply} className="max-w-md space-y-5 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
-                                <div>
-                                    <SharedDropdown
-                                        label="Leave Type"
-                                        value={formData.leave_type_id}
-                                        onChange={(val) => setFormData({ ...formData, leave_type_id: val })}
-                                        options={balances.map((b) => ({
-                                            value: b.leave_type_id,
-                                            label: `${b.leave_type_name} (Balance: ${Number(b.balance)} days)`
-                                        }))}
-                                        placeholder="Select Type"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
+                            <form onSubmit={handleApply} className="w-full space-y-6 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="md:col-span-2">
+                                        <SharedDropdown
+                                            label="Leave Type"
+                                            value={formData.leave_type_id}
+                                            onChange={(val) => setFormData({ ...formData, leave_type_id: val })}
+                                            options={balances.map((b) => ({
+                                                value: b.leave_type_id,
+                                                label: `${b.leave_type_name} (Balance: ${Number(b.balance)} days)`
+                                            }))}
+                                            placeholder="Select Type"
+                                        />
+                                    </div>
                                     <div>
                                         <label className="form-label uppercase text-[11px] font-bold">Start Date</label>
                                         <input
@@ -268,23 +268,25 @@ export default function LeavePage() {
                                             required
                                         />
                                     </div>
+                                    <div className="md:col-span-2">
+                                        <label className="form-label uppercase text-[11px] font-bold">Reason</label>
+                                        <textarea
+                                            className="textarea min-h-[120px] py-3"
+                                            value={formData.reason}
+                                            onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+                                            required
+                                            placeholder="Briefly explain the reason for leave..."
+                                        ></textarea>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="form-label uppercase text-[11px] font-bold">Reason</label>
-                                    <textarea
-                                        className="textarea min-h-[100px] py-3"
-                                        value={formData.reason}
-                                        onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
-                                        required
-                                        placeholder="Briefly explain the reason for leave..."
-                                    ></textarea>
+                                <div className="flex justify-end pt-2">
+                                    <button
+                                        type="submit"
+                                        className="btn-primary w-full md:w-64 h-12 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
+                                    >
+                                        Submit Application
+                                    </button>
                                 </div>
-                                <button
-                                    type="submit"
-                                    className="btn-primary w-full h-11 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
-                                >
-                                    Submit Application
-                                </button>
                             </form>
                         )}
 
