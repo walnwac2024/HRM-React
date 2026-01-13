@@ -185,7 +185,7 @@ const login = async (req, res) => {
 
 // GET /auth/me
 const me = async (req, res) => {
-  return res.status(200).json({ user: req.session.user ?? null });
+  return res.status(200).json({ user: req.session?.user ?? null });
 };
 
 // POST /auth/logout
