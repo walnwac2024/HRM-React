@@ -177,7 +177,15 @@ app.use((err, req, res, next) => {
     return res.status(403).json({ message: "Invalid CSRF token" });
   }
 
-  // Enhanced logging for 500 errors
+  // Handle Multer errors
+  if (err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ message: "File too large. Maximum size allowed is 10MB." });
+  }
+  if (err.name === "MulterError") {
+    return res.status(400).json({ message: `Upload error: ${err.message}` });
+  }
+
+  // Enhanced logging for other 500 errors
   const errorDetails = `${new Date().toISOString()} - ERROR 500 - ${req.method} ${req.path}\nStack: ${err.stack}\n\n`;
   try {
     fs.appendFileSync(path.join(__dirname, "debug_requests.log"), errorDetails);

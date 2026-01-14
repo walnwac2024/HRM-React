@@ -19,8 +19,14 @@ const storage = multer.diskStorage({
     }
 });
 
-// File filter for images only
+// File filter
 const fileFilter = (req, file, cb) => {
+    // If it's a document, allow any type (or we could restrict to pdf/doc/etc)
+    if (file.fieldname === 'documents' || file.fieldname === 'file') {
+        return cb(null, true);
+    }
+
+    // Default image filter for 'avatar' or 'image'
     const allowedTypes = /jpeg|jpg|png|gif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
@@ -28,7 +34,7 @@ const fileFilter = (req, file, cb) => {
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb(new Error('Only image files are allowed (jpeg, jpg, png, gif, webp)'));
+        cb(new Error('Only image files are allowed for this field (jpeg, jpg, png, gif, webp)'));
     }
 };
 
@@ -36,7 +42,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 10 * 1024 * 1024 // Increased to 10MB limit
     },
     fileFilter: fileFilter
 });

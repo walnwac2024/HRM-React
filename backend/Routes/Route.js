@@ -11,7 +11,8 @@ const {
     logout,
     me,
     heartbeat,
-    changePassword
+    changePassword,
+    uploadAvatar
 } = require("../Controller/UserDeatils/Login");
 const Role = require("../Controller/UserDeatils/Role");
 const Attendance = require("../Controller/Attendance/Attendance");
@@ -65,7 +66,10 @@ const docsStorage = multer.diskStorage({
         cb(null, file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname));
     }
 });
-const docsUpload = multer({ storage: docsStorage });
+const docsUpload = multer({
+    storage: docsStorage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+});
 
 // Shared upload middleware (ensure this is configured for news/avatars if needed)
 const upload = require('../Middleware/uploadMiddleware');
@@ -76,6 +80,7 @@ router.get("/auth/me", me);
 router.post("/auth/logout", logout);
 router.post("/auth/heartbeat", heartbeat);
 router.post("/auth/change-password", isAuthenticated, changePassword);
+router.post("/auth/me/avatar", isAuthenticated, upload.single("image"), uploadAvatar);
 router.get("/me/menu", isAuthenticated, Role.getMenu);
 router.get("/dashboard", isAuthenticated, Role.getDashboard);
 
