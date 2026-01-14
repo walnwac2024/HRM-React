@@ -4,6 +4,7 @@ const session = require("express-session");
 const MySQLStoreFactory = require("express-mysql-session")(session);
 const cors = require("cors");
 const helmet = require("helmet");
+const compression = require("compression");
 const dotenv = require("dotenv");
 const csurf = require("csurf");
 const path = require("path");
@@ -32,6 +33,9 @@ app.use((req, res, next) => {
 });
 
 const isProd = process.env.NODE_ENV === "production";
+
+// Enable gzip compression for all responses
+app.use(compression());
 
 app.use(
   helmet({
