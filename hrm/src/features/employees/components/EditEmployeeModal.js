@@ -97,14 +97,15 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     setAvatarUploading(true);
     try {
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("avatar", file);
       const { data } = await api.post(`/employees/${employeeId}/avatar`, fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setProfileForm((prev) => ({ ...prev, profile_img: data.profile_img }));
     } catch (e) {
       console.error("Avatar upload failed", e);
-      alert("Failed to upload avatar");
+      const msg = e?.response?.data?.message || e?.message || "Failed to upload avatar";
+      alert(msg);
     } finally {
       setAvatarUploading(false);
     }
@@ -325,7 +326,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
 
     const fd = new FormData();
     docsToUpload.forEach((d) => {
-      fd.append("files", d.file);
+      fd.append("documents", d.file);
       fd.append("titles", (d.title || "").trim());
       fd.append("types", d.type || "");
       fd.append("issued_at", d.issuedAt || "");

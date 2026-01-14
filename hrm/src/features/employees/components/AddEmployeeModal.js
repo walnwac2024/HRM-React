@@ -270,7 +270,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
       // ✅ STEP 1.5: upload profile image if present
       if (created?.id && form.profileImg) {
         const fd = new FormData();
-        fd.append("image", form.profileImg);
+        fd.append("avatar", form.profileImg);
         await api.post(`/employees/${created.id}/avatar`, fd, {
           headers: { "Content-Type": "multipart/form-data" },
         });
@@ -283,8 +283,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
         const fd = new FormData();
 
         docsToUpload.forEach((d) => {
-          // backend expects: files (array)
-          fd.append("files", d.file);
+          // backend expects: documents (array)
+          fd.append("documents", d.file);
 
           // backend reads these arrays:
           fd.append("titles", d.title.trim());

@@ -196,7 +196,8 @@ export default function ProfilePage() {
       setMsg("Profile picture updated.");
     } catch (err) {
       console.error("Avatar upload error:", err);
-      setMsg("Failed to upload picture.");
+      const erMsg = err?.response?.data?.message || err?.message || "Failed to upload picture.";
+      setMsg(erMsg);
     } finally {
       setUploading(false);
     }
