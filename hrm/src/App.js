@@ -1,33 +1,38 @@
 // src/App.js
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ProtectedRoute from "./components/pages/ProtectedRoute/ProtectedRoute";
 
-import Login from "./userdetails/Login";
-import Layout from "./components/pages/Layout/Layout";
-import Dashboard from "./Dashbord/Dashbord";
-import DashboardTabsLayout from "./components/pages/DashboardTabsLayout";
-import EmployeesPage from "./features/employees/EmployeesPage";
-import EmployeeViewPage from "./features/employees/components/EmployeeViewPage"; // 👈
-import { initCsrf } from "./utils/api";
-
 // Auth context
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { initCsrf } from "./utils/api";
 
-// Updated import path for AttendancePage
-import { AttendancePage } from "./features/attendance";
+// Lazy load all route components for code splitting
+const Login = lazy(() => import("./userdetails/Login"));
+const Layout = lazy(() => import("./components/pages/Layout/Layout"));
+const Dashboard = lazy(() => import("./Dashbord/Dashbord"));
+const DashboardTabsLayout = lazy(() => import("./components/pages/DashboardTabsLayout"));
+const EmployeesPage = lazy(() => import("./features/employees/EmployeesPage"));
+const EmployeeViewPage = lazy(() => import("./features/employees/components/EmployeeViewPage"));
+const AttendancePage = lazy(() => import("./features/attendance").then(m => ({ default: m.AttendancePage })));
+const AttendanceSettings = lazy(() => import("./features/attendance/components/AttendanceSettings"));
+const ProfilePage = lazy(() => import("./features/profile/ProfilePage"));
+const LeavePage = lazy(() => import("./features/leave/LeavePage"));
+const PermissionsPage = lazy(() => import("./features/permissions/PermissionsPage"));
+const NewsPage = lazy(() => import("./features/news/NewsPage"));
+const ReportsPage = lazy(() => import("./features/reports/ReportsPage"));
 
-// ✅ NEW: Attendance Settings component (your real path)
-import AttendanceSettings from "./features/attendance/components/AttendanceSettings";
-
-// 👇 NEW: profile page
-import ProfilePage from "./features/profile/ProfilePage";
-import LeavePage from "./features/leave/LeavePage";
-import PermissionsPage from "./features/permissions/PermissionsPage";
-import NewsPage from "./features/news/NewsPage";
-import ReportsPage from "./features/reports/ReportsPage";
+// Loading component
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-customRed border-r-transparent"></div>
+      <p className="mt-2 text-sm text-slate-600">Loading...</p>
+    </div>
+  </div>
+);
 
 const HRDashboard = () => <div className="p-6 text-sm">HR Dashboard — coming soon.</div>;
 const PayrollDashboard = () => <div className="p-6 text-sm">Payroll Dashboard — coming soon.</div>;
@@ -66,67 +71,69 @@ export default function App() {
     <Router>
       <AuthProvider>
         <ToastContainer position="top-right" autoClose={3000} />
-        <Routes>
-          {/* Public */}
-          <Route
-            path="/login"
-            element={
-              <PublicOnly>
-                <Login />
-              </PublicOnly>
-            }
-          />
+        <Suspense fallback={<LoadingFallback />}>
+          <Routes>
+            {/* Public */}
+            <Route
+              path="/login"
+              element={
+                <PublicOnly>
+                  <Login />
+                </PublicOnly>
+              }
+            />
 
-          {/* Protected: EVERYTHING under Layout */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            {/* redirect root to dashboard */}
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            {/* Protected: EVERYTHING under Layout */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              {/* redirect root to dashboard */}
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-            {/* Dashboard + tabs */}
-            <Route path="/dashboard/*" element={<DashboardTabsLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="hr" element={<HRDashboard />} />
-              <Route path="payroll" element={<PayrollDashboard />} />
-              <Route path="recruitment" element={<RecruitmentDashboard />} />
-              <Route path="organcogram" element={<Organcogram />} />
-              <Route path="news" element={<NewsPage />} />
-              <Route path="permissions" element={<PermissionsPage />} />
+              {/* Dashboard + tabs */}
+              <Route path="/dashboard/*" element={<DashboardTabsLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="hr" element={<HRDashboard />} />
+                <Route path="payroll" element={<PayrollDashboard />} />
+                <Route path="recruitment" element={<RecruitmentDashboard />} />
+                <Route path="organcogram" element={<Organcogram />} />
+                <Route path="news" element={<NewsPage />} />
+                <Route path="permissions" element={<PermissionsPage />} />
+              </Route>
+
+              {/* Other top-level pages */}
+              <Route path="/employees" element={<EmployeesPage />} />
+              <Route path="/employees/:id" element={<EmployeeViewPage />} />
+
+              {/* Attendance */}
+              <Route path="/attendance" element={<AttendancePage />} />
+
+              {/* ✅ NEW: Attendance Settings route */}
+              <Route path="/attendance/settings" element={<AttendanceSettings />} />
+
+              <Route path="/organization" element={<div className="p-4">Organization</div>} />
+              <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
+              <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />
+              <Route path="/leave" element={<LeavePage />} />
+              <Route path="/performance" element={<div className="p-4">Performance</div>} />
+              <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
+              <Route path="/reports" element={<ReportsPage />} />
+
+              {/* 👇 NEW: profile route */}
+              <Route path="/profile" element={<ProfilePage />} />
             </Route>
 
-            {/* Other top-level pages */}
-            <Route path="/employees" element={<EmployeesPage />} />
-            <Route path="/employees/:id" element={<EmployeeViewPage />} />
+            {/* Unauthorized placeholder (used if you add role guards) */}
+            <Route path="/unauthorized" element={<div className="p-6">Unauthorized</div>} />
 
-            {/* Attendance */}
-            <Route path="/attendance" element={<AttendancePage />} />
-
-            {/* ✅ NEW: Attendance Settings route */}
-            <Route path="/attendance/settings" element={<AttendanceSettings />} />
-
-            <Route path="/organization" element={<div className="p-4">Organization</div>} />
-            <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
-            <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />
-            <Route path="/leave" element={<LeavePage />} />
-            <Route path="/performance" element={<div className="p-4">Performance</div>} />
-            <Route path="/payroll" element={<div className="p-4">Payroll</div>} />
-            <Route path="/reports" element={<ReportsPage />} />
-
-            {/* 👇 NEW: profile route */}
-            <Route path="/profile" element={<ProfilePage />} />
-          </Route>
-
-          {/* Unauthorized placeholder (used if you add role guards) */}
-          <Route path="/unauthorized" element={<div className="p-6">Unauthorized</div>} />
-
-          {/* 404 */}
-          <Route path="*" element={<h1 className="p-6">Page Not Found</h1>} />
-        </Routes>
+            {/* 404 */}
+            <Route path="*" element={<h1 className="p-6">Page Not Found</h1>} />
+          </Routes>
+        </Suspense>
       </AuthProvider>
     </Router>
   );

@@ -1,5 +1,5 @@
 // src/features/employees/EmployeesPage.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Filters from "./components/Filters";
 import ActionsBar from "./components/ActionsBar";
@@ -75,11 +75,11 @@ export default function EmployeesPage() {
     resetFilters();
   };
 
-  const handleSearchChange = (value) => {
+  const handleSearchChange = useCallback((value) => {
     const next = { ...uiFilters, search: value };
     setUiFilters(next);
     apply(next);
-  };
+  }, [uiFilters, apply]);
 
   const {
     options: filterOptions,
@@ -91,15 +91,15 @@ export default function EmployeesPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployeeId, setEditEmployeeId] = useState(null);
 
-  const handleViewEmployee = (row) => {
+  const handleViewEmployee = useCallback((row) => {
     if (!row?.id) return;
     navigate(`/employees/${row.id}`);
-  };
+  }, [navigate]);
 
-  const handleEditEmployee = (row) => {
+  const handleEditEmployee = useCallback((row) => {
     if (!row?.id) return;
     setEditEmployeeId(row.id);
-  };
+  }, []);
 
   /* ------------------------------------------------------------------
    * ✅ MARK INACTIVE / ACTIVATE (TOGGLE)
@@ -136,10 +136,10 @@ export default function EmployeesPage() {
     }
   };
 
-  const handleCloseEdit = (shouldRefresh = false) => {
+  const handleCloseEdit = useCallback((shouldRefresh = false) => {
     setEditEmployeeId(null);
     if (shouldRefresh) refetch();
-  };
+  }, [refetch]);
 
   const renderMain = () => {
     if (active === "employee-role" || active === "employee-role/main")
