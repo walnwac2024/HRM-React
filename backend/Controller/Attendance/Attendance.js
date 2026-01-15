@@ -709,31 +709,33 @@ const getMonthlyReportAll = async (req, res) => {
 
     console.log(`[getMonthlyReportAll] Generating report for ${y}-${m}`);
 
+    // Calculate Start and End Date for the month to use Index-friendly BETWEEN query
+    const startDate = `${y}-${String(m).padStart(2, '0')}-01`;
+    const lastDay = new Date(y, m, 0).getDate();
+    const endDate = `${y}-${String(m).padStart(2, '0')}-${lastDay}`;
+
     // 1. Fetch All Active Employees
     const [employees] = await pool.execute(
       `SELECT id, Employee_ID, Employee_Name, Department FROM employee_records WHERE is_active = 1 ORDER BY Employee_ID`
     );
 
-    // 2. Fetch All Attendance for the Month
+    // 2. Fetch All Attendance for the Month (Optimized)
     const [attendanceRows] = await pool.execute(
       `
-            SELECT d.*, s.name as shift_name
-            FROM attendance_daily d
-            LEFT JOIN attendance_shifts s ON d.shift_id = s.id
-            WHERE YEAR(d.attendance_date) = ? AND MONTH(d.attendance_date) = ?
-            `,
-      [y, m]
+        SELECT d.*, s.name as shift_name
+        FROM attendance_daily d
+        LEFT JOIN attendance_shifts s ON d.shift_id = s.id
+        WHERE d.attendance_date BETWEEN ? AND ?
+        `,
+      [startDate, endDate]
     );
 
-    // 3. Fetch All Approved Leaves
+    // 3. Fetch All Approved Leaves (Optimized overlaps)
     const [leaveRows] = await pool.execute(
       `SELECT employee_id, start_date, end_date, leave_type_id FROM leave_applications 
-             WHERE status = 'approved' 
-             AND (
-                (YEAR(start_date) = ? AND MONTH(start_date) = ?) OR 
-                (YEAR(end_date) = ? AND MONTH(end_date) = ?)
-             )`,
-      [y, m, y, m]
+         WHERE status = 'approved' 
+         AND (start_date <= ? AND end_date >= ?)`,
+      [endDate, startDate]
     );
 
     // Index Data for fast lookup

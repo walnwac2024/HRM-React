@@ -14,6 +14,10 @@ dotenv.config();
 
 const app = express();
 
+
+// Enable gzip compression for all responses
+app.use(compression());
+
 const routes = require("./Routes/Route");
 const { initAttendanceJob } = require("./Utils/attendanceJob");
 const { initWhatsApp } = require("./Utils/whatsapp");
