@@ -2,20 +2,43 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads/news');
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Ensure uploads directories exist
+const newsUploadsDir = path.join(__dirname, '../uploads/news');
+const profileUploadsDir = path.join(__dirname, '../uploads/profile-img');
+const rootUploadsDir = path.join(__dirname, '../uploads');
+
+[newsUploadsDir, profileUploadsDir, rootUploadsDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
 
 // Configure storage
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, uploadsDir);
+        // Check if request is for news or avatar
+        const isNews = req.originalUrl.includes('/news');
+        const isAvatar = req.originalUrl.includes('/avatar');
+
+        console.log(`[Upload Debug] URL: ${req.originalUrl}, isNews: ${isNews}, isAvatar: ${isAvatar}`);
+
+        let dest = rootUploadsDir;
+        if (isNews) dest = newsUploadsDir;
+        else if (isAvatar) dest = profileUploadsDir;
+
+        console.log(`[Upload Debug] Destination: ${dest}`);
+        cb(null, dest);
     },
     filename: function (req, file, cb) {
+        const isNews = req.originalUrl.includes('/news');
+        const isAvatar = req.originalUrl.includes('/avatar');
+
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'news-' + uniqueSuffix + path.extname(file.originalname));
+        let prefix = '';
+        if (isNews) prefix = 'news-';
+        // if (isAvatar) prefix = 'profile-'; // Optional, keeping simple for now
+
+        cb(null, prefix + uniqueSuffix + path.extname(file.originalname));
     }
 });
 

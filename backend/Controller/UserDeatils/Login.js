@@ -279,7 +279,7 @@ async function uploadAvatar(req, res) {
       return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const relPath = `/uploads/${req.file.filename}`;
+    const relPath = `/uploads/profile-img/${req.file.filename}`;
 
     await pool.execute(
       `UPDATE employee_records

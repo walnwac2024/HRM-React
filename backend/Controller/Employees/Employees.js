@@ -1332,7 +1332,7 @@ async function updateEmployeeAvatar(req, res) {
     const { id } = req.params;
     if (!req.file) return res.status(400).json({ message: "No image uploaded" });
 
-    const relPath = `/uploads/${req.file.filename}`;
+    const relPath = `/uploads/profile-img/${req.file.filename}`;
 
     await pool.execute(
       "UPDATE employee_records SET profile_img = ? WHERE id = ? LIMIT 1",
