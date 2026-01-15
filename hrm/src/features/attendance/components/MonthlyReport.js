@@ -7,21 +7,18 @@ import StatusBadge from './StatusBadge';
 import EmployeeAutocomplete from '../../reports/components/EmployeeAutocomplete';
 import { FaFileDownload, FaPrint } from 'react-icons/fa';
 
-export default function MonthlyReport() {
+export default function MonthlyReport({ employeeId, initialYear, initialMonth, onBack }) {
     const { user } = useAuth();
-    const isAdmin = useMemo(() => {
-        const roles = (user?.roles || []).map(r => String(r).toLowerCase());
-        return roles.includes('admin') || roles.includes('super_admin') || roles.includes('hr');
-    }, [user]);
+    // removed isAdmin logic since this is now controlled by ReportsPage
 
     const currentYear = new Date().getFullYear().toString();
-    const currentMonthIdx = new Date().getMonth() + 1; // 1-based
+    const currentMonthIdx = new Date().getMonth() + 1;
     const currentMonth = WORKSHEET_MONTHS[currentMonthIdx];
 
     const [filters, setFilters] = useState({
-        employee_id: user?.id || '',
-        year: currentYear,
-        month: currentMonth === '--ALL--' ? 'January' : currentMonth
+        employee_id: employeeId || user?.id || '',
+        year: initialYear || currentYear,
+        month: initialMonth || (currentMonth === '--ALL--' ? 'January' : currentMonth)
     });
 
     const [report, setReport] = useState([]);
@@ -58,22 +55,80 @@ export default function MonthlyReport() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.year, filters.month, filters.employee_id]);
 
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const handleExport = () => {
+        if (!report || report.length === 0) return;
+
+        const headers = ["Date", "Shift", "First In", "Last Out", "Worked Minutes", "Late Minutes", "Status"];
+        const csvRows = [headers.join(",")];
+
+        report.forEach(row => {
+            const values = [
+                new Date(row.attendance_date).toLocaleDateString('en-GB'),
+                row.shift_name || "",
+                row.first_in ? new Date(row.first_in).toLocaleTimeString() : "",
+                row.last_out ? new Date(row.last_out).toLocaleTimeString() : "",
+                row.worked_minutes || "0",
+                row.late_minutes || "0",
+                row.status
+            ];
+            csvRows.push(values.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+        });
+
+        const csvContent = csvRows.join("\n");
+        const blob = new Blob([csvContent], { type: "text/csv" });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Attendance_Report_${filters.year}_${filters.month}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="flex flex-col gap-6 animate-in fade-in duration-500">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4">
+            {/* Removed overflow-hidden to allow dropdown to show */}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4 rounded-t-xl">
                     <div>
-                        <h3 className="text-lg font-bold text-slate-800">Attendance Parameters</h3>
-                        <p className="text-xs text-slate-500">Configure your report criteria below</p>
+                        <div className="flex items-center gap-4">
+                            {onBack && (
+                                <button
+                                    onClick={onBack}
+                                    className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
+                                    title="Back to list"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                                </button>
+                            )}
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                    Attendance Report
+                                    {onBack && <span className="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-600 font-bold uppercase tracking-wider">Employee View</span>}
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                    Detailed monthly attendance and leave record
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         {(user?.features || []).includes('reports_print') && (
-                            <button className="btn-outline !py-1.5 !text-xs flex items-center gap-2">
+                            <button
+                                onClick={handlePrint}
+                                className="btn-outline !py-1.5 !text-xs flex items-center gap-2"
+                            >
                                 <FaPrint className="opacity-70" /> Print
                             </button>
                         )}
                         {(user?.features || []).includes('reports_export') && (
-                            <button className="btn-primary !py-1.5 !text-xs flex items-center gap-2">
+                            <button
+                                onClick={handleExport}
+                                className="btn-primary !py-1.5 !text-xs flex items-center gap-2"
+                            >
                                 <FaFileDownload className="opacity-70" /> Export
                             </button>
                         )}
@@ -82,18 +137,26 @@ export default function MonthlyReport() {
 
                 <div className="p-6">
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-12 items-end">
-                        {isAdmin ? (
-                            <div className="md:col-span-6">
-                                <EmployeeAutocomplete
-                                    onSelect={(id) => setFilters(prev => ({ ...prev, employee_id: id }))}
-                                />
-                            </div>
-                        ) : (
-                            <div className="md:col-span-6">
-                                <label className="form-label">Employee</label>
-                                <input className="input bg-slate-50" value={user?.name || ''} readOnly />
-                            </div>
-                        )}
+                        <div className="md:col-span-6">
+                            {/* If we are in "prop mode" (Admin drilled down), showing ID might be enough or read only name */}
+                            {/* But MonthlyReport fetches report by ID. It doesn't fetch name specifically unless we do lookup */}
+                            {/* For simplicity, let's just show the filter if no props, OR if props provided, maybe show readonly? */}
+                            {/* Actually, if props provided, we usually want to lock it to that employee. */}
+
+                            {!onBack ? (
+                                // Self view (or old admin view if used directly)
+                                <div className="md:col-span-6">
+                                    <label className="form-label">Employee</label>
+                                    <input className="input bg-slate-50" value={user?.name || ''} readOnly />
+                                </div>
+                            ) : (
+                                // Admin view of someone else
+                                <div className="md:col-span-6">
+                                    <label className="form-label">Employee ID</label>
+                                    <input className="input bg-slate-50" value={filters.employee_id} readOnly />
+                                </div>
+                            )}
+                        </div>
 
                         <SharedDropdown
                             className="md:col-span-3"

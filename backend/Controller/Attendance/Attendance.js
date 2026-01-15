@@ -1,6 +1,7 @@
 // backend/Controller/Attendance/Attendance.js
 const { pool } = require("../../Utils/db");
 const https = require("https");
+const xlsx = require('xlsx');
 
 /**
  * Fetch real network time to prevent system clock manipulation
@@ -560,7 +561,7 @@ const getMonthlyReport = async (req, res) => {
     const y = Number(year) || new Date().getFullYear();
     const m = Number(month) || (new Date().getMonth() + 1);
 
-    // 1. Get existing records
+    // 1. Get existing attendance records
     const [rows] = await pool.execute(
       `
       SELECT 
@@ -586,7 +587,30 @@ const getMonthlyReport = async (req, res) => {
       [targetId, y, m]
     );
 
-    // 2. Generate all dates for the month
+    // 2. Get Approved Leaves for this month
+    const [leaves] = await pool.execute(
+      `SELECT start_date, end_date, leave_type_id FROM leave_applications 
+         WHERE employee_id = ? AND status = 'approved' 
+         AND (
+            (YEAR(start_date) = ? AND MONTH(start_date) = ?) OR 
+            (YEAR(end_date) = ? AND MONTH(end_date) = ?)
+         )`,
+      [targetId, y, m, y, m]
+    );
+
+    // Helper to check if a date is on leave
+    const isLeave = (dateObj) => {
+      return leaves.some(l => {
+        const start = new Date(l.start_date);
+        const end = new Date(l.end_date);
+        // reset times for comparison
+        start.setHours(0, 0, 0, 0);
+        end.setHours(0, 0, 0, 0);
+        return dateObj >= start && dateObj <= end;
+      });
+    };
+
+    // 3. Generate all dates for the month
     const totalDays = new Date(y, m, 0).getDate();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -603,13 +627,42 @@ const getMonthlyReport = async (req, res) => {
       const dateStr = toYMD(date);
 
       if (existingMap.has(dateStr)) {
-        report.push(existingMap.get(dateStr));
-      } else {
-        // Only mark as ABSENT if date is in the past
-        let status = 'UNMARKED';
-        if (date < today) {
-          status = 'ABSENT';
+        const record = existingMap.get(dateStr);
+
+        // Refine Status: Missing Checkout
+        // If first_in exists, but last_out is NULL, and date is BEFORE today (or worked_minutes is 0/null)
+        // If it's today, they might still be working.
+
+        let finalStatus = record.status;
+
+        // Check for missing checkout on PAST days
+        if (record.first_in && !record.last_out && date < today) {
+          finalStatus = "MISSING_CHECKOUT";
         }
+
+        report.push({
+          ...record,
+          status: finalStatus
+        });
+
+      } else {
+        // No attendance record found
+        let status = 'UNMARKED';
+
+        if (date < today) {
+          // Check for Leave
+          if (isLeave(date)) {
+            status = 'LEAVE';
+          } else {
+            status = 'ABSENT';
+          }
+        }
+        // If date >= today, it remains 'UNMARKED' (or 'UPCOMING' if preferred, but user asked about Unmarked)
+        // Actually, user wants future dates to be Unmarked (implied), but past to be Absent/Leave.
+
+        // Handling 'Today' specifically? 
+        // If today and no record, it's Unmarked (yet to come) or Absent (if shift over). 
+        // Let's stick to Unmarked for Today if no record yet.
 
         report.push({
           id: `virtual-${dateStr}`,
@@ -638,6 +691,150 @@ const getMonthlyReport = async (req, res) => {
   }
 };
 
+
+
+// ... existing code ...
+
+/**
+ * GET /attendance/report/monthly/all?year=YYYY&month=M
+ * Admin only
+ */
+const getMonthlyReportAll = async (req, res) => {
+  try {
+    const sessionUser = req.session?.user;
+    if (!isAdminLike(sessionUser)) return res.status(403).json({ message: "Forbidden" });
+
+    const y = Number(req.query.year) || new Date().getFullYear();
+    const m = Number(req.query.month) || (new Date().getMonth() + 1);
+
+    console.log(`[getMonthlyReportAll] Generating report for ${y}-${m}`);
+
+    // 1. Fetch All Active Employees
+    const [employees] = await pool.execute(
+      `SELECT id, Employee_ID, Employee_Name, Department FROM employee_records WHERE is_active = 1 ORDER BY Employee_ID`
+    );
+
+    // 2. Fetch All Attendance for the Month
+    const [attendanceRows] = await pool.execute(
+      `
+            SELECT d.*, s.name as shift_name
+            FROM attendance_daily d
+            LEFT JOIN attendance_shifts s ON d.shift_id = s.id
+            WHERE YEAR(d.attendance_date) = ? AND MONTH(d.attendance_date) = ?
+            `,
+      [y, m]
+    );
+
+    // 3. Fetch All Approved Leaves
+    const [leaveRows] = await pool.execute(
+      `SELECT employee_id, start_date, end_date, leave_type_id FROM leave_applications 
+             WHERE status = 'approved' 
+             AND (
+                (YEAR(start_date) = ? AND MONTH(start_date) = ?) OR 
+                (YEAR(end_date) = ? AND MONTH(end_date) = ?)
+             )`,
+      [y, m, y, m]
+    );
+
+    // Index Data for fast lookup
+    // Map<employeeId, Map<dateStr, attendanceRecord>>
+    const attMap = new Map();
+    attendanceRows.forEach(r => {
+      const d = toYMD(new Date(r.attendance_date));
+      if (!attMap.has(r.employee_id)) attMap.set(r.employee_id, new Map());
+      attMap.get(r.employee_id).set(d, r);
+    });
+
+    const leaveMap = new Map(); // Map<employeeId, Array<leave>>
+    leaveRows.forEach(l => {
+      if (!leaveMap.has(l.employee_id)) leaveMap.set(l.employee_id, []);
+      leaveMap.get(l.employee_id).push(l);
+    });
+
+    const isLeave = (empId, dateObj) => {
+      const empLeaves = leaveMap.get(empId) || [];
+      return empLeaves.some(l => {
+        const s = new Date(l.start_date);
+        const e = new Date(l.end_date);
+        s.setHours(0, 0, 0, 0);
+        e.setHours(0, 0, 0, 0);
+        return dateObj >= s && dateObj <= e;
+      });
+    };
+
+    const totalDays = new Date(y, m, 0).getDate();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const dataForSheet = [];
+
+    // Loop Employees -> Days
+    for (const emp of employees) {
+      for (let day = 1; day <= totalDays; day++) {
+        const date = new Date(y, m - 1, day);
+        const dateStr = toYMD(date);
+        const empAtt = attMap.get(emp.id)?.get(dateStr);
+
+        let status = "UNMARKED";
+        let inTime = "";
+        let outTime = "";
+        let worked = 0;
+        let late = 0;
+        let shift = "";
+
+        if (empAtt) {
+          status = empAtt.status;
+          shift = empAtt.shift_name || "";
+          if (empAtt.first_in) inTime = new Date(empAtt.first_in).toLocaleTimeString();
+          if (empAtt.last_out) outTime = new Date(empAtt.last_out).toLocaleTimeString();
+          worked = empAtt.worked_minutes || 0;
+          late = empAtt.late_minutes || 0;
+
+          // Refine Missing Checkout logic
+          if (empAtt.first_in && !empAtt.last_out && date < today) {
+            status = "MISSING_CHECKOUT";
+          }
+        } else {
+          if (date < today) {
+            if (isLeave(emp.id, date)) {
+              status = "LEAVE";
+            } else {
+              status = "ABSENT";
+            }
+          }
+        }
+
+        dataForSheet.push({
+          "Employee ID": emp.Employee_ID,
+          "Name": emp.Employee_Name,
+          "Department": emp.Department,
+          "Date": dateStr,
+          "Status": status,
+          "Shift": shift,
+          "Check In": inTime,
+          "Check Out": outTime,
+          "Worked Mins": worked,
+          "Late Mins": late
+        });
+      }
+    }
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(dataForSheet);
+    xlsx.utils.book_append_sheet(wb, ws, "Monthly Report");
+
+    const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", `attachment; filename="Monthly_Report_ALL_${y}_${m}.xlsx"`);
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    return res.send(buffer);
+
+  } catch (e) {
+    console.error("getMonthlyReportAll error:", e);
+    return res.status(500).json({ message: "Failed to generate bulk report" });
+  }
+};
+
 module.exports = {
   listOffices,
   getToday,
@@ -645,4 +842,5 @@ module.exports = {
   adminMissing,
   getPersonalSummary,
   getMonthlyReport,
+  getMonthlyReportAll,
 };

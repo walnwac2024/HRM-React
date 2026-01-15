@@ -4,6 +4,8 @@ import ReportsSidebar from './components/ReportsSidebar';
 import MonthlyReport from '../attendance/components/MonthlyReport';
 import { REPORTS_NAV } from './constants';
 
+import ReportsList from './components/ReportsList';
+
 export default function ReportsPage() {
     const { user } = useAuth();
 
@@ -18,10 +20,27 @@ export default function ReportsPage() {
     }, [user]);
 
     const [nav, setNav] = useState(safeNav);
+
+    // View state for Admin drill-down
+    // mode: 'list' | 'detail'
+    const [view, setView] = useState({ mode: 'list', employeeId: null, year: null, month: null });
+
+    // Permissions
+    const isAdmin = useMemo(() => {
+        const roles = (user?.roles || []).map(r => String(r).toLowerCase());
+        return roles.includes('admin') || roles.includes('super_admin') || roles.includes('hr');
+    }, [user]);
+
+    // ✅ Sync nav when user/permissions load
+    React.useEffect(() => {
+        setNav(safeNav);
+    }, [safeNav]);
     const activeId = nav.find(n => n.active)?.id || (nav[0]?.id || '');
 
     const handleNavigate = (id) => {
         setNav(prev => prev.map(n => ({ ...n, active: n.id === id })));
+        // Reset view when changing tabs
+        setView({ mode: 'list', employeeId: null, year: null, month: null });
     };
 
     if (nav.length === 0) {
@@ -46,7 +65,24 @@ export default function ReportsPage() {
                     </div>
 
                     <div className="grid grid-cols-1">
-                        {activeId === 'attendance-report' && <MonthlyReport />}
+                        {activeId === 'attendance-report' && (
+                            isAdmin ? (
+                                view.mode === 'list' ? (
+                                    <ReportsList
+                                        onView={(empId, year, month) => setView({ mode: 'detail', employeeId: empId, year, month })}
+                                    />
+                                ) : (
+                                    <MonthlyReport
+                                        employeeId={view.employeeId}
+                                        initialYear={view.year}
+                                        initialMonth={view.month}
+                                        onBack={() => setView({ mode: 'list', employeeId: null })}
+                                    />
+                                )
+                            ) : (
+                                <MonthlyReport />
+                            )
+                        )}
                     </div>
                 </div>
             </section>

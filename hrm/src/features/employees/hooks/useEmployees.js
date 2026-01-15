@@ -173,8 +173,18 @@ export default function useEmployees() {
   const exportData = async () => {
     try {
       const params = toApiParams(appliedFilters, { includeInactive: canSeeInactive });
-      const { data } = await api.get("/employees", { params });
-      console.log("Export employees:", data);
+      const response = await api.get("/employees/export", { params, responseType: 'blob' });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'employees_export.xlsx');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url); // cleanup
+
     } catch (err) {
       console.error("Failed to export employees", err);
       setError(

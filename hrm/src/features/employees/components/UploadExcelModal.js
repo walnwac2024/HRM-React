@@ -1,6 +1,7 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useState, useRef, useMemo } from "react";
+import api from "../../../utils/api";
 
-export default function UploadExcelModal({ open, onClose }) {
+export default function UploadExcelModal({ open, onClose, onCreated }) {
   // ✅ Hooks at top-level (always run)
   const [active, setActive] = useState("employees");
   const [files, setFiles] = useState({
@@ -8,13 +9,14 @@ export default function UploadExcelModal({ open, onClose }) {
     assets: null,
     dependants: null,
   });
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
   const tabs = useMemo(
     () => [
-      { key: "employees",  label: "Employees",  template: "/templates/employees.xlsx" },
-      { key: "assets",     label: "Assets",     template: "/templates/assets.xlsx" },
-      { key: "dependants", label: "Dependants", template: "/templates/dependants.xlsx" },
+      { key: "employees", label: "Employees", template: null, action: "download-template" },
+      // { key: "assets",     label: "Assets",     template: "/templates/assets.xlsx" },
+      // { key: "dependants", label: "Dependants", template: "/templates/dependants.xlsx" },
     ],
     []
   );
@@ -36,10 +38,27 @@ export default function UploadExcelModal({ open, onClose }) {
 
   const remove = () => setFiles((s) => ({ ...s, [active]: null }));
 
-  const save = () => {
-    // UI only; wire backend later
-    alert(`Pretend upload: ${file?.name} (${active})`);
-    onClose?.();
+  const save = async () => {
+    if (!file) return;
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", active); // employees, assets, etc.
+
+      await api.post("/employees/import", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      alert("Upload successful! Existing records have been updated.");
+      onClose?.();
+      onCreated?.(); // Refresh list
+    } catch (e) {
+      console.error(e);
+      alert(e?.response?.data?.message || "Upload failed");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ✅ Conditional render AFTER hooks (allowed)
@@ -47,7 +66,7 @@ export default function UploadExcelModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true"
-         onKeyDown={(e) => e.key === "Escape" && onClose?.()}>
+      onKeyDown={(e) => e.key === "Escape" && onClose?.()}>
       {/* backdrop */}
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
@@ -86,13 +105,30 @@ export default function UploadExcelModal({ open, onClose }) {
         {/* body */}
         <div className="p-4">
           <div className="mb-3">
-            <a
-              href={tabs.find((t) => t.key === active)?.template || "#"}
-              download
-              className="text-customRed text-sm hover:underline"
+            <span
+              className="text-xs text-customRed cursor-pointer hover:underline"
+              onClick={async () => {
+                if (active === 'employees') {
+                  // download from API
+                  try {
+                    const res = await api.get("/employees/import-template", { responseType: 'blob' });
+                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', 'employees_template.xlsx');
+                    document.body.appendChild(link);
+                    link.click();
+                    link.parentNode.removeChild(link);
+                  } catch (e) {
+                    alert("Failed to download template");
+                  }
+                } else {
+                  alert("Template not available");
+                }
+              }}
             >
               Download {tabs.find((t) => t.key === active)?.label} Template
-            </a>
+            </span>
           </div>
 
           <div
@@ -149,7 +185,7 @@ export default function UploadExcelModal({ open, onClose }) {
             className={`h-9 px-5 rounded-md text-white text-sm
               ${file ? "bg-customRed hover:opacity-95" : "bg-slate-300 cursor-not-allowed"}`}
           >
-            Save
+            {loading ? "Uploading..." : "Import"}
           </button>
         </div>
       </div>

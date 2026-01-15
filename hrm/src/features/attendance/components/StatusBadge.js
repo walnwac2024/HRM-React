@@ -25,6 +25,12 @@ export default function StatusBadge({ status = "Pending" }) {
   } else if (s === "HOLIDAY" || s === "OFF_DAY") {
     cls = "bg-blue-50 text-blue-700 ring-blue-100";
     Icon = AlertCircle;
+  } else if (s === "LEAVE") {
+    cls = "bg-blue-50 text-blue-700 ring-blue-200";
+    Icon = CheckCircle;
+  } else if (s === "MISSING_CHECKOUT") {
+    cls = "bg-orange-50 text-orange-700 ring-orange-200";
+    Icon = AlertCircle;
   }
 
   return (

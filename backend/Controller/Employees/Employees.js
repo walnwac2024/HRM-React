@@ -3,6 +3,7 @@ const { pool } = require("../../Utils/db");
 const bcrypt = require("bcryptjs");
 const path = require("path");
 const fs = require("fs");
+const xlsx = require("xlsx");
 
 /**
  * Columns for employees list
@@ -1381,4 +1382,309 @@ module.exports = {
   deleteEmployeeDocument,
   replaceEmployeeDocumentFile,
   updateEmployeeAvatar,
+  importEmployees,
+  deleteEmployee,
+  exportEmployees,
+  getImportTemplate,
+  sendCredentials
 };
+
+async function deleteEmployee(req, res) {
+  // Stub to prevent crash
+  return res.status(501).json({ message: "Delete employee not implemented yet" });
+}
+
+/* ------------------------------------------------------------------
+ * EXPORT EMPLOYEES (GET /api/v1/employees/export)
+ * ------------------------------------------------------------------ */
+async function exportEmployees(req, res) {
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+
+    // For simplicity, we export ALL active employees for now.
+    // Ideally we would reuse the filters from listEmployees.
+
+    // Check permissions
+    const canSeeAll = hasFullAccess(sessionUser) || (sessionUser.features || []).includes("employee_view");
+
+    let sql = `
+       SELECT 
+          Employee_ID AS employeeCode,
+          Employee_Name AS name,
+          login_email AS userName,
+          Department AS department,
+          Designations AS designation,
+          Office_Location AS station,
+          Status AS employmentStatus,
+          Date_of_Joining AS dateOfJoining,
+          Contact AS contact,
+          Official_Email AS officialEmail,
+          Email AS personalEmail,
+          CNIC AS cnic,
+          Emergency_Contact AS emergencyContact,
+          Address AS address
+       FROM employee_records 
+    `;
+
+    // Normal users only see themselves? Or fail?
+    // Let's assume export is Admin/HR feature for now.
+    if (!canSeeAll) {
+      sql += " WHERE id = " + sessionUser.id;
+    } else {
+      sql += " ORDER BY id DESC";
+    }
+
+    const [rows] = await pool.execute(sql);
+
+    // Map to Excel friendly format
+    const data = rows.map(r => ({
+      "Employee ID": r.employeeCode,
+      "Name": r.name,
+      "Official Email": r.officialEmail,
+      "Department": r.department,
+      "Designation": r.designation,
+      "Station": r.station,
+      "Status": r.employmentStatus,
+      "Joining Date": r.dateOfJoining,
+      "Phone": r.contact,
+      "Personal Email": r.personalEmail,
+      "CNIC": r.cnic,
+      "Emergency Contact": r.emergencyContact,
+      "Address": r.address
+    }));
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(data);
+    xlsx.utils.book_append_sheet(wb, ws, "Employees");
+
+    const buf = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", 'attachment; filename="employees_export.xlsx"');
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(buf);
+
+  } catch (err) {
+    console.error("exportEmployees error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * GET IMPORT TEMPLATE (GET /api/v1/employees/import-template)
+ * ------------------------------------------------------------------ */
+async function getImportTemplate(req, res) {
+  try {
+    // Define headers that matched import logic
+    // We create a dummy object with empty strings to prompt headers
+    const headers = [
+      {
+        "Employee ID": "EM/001",
+        "Name": "John Doe",
+        "Department": "Management",
+        "Designation": "Manager",
+        "Station": "Head Office",
+        "Status": "Permanent",
+        "Joining Date": "2023-01-01",
+        "Official Email": "john@example.com",
+        "Personal Email": "",
+        "CNIC": "42101-...",
+        "Contact": "0300-...",
+        "Emergency Contact": "",
+        "Address": ""
+      }
+    ];
+
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(headers);
+    xlsx.utils.book_append_sheet(wb, ws, "Template");
+
+    const buf = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader("Content-Disposition", 'attachment; filename="employees_template.xlsx"');
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.send(buf);
+
+  } catch (err) {
+    console.error("getImportTemplate error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * SEND CREDENTIALS (POST /api/v1/employees/send-credentials)
+ * ------------------------------------------------------------------ */
+async function sendCredentials(req, res) {
+  try {
+    const { station, department, group, employee, employee_id } = req.body || {};
+
+    // Stub logic
+    console.log("Send Creds Request:", req.body);
+
+    // Simulate processing time
+    await new Promise(r => setTimeout(r, 1000));
+
+    return res.json({ message: "Credentials sent successfully (Mock)." });
+  } catch (err) {
+    console.error("sendCredentials error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/* ------------------------------------------------------------------
+ * IMPORT EMPLOYEES (POST /api/v1/employees/import)
+ * ------------------------------------------------------------------ */
+async function importEmployees(req, res) {
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  try {
+    const workbook = xlsx.read(req.file.path, { type: "file" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const data = xlsx.utils.sheet_to_json(sheet);
+
+    // cleanup temp file if path exists (multer diskStorage)
+    safeUnlink(req.file.path);
+
+    if (!data.length) {
+      return res.status(400).json({ message: "Excel file is empty" });
+    }
+
+    const conn = await pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      let created = 0;
+      let updated = 0;
+
+      for (const row of data) {
+        // Normalization helpers
+        const getVal = (keys) => {
+          for (const k of keys) {
+            if (row[k] !== undefined) return String(row[k]).trim();
+          }
+          return null;
+        };
+
+        // Identify key fields
+        const employeeCode = getVal(["Employee_ID", "Employee Code", "ID", "Code"]);
+        const email = getVal(["Email", "Official_Email", "Personal Email", "Official Email"]);
+        const cnic = getVal(["CNIC", "Cnic"]);
+
+        // We NEED at least one identifier (Code or Email or CNIC)
+        if (!employeeCode && !email && !cnic) {
+          continue; // skip invalid rows
+        }
+
+        // Check existence
+        // Priority: Employee_ID > Email > CNIC
+        let existingId = null;
+
+        if (employeeCode) {
+          const [rows] = await conn.execute("SELECT id FROM employee_records WHERE Employee_ID = ? LIMIT 1", [employeeCode]);
+          if (rows.length) existingId = rows[0].id;
+        }
+
+        if (!existingId && email) {
+          const [rows] = await conn.execute("SELECT id FROM employee_records WHERE Official_Email = ? OR Email = ? LIMIT 1", [email, email]);
+          if (rows.length) existingId = rows[0].id;
+        }
+
+        if (!existingId && cnic) {
+          const [rows] = await conn.execute("SELECT id FROM employee_records WHERE CNIC = ? LIMIT 1", [cnic]);
+          if (rows.length) existingId = rows[0].id;
+        }
+
+        // Map fields to DB columns
+        // We only map fields that are present in the row
+        // This effectively implements "Merge" logic (only update provided fields)
+
+        const dbFields = {
+          "Employee_Name": ["Employee Name", "Name", "Full Name", "Employee_Name"],
+          "Designations": ["Designation", "Designations", "Title"],
+          "Department": ["Department", "Dept"],
+          "Office_Location": ["Station", "Location", "Office_Location", "Office Location"],
+          "Status": ["Status", "Employment Status"],
+          "Date_of_Joining": ["Date of Joining", "Joining Date", "DOJ", "Date_of_Joining"],
+          "Date_of_Birth": ["Date of Birth", "DOB", "Date_of_Birth"],
+          "CNIC": ["CNIC", "Cnic"],
+          "Gender": ["Gender", "Sex"],
+          "Blood_Group": ["Blood Group", "Blood_Group"],
+          "Contact": ["Contact", "Phone", "Mobile"],
+          "Official_Email": ["Official Email", "Official_Email"],
+          "Email": ["Personal Email", "Email"],
+          "Address": ["Address"],
+          "Emergency_Contact": ["Emergency Contact", "Emergency_Contact"],
+        };
+
+        const fieldsToUpdate = {};
+
+        // If we have an ID, we update. If not, we create (Insert)
+        if (existingId) {
+          // Update mode
+          for (const [dbCol, excelKeys] of Object.entries(dbFields)) {
+            const val = getVal(excelKeys);
+            if (val !== null) fieldsToUpdate[dbCol] = val;
+          }
+
+          if (Object.keys(fieldsToUpdate).length > 0) {
+            const setClause = Object.keys(fieldsToUpdate).map(k => `${k} = ?`).join(", ");
+            const params = Object.values(fieldsToUpdate);
+            params.push(existingId);
+
+            await conn.execute(`UPDATE employee_records SET ${setClause} WHERE id = ?`, params);
+            updated++;
+          }
+
+        } else {
+          // Create mode (Insert)
+          // Determine Employee ID if missing
+          let finalCode = employeeCode;
+          if (!finalCode) {
+            // Auto-generate rudimentary ID if creating new
+            const [maxRows] = await conn.query("SELECT MAX(id) AS maxId FROM employee_records");
+            const next = (maxRows[0]?.maxId || 0) + 1000 + created + 1; // +created to look ahead in this batch
+            finalCode = `EM/${String(next).padStart(3, "0")}`;
+          }
+
+          // Fill defaults
+          fieldsToUpdate["Employee_ID"] = finalCode;
+          fieldsToUpdate["is_active"] = 1;
+
+          for (const [dbCol, excelKeys] of Object.entries(dbFields)) {
+            const val = getVal(excelKeys);
+            if (val !== null) fieldsToUpdate[dbCol] = val;
+          }
+
+          // Ensure required fields for INSERT
+          // (Relax these if you want partial inserts, but let's try to be safe)
+          if (!fieldsToUpdate["Employee_Name"]) fieldsToUpdate["Employee_Name"] = "Unknown";
+
+          const cols = Object.keys(fieldsToUpdate).join(", ");
+          const placeholders = Object.keys(fieldsToUpdate).map(() => "?").join(", ");
+          const params = Object.values(fieldsToUpdate);
+
+          await conn.execute(`INSERT INTO employee_records (${cols}) VALUES (${placeholders})`, params);
+          created++;
+        }
+      }
+
+      await conn.commit();
+      return res.json({ message: `Import complete. Created: ${created}, Updated: ${updated}` });
+
+    } catch (err) {
+      if (conn) await conn.rollback();
+      console.error("importEmployees error:", err);
+      return res.status(500).json({ message: "DB Error during import: " + err.message });
+    } finally {
+      if (conn) conn.release();
+    }
+
+  } catch (err) {
+    console.error("importEmployees processing error:", err);
+    return res.status(500).json({ message: "Failed to process Excel file" });
+  }
+}

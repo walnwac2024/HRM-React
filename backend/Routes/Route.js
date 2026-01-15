@@ -42,6 +42,11 @@ const {
     lookupDesignations,
     lookupStatuses,
     lookupRoleTemplates,
+    deleteEmployee,
+    importEmployees,
+    exportEmployees,
+    getImportTemplate,
+    sendCredentials,
     lookupUserTypes
 } = require("../Controller/Employees/Employees");
 
@@ -114,7 +119,17 @@ router.get("/employees/lookups/statuses", isAuthenticated, lookupStatuses);
 router.get("/employees/lookups/role-templates", isAuthenticated, lookupRoleTemplates);
 router.get("/employees/lookups/user-types", isAuthenticated, lookupUserTypes);
 
+// ✅ Import Employees (Excel)
+router.post("/employees/import", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), upload.single("file"), importEmployees);
+
+// ✅ Export & Template
+router.get("/employees/export", isAuthenticated, exportEmployees);
+router.get("/employees/import-template", isAuthenticated, getImportTemplate);
+router.post("/employees/send-credentials", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), sendCredentials);
+
 router.get("/employees/:id", isAuthenticated, getEmployeeById);
+
+// Existing routes...
 router.post("/employees", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), upload.fields([{ name: "avatar", maxCount: 1 }, { name: "documents" }]), createEmployee);
 router.patch("/employees/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployee);
 router.put("/employees/:id/login", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployeeLogin);
@@ -135,6 +150,7 @@ router.get("/attendance/today", isAuthenticated, Attendance.getToday);
 router.post("/attendance/punch", isAuthenticated, Attendance.punch);
 router.get("/attendance/admin/missing", isAuthenticated, Attendance.adminMissing);
 router.get("/attendance/summary/personal", isAuthenticated, Attendance.getPersonalSummary);
+router.get("/attendance/report/monthly/all", isAuthenticated, Attendance.getMonthlyReportAll); // ✅ BULK EXPORT
 router.get("/attendance/report/monthly", isAuthenticated, Attendance.getMonthlyReport);
 
 // Attendance Settings
