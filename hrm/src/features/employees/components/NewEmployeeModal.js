@@ -151,38 +151,30 @@ function NewEmployeeModal({ open, onClose, onSave }) {
     showError(name) ? errorBorder : normalBorder;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* Card */}
-      <div className="relative z-10 w-[98%] max-w-5xl max-h-[90vh] bg-white rounded-xl shadow-xl border border-slate-200 flex flex-col">
+    <div className="modal-overlay">
+      <div className="modal-content max-w-5xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-800">
             Add New Employee
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-customRed hover:opacity-80"
+            className="h-8 px-3 rounded hover:bg-slate-100 text-xs font-bold uppercase tracking-wider text-customRed transition-colors"
           >
             Close
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 overflow-y-auto space-y-6">
+        <div className="modal-body overflow-y-auto space-y-8">
           {/* Core Employment Info */}
           <section>
-            <h3 className="text-sm font-semibold text-slate-800 mb-3">
+            <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-4">
               Employment Details
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="form-grid lg:grid-cols-3">
               <Field label="Employee ID / Code (auto)">
                 <input
                   className={`${baseInput} ${normalBorder} bg-slate-100 text-slate-500`}
@@ -255,212 +247,209 @@ function NewEmployeeModal({ open, onClose, onSave }) {
           </section>
 
           {/* Two-column layout like Bushra card */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="form-grid lg:grid-cols-2">
             {/* Personal Information */}
-            <section className="border rounded-lg p-4 border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">
+            <section className="bg-slate-50/50 rounded-xl p-5 border border-slate-200 space-y-5">
+              <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                 Personal Information
               </h3>
-              <div className="space-y-3">
-                <Field
-                  label="Date of Birth"
-                  required
-                  error={showError("dateOfBirth") && errors.dateOfBirth}
-                >
-                  <input
-                    type="date"
-                    className={`${baseInput} ${borderClass("dateOfBirth")}`}
-                    value={form.dateOfBirth}
-                    onChange={set("dateOfBirth")}
-                    onBlur={markTouched("dateOfBirth")}
-                  />
-                </Field>
+              <Field
+                label="Date of Birth"
+                required
+                error={showError("dateOfBirth") && errors.dateOfBirth}
+              >
+                <input
+                  type="date"
+                  className={`${baseInput} ${borderClass("dateOfBirth")}`}
+                  value={form.dateOfBirth}
+                  onChange={set("dateOfBirth")}
+                  onBlur={markTouched("dateOfBirth")}
+                />
+              </Field>
 
-                <Field
-                  label="CNIC"
-                  required
-                  error={showError("cnic") && errors.cnic}
-                >
-                  <input
-                    className={`${baseInput} ${borderClass("cnic")}`}
-                    value={form.cnic}
-                    onChange={set("cnic")}
-                    onBlur={markTouched("cnic")}
-                  />
-                </Field>
+              <Field
+                label="CNIC"
+                required
+                error={showError("cnic") && errors.cnic}
+              >
+                <input
+                  className={`${baseInput} ${borderClass("cnic")}`}
+                  value={form.cnic}
+                  onChange={set("cnic")}
+                  onBlur={markTouched("cnic")}
+                />
+              </Field>
 
-                <Field
-                  label="Gender"
-                  required
-                  error={showError("gender") && errors.gender}
-                >
-                  <SharedDropdown
-                    value={form.gender}
-                    onChange={(val) => set("gender")(val)}
-                    options={["Male", "Female", "Other"]}
-                  />
-                </Field>
+              <Field
+                label="Gender"
+                required
+                error={showError("gender") && errors.gender}
+              >
+                <SharedDropdown
+                  value={form.gender}
+                  onChange={(val) => set("gender")(val)}
+                  options={["Male", "Female", "Other"]}
+                />
+              </Field>
 
-                <Field label="Blood Group">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.bloodGroup}
-                    onChange={set("bloodGroup")}
-                    onBlur={markTouched("bloodGroup")}
-                  />
-                </Field>
+              <Field label="Blood Group">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.bloodGroup}
+                  onChange={set("bloodGroup")}
+                  onBlur={markTouched("bloodGroup")}
+                />
+              </Field>
 
-                <Field label="Religion">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.religion}
-                    onChange={set("religion")}
-                    onBlur={markTouched("religion")}
-                  />
-                </Field>
+              <Field label="Religion">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.religion}
+                  onChange={set("religion")}
+                  onBlur={markTouched("religion")}
+                />
+              </Field>
 
-                <Field label="Marital Status">
-                  <SharedDropdown
-                    value={form.maritalStatus}
-                    onChange={(val) => set("maritalStatus")(val)}
-                    options={["Single", "Married", "Divorced", "Widowed"]}
-                  />
-                </Field>
+              <Field label="Marital Status">
+                <SharedDropdown
+                  value={form.maritalStatus}
+                  onChange={(val) => set("maritalStatus")(val)}
+                  options={["Single", "Married", "Divorced", "Widowed"]}
+                />
+              </Field>
 
-                <Field label="Address">
-                  <textarea
-                    rows={3}
-                    className={`w-full border rounded px-3 py-2 text-sm resize-none focus:ring-customRed focus:border-customRed ${normalBorder}`}
-                    value={form.address}
-                    onChange={set("address")}
-                    onBlur={markTouched("address")}
-                  />
-                </Field>
-              </div>
+              <Field label="Address">
+                <textarea
+                  rows={3}
+                  className={`w-full border rounded px-3 py-2 text-sm resize-none focus:ring-customRed focus:border-customRed ${normalBorder}`}
+                  value={form.address}
+                  onChange={set("address")}
+                  onBlur={markTouched("address")}
+                />
+              </Field>
             </section>
 
             {/* Job & Contact Information */}
-            <section className="border rounded-lg p-4 border-slate-200">
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">
+            <section className="bg-slate-50/50 rounded-xl p-5 border border-slate-200 space-y-5">
+              <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
                 Job & Contact Information
               </h3>
-              <div className="space-y-3">
-                <Field
-                  label="Date of Joining"
-                  required
-                  error={showError("dateOfJoining") && errors.dateOfJoining}
-                >
-                  <input
-                    type="date"
-                    className={`${baseInput} ${borderClass("dateOfJoining")}`}
-                    value={form.dateOfJoining}
-                    onChange={set("dateOfJoining")}
-                    onBlur={markTouched("dateOfJoining")}
-                  />
-                </Field>
+              <Field
+                label="Date of Joining"
+                required
+                error={showError("dateOfJoining") && errors.dateOfJoining}
+              >
+                <input
+                  type="date"
+                  className={`${baseInput} ${borderClass("dateOfJoining")}`}
+                  value={form.dateOfJoining}
+                  onChange={set("dateOfJoining")}
+                  onBlur={markTouched("dateOfJoining")}
+                />
+              </Field>
 
-                <Field
-                  label="Official Email (used for login)"
-                  required
-                  error={showError("emailOfficial") && errors.emailOfficial}
-                >
-                  <input
-                    type="email"
-                    className={`${baseInput} ${borderClass("emailOfficial")}`}
-                    value={form.emailOfficial}
-                    onChange={set("emailOfficial")}
-                    onBlur={markTouched("emailOfficial")}
-                  />
-                </Field>
+              <Field
+                label="Official Email (used for login)"
+                required
+                error={showError("emailOfficial") && errors.emailOfficial}
+              >
+                <input
+                  type="email"
+                  className={`${baseInput} ${borderClass("emailOfficial")}`}
+                  value={form.emailOfficial}
+                  onChange={set("emailOfficial")}
+                  onBlur={markTouched("emailOfficial")}
+                />
+              </Field>
 
-                <Field label="Personal Email">
-                  <input
-                    type="email"
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.emailPersonal}
-                    onChange={set("emailPersonal")}
-                    onBlur={markTouched("emailPersonal")}
-                  />
-                </Field>
+              <Field label="Personal Email">
+                <input
+                  type="email"
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.emailPersonal}
+                  onChange={set("emailPersonal")}
+                  onBlur={markTouched("emailPersonal")}
+                />
+              </Field>
 
-                <Field
-                  label="Personal Contact"
-                  required
-                  error={showError("contact") && errors.contact}
-                >
-                  <input
-                    className={`${baseInput} ${borderClass("contact")}`}
-                    value={form.contact}
-                    onChange={set("contact")}
-                    onBlur={markTouched("contact")}
-                  />
-                </Field>
+              <Field
+                label="Personal Contact"
+                required
+                error={showError("contact") && errors.contact}
+              >
+                <input
+                  className={`${baseInput} ${borderClass("contact")}`}
+                  value={form.contact}
+                  onChange={set("contact")}
+                  onBlur={markTouched("contact")}
+                />
+              </Field>
 
-                <Field label="Official Contact">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.officialContact}
-                    onChange={set("officialContact")}
-                    onBlur={markTouched("officialContact")}
-                  />
-                </Field>
+              <Field label="Official Contact">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.officialContact}
+                  onChange={set("officialContact")}
+                  onBlur={markTouched("officialContact")}
+                />
+              </Field>
 
-                <Field label="Emergency Contact">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.emergencyContact}
-                    onChange={set("emergencyContact")}
-                    onBlur={markTouched("emergencyContact")}
-                  />
-                </Field>
+              <Field label="Emergency Contact">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.emergencyContact}
+                  onChange={set("emergencyContact")}
+                  onBlur={markTouched("emergencyContact")}
+                />
+              </Field>
 
-                <Field label="Emergency Relation">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.emergencyRelation}
-                    onChange={set("emergencyRelation")}
-                    onBlur={markTouched("emergencyRelation")}
-                  />
-                </Field>
+              <Field label="Emergency Relation">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.emergencyRelation}
+                  onChange={set("emergencyRelation")}
+                  onBlur={markTouched("emergencyRelation")}
+                />
+              </Field>
 
-                <Field label="Reporting To">
-                  <input
-                    className={`${baseInput} ${normalBorder}`}
-                    value={form.reporting}
-                    onChange={set("reporting")}
-                    onBlur={markTouched("reporting")}
-                  />
-                </Field>
-              </div>
+              <Field label="Reporting To">
+                <input
+                  className={`${baseInput} ${normalBorder}`}
+                  value={form.reporting}
+                  onChange={set("reporting")}
+                  onBlur={markTouched("reporting")}
+                />
+              </Field>
             </section>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t px-5 py-3 flex items-center justify-between bg-white">
-          <div className="flex items-center gap-3 text-xs text-slate-500">
-            <label className="inline-flex items-center gap-2">
+        <div className="modal-footer flex-col sm:flex-row bg-slate-50">
+          <div className="flex items-center gap-3 text-xs text-slate-500 w-full sm:w-auto">
+            <label className="inline-flex items-center gap-2 cursor-pointer group">
               <input
                 type="checkbox"
                 checked={form.canLogin}
                 onChange={set("canLogin")}
+                className="w-4 h-4 rounded border-slate-300 text-customRed focus:ring-customRed"
               />
-              <span>Allow portal login (uses official email)</span>
+              <span className="group-hover:text-slate-700 transition-colors">Allow portal login</span>
             </label>
           </div>
 
-          <div className="space-x-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 rounded border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-sm"
+              className="btn-outline flex-1 sm:flex-none"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={handleSave}
-              className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90 shadow-sm text-sm"
+              className="btn-primary flex-1 sm:flex-none"
             >
               Save Employee
             </button>

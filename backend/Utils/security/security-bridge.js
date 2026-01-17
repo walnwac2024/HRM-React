@@ -44,22 +44,42 @@ function getHiddenInput(query, callback) {
     stdin.on('data', onData);
 }
 
-getHiddenInput('ENTER OWNER PASSKEY (FRAG-B): ', (passkey) => {
-    if (validateOwner(passkey)) {
-        console.log("\n✅ OWNER AUTHORIZED. UNLOCKING SYSTEM...\n");
+const envPasskey = process.env.OWNER_PASSKEY_B || process.env.FRAG_B;
 
-        const shell = process.platform === 'win32' ? true : '/bin/sh';
-        const child = spawn(command, [], {
-            stdio: 'inherit',
-            shell: shell
-        });
-
-        child.on('exit', (code) => {
-            process.exit(code || 0);
-        });
+if (envPasskey) {
+    console.log("Using passkey from environment...");
+    if (validateOwner(envPasskey)) {
+        console.log("\n✅ OWNER AUTHORIZED (ENV). UNLOCKING SYSTEM...\n");
+        startChild();
     } else {
-        console.log("\n❌ ACCESS DENIED - OWNER AUTHORIZATION REQUIRED");
-        console.log("REASON: INVALID PASSKEY OR UNAUTHORIZED DEVICE\n");
+        console.log("\n❌ ACCESS DENIED - INVALID ENV PASSKEY");
         process.exit(1);
     }
-});
+} else if (!process.stdin.isTTY) {
+    console.log("\n❌ ACCESS DENIED - NON-INTERACTIVE TERMINAL DETECTED");
+    console.log("Please provide passkey via OWNER_PASSKEY_B environment variable.\n");
+    process.exit(1);
+} else {
+    getHiddenInput('ENTER OWNER PASSKEY (FRAG-B): ', (passkey) => {
+        if (validateOwner(passkey)) {
+            console.log("\n✅ OWNER AUTHORIZED. UNLOCKING SYSTEM...\n");
+            startChild();
+        } else {
+            console.log("\n❌ ACCESS DENIED - OWNER AUTHORIZATION REQUIRED");
+            console.log("REASON: INVALID PASSKEY OR UNAUTHORIZED DEVICE\n");
+            process.exit(1);
+        }
+    });
+}
+
+function startChild() {
+    const shell = process.platform === 'win32' ? true : '/bin/sh';
+    const child = spawn(command, [], {
+        stdio: 'inherit',
+        shell: shell
+    });
+
+    child.on('exit', (code) => {
+        process.exit(code || 0);
+    });
+}

@@ -474,7 +474,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                 <h3 className="section-title">Profile Information</h3>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="form-grid">
                 <Field label="Employee Name:" required>
                   <input
                     type="text"
@@ -671,11 +671,11 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                         return (
                           <div
                             key={doc.id}
-                            className="rounded-xl border border-slate-200 bg-white p-3"
+                            className="rounded-xl border border-slate-200 bg-white p-4"
                           >
-                            <div className="flex items-start justify-between gap-3">
+                            <div className="flex flex-col gap-4">
                               <div className="min-w-0 flex-1">
-                                <div className="grid gap-3 md:grid-cols-2">
+                                <div className="grid gap-3 sm:grid-cols-2">
                                   <Field label="Title">
                                     <input
                                       type="text"
@@ -738,18 +738,18 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                                 </div>
                               </div>
 
-                              <div className="shrink-0 flex flex-col gap-2">
+                              <div className="shrink-0 flex flex-row sm:flex-col gap-2 border-t sm:border-t-0 pt-3 sm:pt-0">
                                 <button
                                   type="button"
                                   disabled={busy}
                                   onClick={() => handleSaveDocMeta(doc)}
-                                  className="h-8 px-3 rounded bg-slate-900 text-white text-[11px] font-semibold hover:bg-black disabled:opacity-60"
+                                  className="flex-1 h-8 px-3 rounded bg-slate-900 text-white text-[11px] font-semibold hover:bg-black disabled:opacity-60"
                                 >
                                   {docSavingId === doc.id ? "Saving…" : "Save"}
                                 </button>
 
-                                <label className="h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center justify-center">
-                                  {docReplacingId === doc.id ? "Replacing…" : "Replace file"}
+                                <label className="flex-1 h-8 px-3 rounded border border-slate-300 text-[11px] font-medium bg-white hover:bg-slate-50 cursor-pointer inline-flex items-center justify-center">
+                                  {docReplacingId === doc.id ? "Replacing…" : "Replace"}
                                   <input
                                     type="file"
                                     className="hidden"
@@ -766,7 +766,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                                   type="button"
                                   disabled={busy}
                                   onClick={() => handleDeleteDoc(doc.id)}
-                                  className="h-8 px-3 rounded border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 disabled:opacity-60"
+                                  className="flex-1 h-8 px-3 rounded border border-red-200 text-red-600 text-[11px] font-semibold hover:bg-red-50 disabled:opacity-60"
                                 >
                                   {docDeletingId === doc.id ? "Deleting…" : "Delete"}
                                 </button>
@@ -1072,7 +1072,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
             </form>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }

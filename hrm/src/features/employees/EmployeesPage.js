@@ -87,7 +87,6 @@ export default function EmployeesPage() {
   } = useEmployeeFilterOptions();
 
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [sendOpen, setSendOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [editEmployeeId, setEditEmployeeId] = useState(null);
 
@@ -183,7 +182,6 @@ export default function EmployeesPage() {
               setPerPage={setPerPage}
               setOpenExport={setOpenExport}
               onOpenUpload={() => setUploadOpen(true)}
-              onSendCreds={() => setSendOpen(true)}
               onAddNew={() => setAddOpen(true)}
               total={total}
             />
@@ -265,14 +263,6 @@ export default function EmployeesPage() {
         <UploadExcelModal
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
-        />
-        <SendCredentialsModal
-          open={sendOpen}
-          onClose={() => setSendOpen(false)}
-          onSend={(payload) => {
-            alert(`Pretend sending credentials to: ${payload.employee}`);
-            setSendOpen(false);
-          }}
         />
         <AddEmployeeModal
           open={addOpen}

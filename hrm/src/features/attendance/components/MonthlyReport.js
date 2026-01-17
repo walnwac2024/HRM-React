@@ -92,83 +92,74 @@ export default function MonthlyReport({ employeeId, initialYear, initialMonth, o
         <div className="flex flex-col gap-6 animate-in fade-in duration-500">
             {/* Removed overflow-hidden to allow dropdown to show */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-wrap items-center justify-between gap-4 rounded-t-xl">
-                    <div>
-                        <div className="flex items-center gap-4">
-                            {onBack && (
-                                <button
-                                    onClick={onBack}
-                                    className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-all"
-                                    title="Back to list"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                                </button>
-                            )}
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                    Attendance Report
-                                    {onBack && <span className="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-600 font-bold uppercase tracking-wider">Employee View</span>}
-                                </h3>
-                                <p className="text-xs text-slate-500">
-                                    Detailed monthly attendance and leave record
-                                </p>
-                            </div>
+                <div className="px-6 py-5 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-t-xl">
+                    <div className="flex items-center gap-4">
+                        {onBack && (
+                            <button
+                                onClick={onBack}
+                                className="p-2 -ml-2 text-slate-400 hover:text-customRed hover:bg-red-50 rounded-xl transition-all"
+                                title="Back to list"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                            </button>
+                        )}
+                        <div>
+                            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                Attendance Report
+                                {onBack && <span className="px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-600 font-bold uppercase tracking-wider">Employee View</span>}
+                            </h3>
+                            <p className="text-[11px] font-medium text-slate-500">
+                                Detailed monthly attendance and leave record
+                            </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         {(user?.features || []).includes('reports_print') && (
                             <button
                                 onClick={handlePrint}
-                                className="btn-outline !py-1.5 !text-xs flex items-center gap-2"
+                                className="btn-outline !h-10 px-4 sm:px-5 flex-1 sm:flex-none"
                             >
-                                <FaPrint className="opacity-70" /> Print
+                                <FaPrint className="opacity-70 text-sm mr-2" /> <span className="hidden xs:inline">Print</span>
                             </button>
                         )}
                         {(user?.features || []).includes('reports_export') && (
                             <button
                                 onClick={handleExport}
-                                className="btn-primary !py-1.5 !text-xs flex items-center gap-2"
+                                className="btn-primary !h-10 px-4 sm:px-5 flex-1 sm:flex-none shadow-lg shadow-red-500/15"
                             >
-                                <FaFileDownload className="opacity-70" /> Export
+                                <FaFileDownload className="opacity-70 text-sm mr-2" /> <span className="hidden xs:inline">Export</span>
                             </button>
                         )}
                     </div>
                 </div>
 
                 <div className="p-6">
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-12 items-end">
-                        <div className="md:col-span-6">
-                            {/* If we are in "prop mode" (Admin drilled down), showing ID might be enough or read only name */}
-                            {/* But MonthlyReport fetches report by ID. It doesn't fetch name specifically unless we do lookup */}
-                            {/* For simplicity, let's just show the filter if no props, OR if props provided, maybe show readonly? */}
-                            {/* Actually, if props provided, we usually want to lock it to that employee. */}
-
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 items-end gap-6">
+                        <div className="lg:col-span-6">
                             {!onBack ? (
-                                // Self view (or old admin view if used directly)
-                                <div className="md:col-span-6">
-                                    <label className="form-label">Employee</label>
-                                    <input className="input bg-slate-50" value={user?.name || ''} readOnly />
+                                <div>
+                                    <label className="form-label">Employee Profile</label>
+                                    <input className="input bg-slate-50 font-bold text-slate-700" value={user?.name || ''} readOnly />
                                 </div>
                             ) : (
-                                // Admin view of someone else
-                                <div className="md:col-span-6">
-                                    <label className="form-label">Employee ID</label>
-                                    <input className="input bg-slate-50" value={filters.employee_id} readOnly />
+                                <div>
+                                    <label className="form-label">Viewing Employee ID</label>
+                                    <input className="input bg-slate-50 font-bold text-slate-700" value={filters.employee_id} readOnly />
                                 </div>
                             )}
                         </div>
 
                         <SharedDropdown
-                            className="md:col-span-3"
-                            label="Year Selection"
+                            className="lg:col-span-3"
+                            label="Reporting Year"
                             value={filters.year}
                             onChange={(val) => setFilters(prev => ({ ...prev, year: val }))}
                             options={WORKSHEET_YEARS.filter(y => y !== '--ALL--')}
                         />
 
                         <SharedDropdown
-                            className="md:col-span-3"
-                            label="Month Selection"
+                            className="lg:col-span-3"
+                            label="Reporting Month"
                             value={filters.month}
                             onChange={(val) => setFilters(prev => ({ ...prev, month: val }))}
                             options={WORKSHEET_MONTHS.filter(m => m !== '--ALL--')}
@@ -178,17 +169,17 @@ export default function MonthlyReport({ employeeId, initialYear, initialMonth, o
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-slate-200">
-                        <thead>
-                            <tr className="bg-slate-50">
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Shift</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Check In</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Check Out</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Work Duration</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">Late Arrivals</th>
-                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">Status</th>
+                <div className="table-scroll">
+                    <table className="min-w-[1000px] w-full divide-y divide-slate-200 text-sm">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Reporting<br /><span className="text-[9px] opacity-70">Date</span></th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Assigned<br /><span className="text-[9px] opacity-70">Shift</span></th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Access<br /><span className="text-[9px] opacity-70">Check In</span></th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Access<br /><span className="text-[9px] opacity-70">Check Out</span></th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Work<br /><span className="text-[9px] opacity-70">Duration</span></th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Late<br /><span className="text-[9px] opacity-70">Arrivals</span></th>
+                                <th className="px-6 py-4 text-center text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Attendance<br /><span className="text-[9px] opacity-70">Status</span></th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-slate-100">

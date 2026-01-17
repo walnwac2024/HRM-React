@@ -1,5 +1,5 @@
-// backend/Controller/Leaves/Leave.js
 const { pool } = require("../../Utils/db");
+const { recordLog } = require("../../Utils/AuditUtils");
 
 /**
  * GET /leaves/types
@@ -101,6 +101,18 @@ const applyLeave = async (req, res) => {
         }
 
         await conn.commit();
+
+        // Audit Log for Applying Leave
+        await recordLog({
+            actorId: user.id,
+            action: isAutoApproved
+                ? `Leave automatically approved for ${user.name}`
+                : `Applied for leave (${total_days} days)`,
+            category: "System",
+            status: "Success",
+            details: { applicationId, leave_type_id, total_days, autoApproved: isAutoApproved }
+        });
+
         return res.status(201).json({
             message: isAutoApproved ? "Leave approved automatically." : "Leave applied successfully.",
             applicationId,
@@ -210,6 +222,25 @@ const approveLeave = async (req, res) => {
 
         await conn.beginTransaction();
 
+        const [[la]] = await conn.execute("SELECT employee_id, leave_type_id, start_date, end_date, total_days, status as current_status FROM leave_applications WHERE id = ?", [id]);
+
+        if (!la) {
+            return res.status(404).json({ message: "Leave application not found" });
+        }
+
+        // Check if application is already approved
+        if (la.current_status === 'approved' && status === 'approved') {
+            return res.status(400).json({ message: "Leave is already approved" });
+        }
+
+        // Special handling for re-approving a rejected leave
+        if (la.current_status === 'rejected' && status === 'approved') {
+            const isAdmin = ["super_admin", "admin", "hr", "developer"].includes(String(user?.role || "").toLowerCase());
+            if (!isAdmin) {
+                return res.status(403).json({ message: "Only HR/Admin can re-approve a rejected application." });
+            }
+        }
+
         await conn.execute(
             "UPDATE leave_applications SET status = ? WHERE id = ?",
             [status, id]
@@ -221,17 +252,28 @@ const approveLeave = async (req, res) => {
         );
 
         // ✅ Deduct Balance on Approval
-        if (status === "approved") {
-            const [[la]] = await conn.execute("SELECT employee_id, leave_type_id, total_days FROM leave_applications WHERE id = ?", [id]);
+        if (status === "approved" && la.current_status !== 'approved') {
+            // Re-fetch current year for deduction
+            const currentYear = new Date().getFullYear();
             await conn.execute(
                 `UPDATE leave_balances 
                  SET used = used + ?, balance = balance - ?, updated_at = CURRENT_TIMESTAMP 
                  WHERE employee_id = ? AND leave_type_id = ? AND year = ?`,
-                [la.total_days, la.total_days, la.employee_id, la.leave_type_id, new Date().getFullYear()]
+                [la.total_days, la.total_days, la.employee_id, la.leave_type_id, currentYear]
             );
         }
 
         await conn.commit();
+
+        // Audit Log for Approving/Rejecting Leave
+        await recordLog({
+            actorId: user.id,
+            action: `${status.charAt(0).toUpperCase() + status.slice(1)} leave application for employee_id: ${la.employee_id}`,
+            category: "System",
+            status: "Success",
+            details: { applicationId: id, status, comment }
+        });
+
         return res.json({ message: `Leave ${status} successfully` });
     } catch (e) {
         await conn.rollback();
@@ -257,6 +299,15 @@ const createLeaveType = async (req, res) => {
             "INSERT INTO leave_types (name, entitlement_days, is_active) VALUES (?, ?, 1)",
             [name, entitlement_days]
         );
+
+        // Audit Log for Creating Leave Type
+        await recordLog({
+            actorId: req.session?.user?.id,
+            action: `Created new leave type: ${name}`,
+            category: "System",
+            status: "Success",
+            details: { name, entitlement_days }
+        });
 
         return res.status(201).json({ message: "Leave type created successfully" });
     } catch (e) {

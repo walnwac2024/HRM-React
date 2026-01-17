@@ -70,8 +70,8 @@ export default function PermissionsPage() {
     if (loading) return <div className="p-6">Loading permissions...</div>;
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
+        <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h1 className="text-2xl font-bold text-slate-800">Permissions Management</h1>
                 <button
                     onClick={handleSave}

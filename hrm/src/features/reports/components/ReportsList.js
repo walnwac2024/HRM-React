@@ -108,97 +108,122 @@ export default function ReportsList({ onView }) {
     return (
         <div className="flex flex-col gap-6 animate-in fade-in duration-500">
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                <div className="flex flex-wrap items-end gap-4 mb-6">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="form-label">Search Employee</label>
-                        <input
-                            type="text"
-                            className="input"
-                            placeholder="Search by name or code..."
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 items-end gap-6 mb-8">
+                    <div className="lg:col-span-5">
+                        <label className="form-label">Search Employee Database</label>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                className="input pl-10"
+                                placeholder="Search by name or code..."
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                            />
+                            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                     <SharedDropdown
-                        className="w-40"
-                        label="Year"
+                        className="lg:col-span-2"
+                        label="Report Year"
                         value={selectedYear}
                         onChange={setSelectedYear}
                         options={WORKSHEET_YEARS.filter(y => y !== '--ALL--')}
                     />
                     <SharedDropdown
-                        className="w-40"
-                        label="Month"
+                        className="lg:col-span-2"
+                        label="Report Month"
                         value={selectedMonth}
                         onChange={setSelectedMonth}
                         options={WORKSHEET_MONTHS.filter(m => m !== '--ALL--')}
                     />
-                    <button
-                        onClick={async () => {
-                            if (!window.confirm(`Download full report for ${selectedMonth} ${selectedYear}?`)) return;
-                            try {
-                                const m = monthsMap[selectedMonth];
-                                const res = await api.get("/attendance/report/monthly/all", {
-                                    params: { year: selectedYear, month: m },
-                                    responseType: 'blob'
-                                });
-                                const url = window.URL.createObjectURL(new Blob([res.data]));
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.setAttribute('download', `Monthly_Report_ALL_${selectedYear}_${selectedMonth}.xlsx`);
-                                document.body.appendChild(link);
-                                link.click();
-                                link.parentNode.removeChild(link);
-                            } catch (e) {
-                                console.error(e);
-                                alert("Failed to download bulk report.");
-                            }
-                        }}
-                        className="btn-primary flex items-center gap-2 mb-1"
-                    >
-                        <FaFileDownload /> Export All
-                    </button>
+                    <div className="lg:col-span-3 sm:flex sm:items-end sm:justify-end">
+                        <button
+                            onClick={async () => {
+                                if (!window.confirm(`Download full report for ${selectedMonth} ${selectedYear}?`)) return;
+                                try {
+                                    const m = monthsMap[selectedMonth];
+                                    const res = await api.get("/attendance/report/monthly/all", {
+                                        params: { year: selectedYear, month: m },
+                                        responseType: 'blob'
+                                    });
+                                    const url = window.URL.createObjectURL(new Blob([res.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', `Monthly_Report_ALL_${selectedYear}_${selectedMonth}.xlsx`);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    link.parentNode.removeChild(link);
+                                } catch (e) {
+                                    console.error(e);
+                                    alert("Failed to download bulk report.");
+                                }
+                            }}
+                            className="btn-primary w-full h-11 flex items-center justify-center gap-2 shadow-md shadow-red-500/20 text-[11px] font-black uppercase tracking-widest whitespace-nowrap"
+                        >
+                            <FaFileDownload className="text-sm" /> Export All Data
+                        </button>
+                    </div>
                 </div>
 
-                <div className="overflow-x-auto border rounded-lg">
-                    <table className="min-w-full divide-y divide-slate-200">
+                <div className="table-scroll border rounded-xl overflow-hidden shadow-sm">
+                    <table className="min-w-[800px] w-full divide-y divide-slate-200 text-sm">
                         <thead className="bg-slate-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Department</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight text-center w-24">Profile</th>
+                                <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Employee<br /><span className="text-[9px] opacity-70 text-slate-400">Details</span></th>
+                                <th className="px-6 py-4 text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight text-center">Organization<br /><span className="text-[9px] opacity-70 text-slate-400">Department</span></th>
+                                <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight pr-10">Report<br /><span className="text-[9px] opacity-70 text-slate-400">Actions</span></th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-slate-200">
+                        <tbody className="bg-white divide-y divide-slate-100">
                             {loading ? (
-                                <tr><td colSpan="3" className="p-4 text-center">Loading...</td></tr>
+                                <tr>
+                                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400 font-medium">
+                                        Loading employee database...
+                                    </td>
+                                </tr>
                             ) : filteredList.length === 0 ? (
-                                <tr><td colSpan="3" className="p-4 text-center text-slate-500">No employees found.</td></tr>
+                                <tr>
+                                    <td colSpan="4" className="px-6 py-12 text-center text-slate-400 italic font-medium">
+                                        No employees matching your search criteria.
+                                    </td>
+                                </tr>
                             ) : (
                                 filteredList.map(emp => (
-                                    <tr key={emp.id} className="hover:bg-slate-50">
+                                    <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-black text-xs border border-slate-200 shadow-sm mx-auto">
+                                                {emp.employee_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
+                                            </div>
+                                        </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="font-medium text-slate-900">{emp.employee_name}</div>
-                                            <div className="text-sm text-slate-500">{emp.employee_code}</div>
+                                            <div className="font-bold text-slate-800 leading-none mb-1.5">{emp.employee_name}</div>
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{emp.employee_code}</div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                                            {emp.department}
+                                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                                            <span className="px-3 py-1 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-lg uppercase tracking-wider border border-slate-200/50">
+                                                {emp.department || 'General'}
+                                            </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex items-center justify-end gap-2">
+                                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                                            <div className="flex flex-wrap items-center justify-end gap-2 px-2">
                                                 <button
                                                     onClick={() => onView(emp.id, selectedYear, selectedMonth)}
-                                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
-                                                    title="View Report"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black text-blue-600 hover:bg-blue-50 rounded-lg transition-all border border-blue-100 uppercase tracking-widest active:scale-95"
+                                                    title="View Detailed Report"
                                                 >
-                                                    <FaEye />
+                                                    <FaEye className="text-[10px]" /> View
                                                 </button>
                                                 <button
                                                     onClick={() => handleExport(emp.id, emp.employee_name)}
-                                                    className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-full"
-                                                    title="Export CSV"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100 uppercase tracking-widest active:scale-95"
+                                                    title="Export CSV Data"
                                                 >
-                                                    <FaFileDownload />
+                                                    <FaFileDownload className="text-[10px]" /> Export
                                                 </button>
                                             </div>
                                         </td>

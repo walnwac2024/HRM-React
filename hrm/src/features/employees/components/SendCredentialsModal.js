@@ -78,19 +78,14 @@ export default function SendCredentialsModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* Dialog */}
-      <div className="relative z-10 w-full max-w-3xl bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden mx-4">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold text-slate-800">
+    <div className="modal-overlay">
+      <div className="modal-content max-w-3xl">
+        <div className="modal-header">
+          <h3 className="font-semibold text-gray-800 leading-tight">
             Which Employees would you like to send login credentials?
           </h3>
           <button
-            className="h-7 w-7 rounded-full grid place-items-center text-slate-600 hover:bg-slate-100"
+            className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
             onClick={onClose}
           >
             ×
@@ -98,15 +93,15 @@ export default function SendCredentialsModal({ open, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="modal-body">
+          <div className="form-grid">
             {/* Station */}
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Station</label>
+              <label className="form-label">Station</label>
               <select
                 value={form.station}
                 onChange={set("station")}
-                className="w-full h-9 rounded border border-slate-300 text-sm focus:border-customRed focus:ring-customRed"
+                className="input"
               >
                 <option value="">--ALL--</option>
                 {stations.map((v) => (
@@ -117,11 +112,11 @@ export default function SendCredentialsModal({ open, onClose }) {
 
             {/* Department */}
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Department</label>
+              <label className="form-label">Department</label>
               <select
                 value={form.department}
                 onChange={set("department")}
-                className="w-full h-9 rounded border border-slate-300 text-sm focus:border-customRed focus:ring-customRed"
+                className="input"
               >
                 <option value="">--ALL--</option>
                 {departments.map((v) => (
@@ -132,11 +127,11 @@ export default function SendCredentialsModal({ open, onClose }) {
 
             {/* Employee Group */}
             <div>
-              <label className="block text-xs text-slate-600 mb-1">Employee Group</label>
+              <label className="form-label">Employee Group</label>
               <select
                 value={form.group}
                 onChange={set("group")}
-                className="w-full h-9 rounded border border-slate-300 text-sm focus:border-customRed focus:ring-customRed"
+                className="input"
               >
                 <option value="">--ALL--</option>
                 {groups.map((v) => (
@@ -147,14 +142,14 @@ export default function SendCredentialsModal({ open, onClose }) {
 
             {/* Employee (required) */}
             <div>
-              <label className="block text-xs text-slate-600 mb-1">
-                Employee <span className="text-red-500">*</span>
+              <label className="form-label">
+                Employee <span className="text-customRed">*</span>
               </label>
               <select
                 value={form.employee}
                 onChange={set("employee")}
                 disabled={loading}
-                className="w-full h-9 rounded border border-slate-300 text-sm focus:border-customRed focus:ring-customRed disabled:bg-slate-100"
+                className={`input ${loading ? "bg-slate-100" : ""}`}
               >
                 <option value="">
                   {loading ? "Loading..." : "Select employee..."}
@@ -170,11 +165,11 @@ export default function SendCredentialsModal({ open, onClose }) {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t flex items-center justify-end gap-2">
+        <div className="modal-footer flex-col sm:flex-row">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 px-4 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm"
+            className="btn-outline flex-1 sm:flex-none"
           >
             Cancel
           </button>
@@ -183,10 +178,9 @@ export default function SendCredentialsModal({ open, onClose }) {
             type="button"
             disabled={!canSend}
             onClick={handleSend}
-            className={`h-9 px-6 rounded-md text-white text-sm transition-all
-              ${canSend ? "bg-customRed hover:opacity-95" : "bg-slate-300 cursor-not-allowed"}`}
+            className={`btn-primary flex-1 sm:flex-none ${!canSend ? "opacity-60 cursor-not-allowed" : ""}`}
           >
-            {sending ? "Sending..." : "Send"}
+            {sending ? "Sending..." : "Send Credentials"}
           </button>
         </div>
       </div>

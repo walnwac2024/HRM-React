@@ -64,88 +64,77 @@ export default function EmployeeTransferModal({ open, onClose, onSubmit }) {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* card */}
-      <div className="relative z-10 w-[98%] max-w-5xl bg-white rounded-xl shadow-xl border border-slate-200">
-        {/* header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold">Add Employee Transfer</h3>
+    <div className="modal-overlay">
+      <div className="modal-content max-w-5xl">
+        <div className="modal-header">
+          <h3 className="font-semibold text-gray-800">Add Employee Transfer</h3>
           <button
             type="button"
-            className="text-customRed hover:opacity-90"
+            className="text-xs font-bold uppercase tracking-wider text-customRed hover:opacity-80 transition-opacity"
             onClick={onClose}
             title="Back"
           >
-            &larr; Back
+            ← Back
           </button>
         </div>
 
-        {/* body */}
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* LEFT column */}
-            <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="modal-body space-y-6">
+          <div className="form-grid lg:grid-cols-2">
+            <div>
               <Field label="Employee" required error={errors.employee}>
                 <Select value={form.employee} onChange={set("employee")}>
                   <option value="">Select One</option>
-                  {/* TODO: replace sample with real employees */}
                   <option>John Doe</option>
                   <option>Sumitha Thomas</option>
                 </Select>
               </Field>
 
-              <Field label="Prefix">
-                <Select value={form.prefix} onChange={set("prefix")}>
-                  <option>None</option>
-                  <option>Mr</option>
-                  <option>Ms</option>
-                  <option>Mrs</option>
-                </Select>
-              </Field>
+              <div className="mt-4 space-y-4">
+                <Field label="Prefix">
+                  <Select value={form.prefix} onChange={set("prefix")}>
+                    <option>None</option>
+                    <option>Mr</option>
+                    <option>Ms</option>
+                    <option>Mrs</option>
+                  </Select>
+                </Field>
 
-              <Field label="Employee Code">
-                <Input value={form.employeeCode} onChange={set("employeeCode")} />
-              </Field>
+                <Field label="Employee Code">
+                  <Input value={form.employeeCode} onChange={set("employeeCode")} />
+                </Field>
 
-              <Field label="Station" required error={errors.station}>
-                <Select value={form.station} onChange={set("station")}>
-                  <option value="">Select One</option>
-                  <option>RegionalOffice</option>
-                  <option>HeadOffice</option>
-                </Select>
-              </Field>
+                <Field label="Station" required error={errors.station}>
+                  <Select value={form.station} onChange={set("station")}>
+                    <option value="">Select One</option>
+                    <option>RegionalOffice</option>
+                    <option>HeadOffice</option>
+                  </Select>
+                </Field>
 
-              <Field label="Department" required error={errors.department}>
-                <Select value={form.department} onChange={set("department")}>
-                  <option value="">Select One</option>
-                  <option>Marketing</option>
-                  <option>HR</option>
-                  <option>IT</option>
-                  <option>Finance</option>
-                </Select>
-              </Field>
+                <Field label="Department" required error={errors.department}>
+                  <Select value={form.department} onChange={set("department")}>
+                    <option value="">Select One</option>
+                    <option>Marketing</option>
+                    <option>HR</option>
+                    <option>IT</option>
+                    <option>Finance</option>
+                  </Select>
+                </Field>
 
-              <Field label="Configure Automated Alert">
-                <Select
-                  value={form.automatedAlert}
-                  onChange={set("automatedAlert")}
-                >
-                  <option value="">Select One</option>
-                  <option>Email</option>
-                  <option>SMS</option>
-                  <option>None</option>
-                </Select>
-              </Field>
+                <Field label="Configure Automated Alert">
+                  <Select
+                    value={form.automatedAlert}
+                    onChange={set("automatedAlert")}
+                  >
+                    <option value="">Select One</option>
+                    <option>Email</option>
+                    <option>SMS</option>
+                    <option>None</option>
+                  </Select>
+                </Field>
+              </div>
             </div>
 
-            {/* RIGHT column */}
             <div className="space-y-4">
               <Field label="Transfer Date">
                 <Input
@@ -179,30 +168,30 @@ export default function EmployeeTransferModal({ open, onClose, onSubmit }) {
                 </Select>
               </Field>
             </div>
+
+            <div className="lg:col-span-2">
+              <Field label="Description" required error={errors.description}>
+                <textarea
+                  rows={6}
+                  className="w-full rounded border border-slate-300 focus:border-customRed focus:ring-customRed p-2 text-sm"
+                  value={form.description}
+                  onChange={set("description")}
+                />
+              </Field>
+            </div>
           </div>
 
-          {/* Description */}
-          <Field label="Description" required error={errors.description}>
-            <textarea
-              rows={6}
-              className="w-full rounded border border-slate-300 focus:border-customRed focus:ring-customRed p-2"
-              value={form.description}
-              onChange={set("description")}
-            />
-          </Field>
-
-          {/* footer */}
-          <div className="flex items-center justify-end gap-2 pt-2">
+          <div className="modal-footer flex-col sm:flex-row mt-6">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 rounded border border-slate-300 bg-white hover:bg-slate-50"
+              className="btn-outline flex-1 sm:flex-none"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="h-9 px-5 rounded bg-customRed text-white hover:bg-customRed/90"
+              className="btn-primary flex-1 sm:flex-none"
             >
               Submit
             </button>

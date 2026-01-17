@@ -10,12 +10,12 @@
   /* -------- page + card -------- */
   .page {
     /* Responsive Page Padding */
-    @apply mx-auto max-w-screen-2xl px-4 sm:px-6 py-4 sm:py-6;
+    @apply mx-auto max-w-screen-2xl px-4 sm:px-6 py-4 sm:py-6 overflow-x-hidden;
   }
 
   .card {
     /* radius 12 is rounded-xl? rounded-2xl is 16px usually. rounded-xl is 12px. User said radius 12. */
-    @apply bg-white rounded-xl shadow-sm ring-1 ring-gray-100;
+    @apply bg-white rounded-xl shadow-sm ring-1 ring-gray-100 overflow-hidden;
   }
 
   .card-header {
@@ -74,21 +74,62 @@
     @apply input h-auto py-3 leading-relaxed;
   }
 
-  /* -------- buttons (Unified Premium: 40px height, radius 12) -------- */
+  /* -------- buttons (Unified Premium Design System) -------- */
   .btn {
-    @apply inline-flex items-center justify-center rounded-xl px-6 h-10 text-[13px] font-bold uppercase tracking-[0.1em] transition-all duration-200 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:scale-95 whitespace-nowrap;
+    @apply inline-flex items-center justify-center rounded-2xl px-5 h-10 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-300 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed select-none whitespace-nowrap active:scale-[0.97];
   }
 
+  /* Main Action (Primary) - Vibrant Gradient & Soft Glow Shadow */
   .btn-primary {
-    @apply btn bg-customRed text-white hover:bg-customRed/90 hover:shadow-lg hover:shadow-red-500/10 focus-visible:ring-4 focus-visible:ring-customRed/10;
+    @apply btn bg-gradient-to-br from-customRed to-red-600 text-white border-t border-white/20;
+    box-shadow: 0 8px 20px -6px rgba(239, 68, 68, 0.5);
   }
 
+  .btn-primary:hover {
+    @apply -translate-y-0.5 brightness-[1.05];
+    box-shadow: 0 12px 28px -8px rgba(239, 68, 68, 0.6);
+  }
+
+  /* Success Action (Save/Submit) - Emerald Theme */
+  .btn-success {
+    @apply btn bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-t border-white/20;
+    box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.4);
+  }
+
+  .btn-success:hover {
+    @apply -translate-y-0.5 brightness-[1.05];
+    box-shadow: 0 12px 28px -8px rgba(16, 185, 129, 0.5);
+  }
+
+  /* Secondary Action (Outline) - Soft Border & Clean Look */
   .btn-outline {
-    @apply btn border-2 border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900;
+    @apply btn border border-slate-200 bg-white text-slate-700;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   }
 
-  .btn-ghost {
-    @apply btn bg-transparent text-slate-500 hover:text-slate-700 hover:bg-slate-100/50 shadow-none;
+  .btn-outline:hover {
+    @apply border-slate-300 bg-slate-50 text-slate-900 -translate-y-0.5 shadow-lg shadow-slate-200/50;
+  }
+
+  /* Utility Action (Export/Import/etc) - Glassy Professional Look */
+  .btn-utility {
+    @apply btn bg-white border border-slate-200 text-slate-600 font-bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  }
+
+  .btn-utility:hover {
+    @apply text-customRed border-customRed/30 bg-red-50/30 -translate-y-0.5 shadow-lg shadow-red-500/5;
+  }
+
+  /* Premium/Dark Action - Sophisticated Slate/Indigo */
+  .btn-premium {
+    @apply btn bg-slate-900 border border-slate-800 text-white border-t border-white/5;
+    box-shadow: 0 10px 25px -10px rgba(15, 23, 42, 0.6);
+  }
+
+  .btn-premium:hover {
+    @apply -translate-y-0.5 bg-slate-800;
+    box-shadow: 0 15px 35px -12px rgba(15, 23, 42, 0.8);
   }
 
   /* -------- sidebar bits (Gold Standard) -------- */
@@ -155,6 +196,25 @@
     @apply w-full border-collapse;
   }
 
+  /* -------- table scroll helper -------- */
+  .table-scroll {
+    @apply w-full overflow-x-auto overflow-y-hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Custom scrollbar for premium look */
+  .table-scroll::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+  }
+
   .thead {
     /* Sticky header requirement */
     @apply sticky top-0 z-10 bg-white text-sm font-semibold text-gray-800 border-b border-customLightGrey/40;
@@ -192,6 +252,64 @@
   /* kebab */
   .kebab {
     @apply inline-flex h-8 w-8 items-center justify-center rounded-lg border border-customRed text-customRed hover:bg-customRed/10;
+  }
+
+  /* -------- RESPONSIVE UTILITIES -------- */
+
+  /* Table scroll wrapper for mobile */
+  .table-scroll {
+    @apply overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  .table-scroll table {
+    @apply min-w-full;
+  }
+
+  /* Responsive modal sizing */
+  .modal-content {
+    @apply w-full max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl mx-auto;
+  }
+
+  /* Mobile-friendly form grid */
+  .form-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+  }
+
+  .form-grid-3 {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
+  }
+
+  /* Responsive card padding */
+  .card-body-responsive {
+    @apply p-4 sm:p-5 md:p-6;
+  }
+
+  /* Touch-friendly button sizing */
+  .btn-touch {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Hide on mobile, show on desktop */
+  .desktop-only {
+    @apply hidden lg:block;
+  }
+
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block lg:hidden;
+  }
+
+  /* Responsive text sizes */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+
+  .text-responsive-lg {
+    @apply text-base sm:text-lg;
   }
 
   /* Transition utilities for drawers */

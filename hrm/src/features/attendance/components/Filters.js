@@ -265,49 +265,70 @@ export default function Filters({
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <button className="btn-primary" onClick={() => onApply?.(vals)}>Apply</button>
-            <button className="btn-outline" onClick={resetVals}>Clear Filters</button>
+        {/* Actions Section */}
+        <div className="mt-8 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6 border-t border-slate-100 pt-6">
+          {/* Group 1: Filter Logic Actions */}
+          <div className="grid grid-cols-2 sm:flex items-center gap-3">
+            <button
+              className="btn-primary flex-1 sm:flex-none"
+              onClick={() => onApply?.(vals)}
+            >
+              Apply Filter
+            </button>
+            <button
+              className="btn-outline flex-1 sm:flex-none"
+              onClick={resetVals}
+            >
+              Clear
+            </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
-            <span className="text-sm text-gray-700">Show</span>
-            <select
-              className="btn-chip !px-2"
-              value={perPage}
-              onChange={(e) => onPerPageChange?.(Number(e.target.value))}
-            >
-              {[10, 25, 50, 100].map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-            <span className="text-sm text-gray-700">Records</span>
+          {/* Group 2: Table Utilities & Primary Actions */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 flex-1 justify-end">
+            {/* Show Records Selector */}
+            <div className="flex items-center px-4 h-11 bg-white rounded-2xl border border-slate-200 shadow-sm transition-all focus-within:border-customRed min-w-[120px]">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-3">Show</span>
+              <select
+                className="bg-transparent outline-none font-bold text-slate-800 cursor-pointer flex-1 appearance-none pr-6"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2.5\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right center', backgroundSize: '1rem' }}
+                value={perPage}
+                onChange={(e) => onPerPageChange?.(Number(e.target.value))}
+              >
+                {[10, 25, 50, 100].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
 
-            {/* Upload Excel: Attendance + Worksheet only */}
-            {!isExemption && !isRemote && !isShift && (
-              <button onClick={onUploadExcel} className="btn-outline">Upload Excel</button>
-            )}
+            {/* Dynamic Action Buttons Group - Responsive Grid/Flex */}
+            <div className="grid grid-cols-2 lg:grid-cols-3 sm:flex flex-wrap items-center gap-2">
+              {!isExemption && !isRemote && !isShift && (
+                <button
+                  onClick={onUploadExcel}
+                  className="btn-utility flex-1 sm:flex-none"
+                >
+                  Upload
+                </button>
+              )}
 
-            <button onClick={onAddNew} className="btn-primary">
-              {isWorksheet ? '+ Add New WorkSheet' : '+ Add New Request'}
-            </button>
-
-            {/* Irregular button:
-               - Attendance -> Irregular Attendance
-               - Shift      -> Irregular Shift
-               - Otherwise hidden */}
-            {!isWorksheet && !isRemote && !isExemption && isShift && (
-              <button onClick={onAddIrregular} className="btn-outline">
-                + Add Irregular Shift Request
+              <button
+                onClick={onAddNew}
+                className="btn-primary flex-1 sm:flex-none shadow-lg shadow-red-500/20"
+              >
+                {isWorksheet ? '+ WorkSheet' : '+ New Request'}
               </button>
-            )}
-            {!isWorksheet && !isRemote && !isExemption && !isShift && (
-              <button onClick={onAddIrregular} className="btn-outline">
-                + Add Irregular Attendance Request
-              </button>
-            )}
+
+              {/* Irregular Actions */}
+              {!isWorksheet && !isRemote && !isExemption && (
+                <button
+                  onClick={onAddIrregular}
+                  className="btn-utility flex-1 sm:flex-none"
+                  title={isShift ? "Add Irregular Shift" : "Add Irregular Attendance"}
+                >
+                  + Irregular
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

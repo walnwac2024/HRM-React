@@ -7,57 +7,83 @@ export default function AttendanceApprovalTable({ rows, onView, onForceApprove, 
     const [open, setOpen] = useState(false);
     return (
       <div className="relative">
-        <button className="rounded-md border border-gray-300 bg-white p-1 hover:bg-gray-50" onClick={() => setOpen((s) => !s)}>
-          <MoreVertical className="h-5 w-5 text-gray-600" />
+        <button
+          className="kebab h-9 w-9"
+          onClick={() => setOpen((s) => !s)}
+          title="Actions"
+        >
+          <MoreVertical className="h-5 w-5" />
         </button>
         {open && (
-          <div className="absolute right-0 z-10 mt-2 w-48 overflow-hidden rounded-md border border-gray-200 bg-white text-sm shadow-md">
-            <button className="flex w-full items-center gap-2 px-3 py-2 hover:bg-gray-50" onClick={() => { setOpen(false); onView(); }}>
-              <Eye className="h-4 w-4" /> View
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 hover:bg-gray-50" onClick={() => { setOpen(false); onForceApprove(); }}>
-              <CheckCircle className="h-4 w-4" /> Forcefully Approved
-            </button>
-            <button className="flex w-full items-center gap-2 px-3 py-2 hover:bg-gray-50" onClick={() => { setOpen(false); onDownload(); }}>
-              <FileDown className="h-4 w-4" /> Download
-            </button>
-          </div>
+          <>
+            <div className="fixed inset-0 z-[5] bg-transparent" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl animate-in fade-in zoom-in duration-200">
+              <div className="p-1.5">
+                <button
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 hover:text-customRed rounded-xl transition-colors text-[13px] font-medium"
+                  onClick={() => { setOpen(false); onView(); }}
+                >
+                  <Eye className="h-4 w-4 opacity-70" /> View Details
+                </button>
+                <button
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 hover:text-emerald-600 rounded-xl transition-colors text-[13px] font-medium"
+                  onClick={() => { setOpen(false); onForceApprove(); }}
+                >
+                  <CheckCircle className="h-4 w-4 opacity-70" /> Force Approve
+                </button>
+                <button
+                  className="flex w-full items-center gap-3 px-4 py-2.5 text-slate-700 hover:bg-slate-50 hover:text-blue-600 rounded-xl transition-colors text-[13px] font-medium"
+                  onClick={() => { setOpen(false); onDownload(); }}
+                >
+                  <FileDown className="h-4 w-4 opacity-70" /> Download
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
     );
   };
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm">
-      <div className="overflow-x-auto">
-        <table className="w-full table-auto text-sm">
-          <thead className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-600">
+    <div className="card overflow-hidden">
+      <div className="table-scroll">
+        <table className="min-w-[1200px] w-full text-sm">
+          <thead className="thead">
             <tr>
               {["S#", "Employee", "Employee Details", "Request Date", "Request Type", "Status", "Forwarded On", "Is From Dashboard", "Details", "Approvals", "Action"].map((h) => (
-                <th key={h} className="px-4 py-3">{h}</th>
+                <th key={h} className="th border-0">{h}</th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-white divide-y divide-slate-100">
             {rows.length === 0 ? (
-              <tr><td colSpan={11} className="px-4 py-8 text-center text-gray-500">No records found.</td></tr>
+              <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic">No records found.</td></tr>
             ) : (
               rows.map((r, idx) => (
-                <tr key={r.id} className="border-t text-gray-800 hover:bg-gray-50">
-                  <td className="px-4 py-3">{idx + 1}</td>
-                  <td className="px-4 py-3">
-                    <button className="text-blue-600 hover:underline">{r.employee?.name}</button>
-                    <div className="text-xs text-gray-500">({r.employee?.code})</div>
+                <tr key={r.id} className="tr border-0">
+                  <td className="px-6 py-4 text-slate-400 font-medium">#{idx + 1}</td>
+                  <td className="px-6 py-4">
+                    <button className="text-customRed font-bold hover:underline text-left block">
+                      {r.employee?.name}
+                    </button>
+                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mt-0.5">
+                      {r.employee?.code}
+                    </div>
                   </td>
-                  <td className="whitespace-pre-line px-4 py-3 text-xs text-gray-600">{r.employeeDetails}</td>
-                  <td className="px-4 py-3">{r.requestDate}</td>
-                  <td className="px-4 py-3">{r.requestType}</td>
-                  <td className="px-4 py-3"><StatusBadge status={r.status} /></td>
-                  <td className="px-4 py-3">{r.forwardedOn}</td>
-                  <td className="px-4 py-3">{r.isFromDashboard ? "Yes" : "No"}</td>
-                  <td className="px-4 py-3">—</td>
-                  <td className="px-4 py-3">—</td>
-                  <td className="px-4 py-3">
+                  <td className="px-6 py-4 text-xs text-slate-500 leading-relaxed min-w-[200px]">{r.employeeDetails}</td>
+                  <td className="px-6 py-4 font-semibold text-slate-700">{r.requestDate}</td>
+                  <td className="px-6 py-4 text-slate-600 font-medium">{r.requestType}</td>
+                  <td className="px-6 py-4"><StatusBadge status={r.status} /></td>
+                  <td className="px-6 py-4 text-slate-500">{r.forwardedOn}</td>
+                  <td className="px-6 py-4">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${r.isFromDashboard ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
+                      {r.isFromDashboard ? "Dashboard" : "System"}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-slate-400">—</td>
+                  <td className="px-6 py-4 text-slate-400">—</td>
+                  <td className="px-6 py-4">
                     <RowActionMenu
                       onView={() => onView?.(r)}
                       onForceApprove={() => onForceApprove?.(r)}

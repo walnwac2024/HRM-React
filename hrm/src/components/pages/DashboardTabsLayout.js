@@ -18,6 +18,7 @@ export default function DashboardTabsLayout() {
     { label: "Organcogram", to: "/dashboard/organcogram", code: "organogram_view" },
     { label: "News", to: "/dashboard/news" },
     { label: "Permissions", to: "/dashboard/permissions", code: "permissions_view" },
+    { label: "Logs", to: "/dashboard/logs", code: "audit_logs_view" },
   ];
 
   // Filter tabs: Show if Admin OR has the specific feature code

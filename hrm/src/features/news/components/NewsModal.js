@@ -78,18 +78,18 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
-                <div className="flex items-center justify-between px-6 py-4 border-b sticky top-0 bg-white z-10">
+        <div className="modal-overlay">
+            <div className="modal-content max-w-lg">
+                <div className="modal-header">
                     <h2 className="text-lg font-bold text-gray-800">
                         {initialData ? "Edit News" : "Publish News"}
                     </h2>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                        <X size={20} className="text-gray-500" />
+                    <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+                        <X size={20} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="modal-body space-y-4">
                     {/* Post Type Selector */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
@@ -200,18 +200,18 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                         </label>
                     </div>
 
-                    <div className="flex justify-end gap-3 mt-6">
+                    <div className="modal-footer">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                            className="btn-outline flex-1 sm:flex-none"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="px-6 py-2 text-sm font-bold text-white bg-customRed hover:bg-red-700 rounded-lg shadow-md transition-all active:scale-95 disabled:opacity-50"
+                            className="btn-success flex-1 sm:flex-none px-12 shadow-emerald-500/20"
                         >
                             {saving ? "Saving..." : initialData ? "Update News" : "Publish"}
                         </button>

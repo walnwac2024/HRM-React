@@ -57,7 +57,7 @@ const VirtualizedTable = memo(({
                 itemCount={data.length}
                 itemSize={rowHeight}
                 width="100%"
-                className="scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100"
+                className=""
             >
                 {Row}
             </List>

@@ -172,8 +172,8 @@ export default function NewsPage() {
     };
 
     return (
-        <div className="p-4 sm:p-6 max-w-5xl mx-auto animate-in fade-in duration-500">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+        <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                         <Megaphone className="text-customRed" />
@@ -183,15 +183,15 @@ export default function NewsPage() {
                 </div>
 
                 {canPublish && (
-                    <div className="flex items-center gap-3">
-                        <div className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider border flex items-center gap-2 ${statusLoading ? "bg-gray-50 text-gray-400 border-gray-200" :
-                            wsStatus.status === "CONNECTED" ? "bg-green-50 text-green-600 border-green-200" :
-                                wsStatus.status === "QR_READY" ? "bg-yellow-50 text-yellow-600 border-yellow-200 animate-pulse" :
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                        <div className={`px-4 h-11 rounded-2xl text-[10px] font-bold uppercase tracking-wider border flex items-center justify-center gap-2 transition-all ${statusLoading ? "bg-slate-50 text-slate-400 border-slate-200" :
+                            wsStatus.status === "CONNECTED" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                                wsStatus.status === "QR_READY" ? "bg-amber-50 text-amber-600 border-amber-200 animate-pulse" :
                                     (wsStatus.status === "CONNECTING" || wsStatus.status === "AUTHENTICATED") ? "bg-blue-50 text-blue-600 border-blue-200 animate-pulse" :
-                                        "bg-gray-50 text-gray-500 border-gray-200"
+                                        "bg-slate-50 text-slate-500 border-slate-200"
                             }`}>
-                            <div className={`w-2 h-2 rounded-full ${statusLoading ? "bg-gray-300 animate-pulse" : wsStatus.status === "CONNECTED" ? "bg-green-500" : wsStatus.status === "QR_READY" ? "bg-yellow-500" : (wsStatus.status === "CONNECTING" || wsStatus.status === "AUTHENTICATED") ? "bg-blue-500" : "bg-gray-400"}`} />
-                            WhatsApp: {statusLoading ? "LOADING..." : (wsStatus.status === "CONNECTING" && wsStatus.stage === "LAUNCHING_BROWSER") ? "BOOTING..." : wsStatus.status}
+                            <div className={`w-2 h-2 rounded-full ${statusLoading ? "bg-slate-300 animate-pulse" : wsStatus.status === "CONNECTED" ? "bg-emerald-500" : wsStatus.status === "QR_READY" ? "bg-amber-500" : (wsStatus.status === "CONNECTING" || wsStatus.status === "AUTHENTICATED") ? "bg-blue-500" : "bg-slate-400"}`} />
+                            <span className="truncate">WA: {statusLoading ? "SYNCING..." : (wsStatus.status === "CONNECTING" && wsStatus.stage === "LAUNCHING_BROWSER") ? "BOOTING..." : wsStatus.status}</span>
                         </div>
 
                         <button
@@ -199,9 +199,9 @@ export default function NewsPage() {
                                 setEditingItem(null);
                                 setModalOpen(true);
                             }}
-                            className="flex items-center gap-2 px-6 py-2.5 bg-customRed text-white font-bold rounded-lg shadow-lg hover:shadow-red-200 transition-all active:scale-95"
+                            className="btn-primary h-11 px-8 shadow-red-500/20"
                         >
-                            <Plus size={18} />
+                            <Plus size={18} className="mr-2" />
                             Post News
                         </button>
                     </div>
@@ -209,7 +209,7 @@ export default function NewsPage() {
             </div>
 
             {(canPublish && wsStatus.status === "AUTHENTICATED") && (
-                <div className="mb-8 p-10 bg-white rounded-3xl shadow-xl border-2 border-blue-200 flex flex-col items-center animate-in zoom-in-95 duration-500">
+                <div className="mb-8 p-6 sm:p-10 bg-white rounded-2xl sm:rounded-3xl shadow-xl border-2 border-blue-200 flex flex-col items-center animate-in zoom-in-95 duration-500">
                     <div className="relative mb-6">
                         <div className="w-20 h-20 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
                         <div className="absolute inset-0 flex items-center justify-center">
@@ -246,7 +246,7 @@ export default function NewsPage() {
             )}
 
             {canPublish && wsStatus.status === "QR_READY" && wsStatus.qr && (
-                <div className="mb-8 p-8 bg-white rounded-[32px] border-2 border-dashed border-yellow-200 shadow-xl shadow-yellow-500/5 flex flex-col items-center animate-in zoom-in-95 duration-500">
+                <div className="mb-8 p-5 sm:p-8 bg-white rounded-2xl sm:rounded-[32px] border-2 border-dashed border-yellow-200 shadow-xl shadow-yellow-500/5 flex flex-col items-center animate-in zoom-in-95 duration-500">
                     <div className="mb-6 text-center">
                         <h2 className="text-xl font-black text-slate-800 mb-1">Link WhatsApp Account</h2>
                         <p className="text-[13px] text-slate-500 max-w-sm">
@@ -269,7 +269,7 @@ export default function NewsPage() {
             )}
 
             {canPublish && wsStatus.status === "CONNECTED" && (
-                <div className="mb-8 p-6 bg-white rounded-[32px] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 duration-500">
+                <div className="mb-8 p-5 sm:p-6 bg-white rounded-2xl sm:rounded-[32px] shadow-sm border border-slate-100 flex flex-col md:flex-row items-center gap-6 animate-in slide-in-from-top-4 duration-500">
                     <div className="flex items-center gap-4 flex-1">
                         <div className="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 border border-emerald-100 shrink-0">
                             <div className="relative">
@@ -359,16 +359,16 @@ export default function NewsPage() {
                         </div>
                     </div>
                     {!statusLoading && (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
                             <button
                                 onClick={handleHardResetWhatsApp}
-                                className="text-[10px] font-black text-slate-400 hover:text-red-500 uppercase tracking-[0.1em] transition-colors"
+                                className="text-[10px] font-black text-slate-400 hover:text-rose-500 uppercase tracking-[0.1em] transition-colors"
                             >
                                 Reset Files
                             </button>
                             <button
                                 onClick={handleManualInit}
-                                className="px-5 py-2.5 bg-customRed text-white text-[10px] font-black uppercase tracking-[0.15em] rounded-xl shadow-lg shadow-red-500/10 hover:shadow-red-500/20 active:scale-95 transition-all"
+                                className="btn-primary h-11 px-8 shadow-red-500/10"
                             >
                                 Connect Now
                             </button>

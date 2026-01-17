@@ -358,7 +358,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                   setIsSuccess(false);
                   setActiveTab("employment");
                 }}
-                className="btn-primary h-11 px-8 rounded-2xl"
+                className="btn-success h-11 px-8 rounded-2xl shadow-emerald-500/20"
               >
                 Add Another
               </button>
@@ -897,9 +897,9 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         {documents.map((doc, idx) => (
                           <div
                             key={idx}
-                            className="p-4 bg-slate-50/50 rounded-2xl border border-slate-200 hover:border-slate-300 transition-colors shadow-sm"
+                            className="p-4 sm:p-5 bg-slate-50/50 rounded-2xl border border-slate-200 hover:border-slate-300 transition-colors shadow-sm"
                           >
-                            <div className="grid md:grid-cols-[1.5fr,1fr,1.5fr,1fr,1fr,auto] gap-4 items-end">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
                               <Field label="Document Title">
                                 <input
                                   type="text"
@@ -1010,7 +1010,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                 type="submit"
                 form="add-employee-form"
                 disabled={loading}
-                className="btn-primary w-full sm:w-auto px-10"
+                className="btn-success w-full sm:w-auto px-12 shadow-emerald-500/20"
               >
                 {loading ? (
                   <div className="flex items-center gap-2">

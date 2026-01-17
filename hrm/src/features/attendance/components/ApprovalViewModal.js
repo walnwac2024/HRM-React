@@ -10,15 +10,15 @@ const btnSecondary = `${btnBase} border border-gray-300 bg-white text-gray-700 h
 export default function ApprovalViewModal({ open, data, onClose, onApprove, onReject }) {
   if (!open || !data) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <h3 className="text-base font-semibold text-gray-900">Attendance Request Details</h3>
-          <button className="rounded p-1 hover:bg-gray-100" onClick={onClose}>
-            <XCircle className="h-5 w-5 text-gray-500" />
+    <div className="modal-overlay">
+      <div className="modal-content max-w-2xl">
+        <div className="modal-header">
+          <h3 className="text-base font-semibold text-gray-800">Attendance Request Details</h3>
+          <button className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors" onClick={onClose}>
+            <XCircle className="h-5 w-5" />
           </button>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto px-4 py-4">
+        <div className="modal-body overflow-y-auto">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-md border border-gray-200 p-3">
               <div className="mb-2 text-sm font-semibold text-gray-700">Employee Info</div>
@@ -40,10 +40,10 @@ export default function ApprovalViewModal({ open, data, onClose, onApprove, onRe
             </div>
           </div>
         </div>
-        <div className="flex items-center justify-end gap-3 border-t px-4 py-3">
-          <button className={btnSecondary} onClick={onClose}>Close</button>
-          <button className={btnPrimary} onClick={() => onApprove?.(data)}>Approve</button>
-          <button className={btnSecondary} onClick={() => onReject?.(data)}>Reject</button>
+        <div className="modal-footer flex-col sm:flex-row">
+          <button className="btn-outline flex-1 sm:flex-none" onClick={onClose}>Close</button>
+          <button className="btn-primary flex-1 sm:flex-none" onClick={() => onApprove?.(data)}>Approve</button>
+          <button className="btn-outline flex-1 sm:flex-none text-red-600 border-red-200 hover:bg-red-50" onClick={() => onReject?.(data)}>Reject</button>
         </div>
       </div>
     </div>

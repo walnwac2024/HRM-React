@@ -65,18 +65,12 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50" role="dialog" aria-modal="true"
-      onKeyDown={(e) => e.key === "Escape" && onClose?.()}>
-      {/* backdrop */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* dialog */}
-      <div className="relative z-10 w-full max-w-2xl mx-auto mt-14 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden">
-        {/* header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b">
-          <h3 className="font-semibold">Upload Excel Files</h3>
+    <div className="modal-overlay">
+      <div className="modal-content max-w-2xl">
+        <div className="modal-header">
+          <h3 className="font-semibold text-gray-800">Upload Excel Files</h3>
           <button
-            className="h-7 w-7 rounded-full grid place-items-center text-slate-600 hover:bg-slate-100"
+            className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
             onClick={onClose}
             aria-label="Close"
           >
@@ -84,17 +78,16 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
           </button>
         </div>
 
-        {/* tabs */}
-        <div className="px-4 pt-3">
-          <div className="flex gap-2">
+        <div className="px-4 pt-4">
+          <div className="flex gap-2 p-1 bg-slate-50 rounded-lg w-fit">
             {tabs.map((t) => (
               <button
                 key={t.key}
                 onClick={() => setActive(t.key)}
-                className={`h-9 px-3 rounded-md text-sm border transition-colors
+                className={`h-8 px-4 rounded-md text-xs font-medium transition-all
                   ${active === t.key
-                    ? "border-customRed text-customRed bg-red-50"
-                    : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}
+                    ? "bg-white text-customRed shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"}`}
               >
                 {t.label}
               </button>
@@ -102,14 +95,13 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
           </div>
         </div>
 
-        {/* body */}
-        <div className="p-4">
-          <div className="mb-3">
-            <span
-              className="text-xs text-customRed cursor-pointer hover:underline"
+        <div className="modal-body space-y-4">
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              className="text-xs font-bold text-customRed hover:underline flex items-center gap-1.5"
               onClick={async () => {
                 if (active === 'employees') {
-                  // download from API
                   try {
                     const res = await api.get("/employees/import-template", { responseType: 'blob' });
                     const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -127,13 +119,14 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
                 }
               }}
             >
+              <i className="fas fa-download text-[10px]" />
               Download {tabs.find((t) => t.key === active)?.label} Template
-            </span>
+            </button>
           </div>
 
           <div
-            className="border-2 border-dashed rounded-xl p-6 text-center
-                       border-slate-200 hover:border-customRed transition-colors cursor-pointer"
+            className="border-2 border-dashed rounded-2xl p-10 text-center
+                       border-slate-200 hover:border-customRed bg-slate-50/50 transition-all cursor-pointer group"
             onDragOver={(e) => e.preventDefault()}
             onDrop={drop}
             onClick={() => inputRef.current?.click()}
@@ -147,34 +140,48 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
             />
 
             {!file ? (
-              <>
-                <div className="text-slate-600 text-sm">
-                  Drag & drop an Excel file here, or{" "}
-                  <span className="text-customRed">choose file</span>
+              <div className="space-y-3">
+                <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center mx-auto text-customRed group-hover:scale-110 transition-transform">
+                  <i className="fas fa-cloud-upload-alt text-xl" />
                 </div>
-                <div className="mt-1 text-xs text-slate-500">Accepted: .xlsx, .xls</div>
-              </>
+                <div>
+                  <div className="text-slate-800 font-bold">
+                    Choose an Excel file
+                  </div>
+                  <div className="text-slate-500 text-xs mt-1">
+                    or drag & drop it here
+                  </div>
+                </div>
+                <div className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                  Accepted: .xlsx, .xls
+                </div>
+              </div>
             ) : (
-              <div className="flex items-center justify-center gap-3">
-                <div className="text-sm text-slate-700">{file.name}</div>
+              <div className="flex flex-col items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                  <i className="fas fa-file-excel text-xl" />
+                </div>
+                <div className="text-center">
+                  <div className="text-sm font-bold text-slate-800">{file.name}</div>
+                  <div className="text-[10px] text-gray-400">Ready to upload</div>
+                </div>
                 <button
                   type="button"
-                  onClick={remove}
-                  className="text-xs text-slate-500 hover:text-customRed"
+                  onClick={(e) => { e.stopPropagation(); remove(); }}
+                  className="text-xs font-bold text-customRed hover:opacity-80 transition-opacity"
                 >
-                  Remove
+                  Change File
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* footer */}
-        <div className="px-4 py-3 border-t flex items-center justify-end gap-2">
+        <div className="modal-footer flex-col sm:flex-row">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 px-4 rounded-md border border-slate-200 text-slate-700 hover:bg-slate-50 text-sm"
+            className="btn-outline flex-1 sm:flex-none"
           >
             Cancel
           </button>
@@ -182,10 +189,9 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
             type="button"
             disabled={!file}
             onClick={save}
-            className={`h-9 px-5 rounded-md text-white text-sm
-              ${file ? "bg-customRed hover:opacity-95" : "bg-slate-300 cursor-not-allowed"}`}
+            className={`btn-primary flex-1 sm:flex-none ${!file ? "opacity-60 cursor-not-allowed" : ""}`}
           >
-            {loading ? "Uploading..." : "Import"}
+            {loading ? "Uploading..." : "Import Data"}
           </button>
         </div>
       </div>

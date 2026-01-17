@@ -28,51 +28,31 @@ export default function RoleTemplateModal({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* overlay */}
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-
-      {/* card */}
-      <div className="relative z-10 w-full max-w-lg overflow-hidden rounded-md border border-slate-200 bg-white shadow-xl">
-        {/* header - slim, like the reference */}
-        <div className="flex items-center justify-between bg-slate-100 px-4 py-2.5 border-b">
-          <h3 className="text-sm font-semibold text-slate-700">Add New Template</h3>
+    <div className="modal-overlay">
+      <div className="modal-content max-w-lg">
+        <div className="modal-header">
+          <h3 className="text-sm font-semibold text-gray-800">Add New Template</h3>
           <button
             type="button"
             onClick={onClose}
-            className="h-7 w-7 grid place-items-center rounded hover:bg-slate-200"
+            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
             aria-label="Close"
-            title="Close"
           >
-            <svg
-              className="h-4 w-4 text-slate-600"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            ×
           </button>
         </div>
 
-        {/* body */}
-        <div className="px-4 py-4 space-y-4">
+        <div className="modal-body space-y-4">
           {/* Template Title */}
           <div className="space-y-1.5">
-            <label className="text-[13px] text-slate-600">
+            <label className="form-label">
               Template Title <span className="text-customRed">*</span>
             </label>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Template for HR"
-              className="h-9 w-full rounded border border-slate-300 px-3 text-[14px] focus:border-customRed focus:ring-customRed"
+              className="input"
             />
           </div>
 
@@ -90,12 +70,12 @@ export default function RoleTemplateModal({
 
           {/* When toggle is ON show select */}
           {cloneOn && (
-            <div className="space-y-1.5">
-              <label className="text-[13px] text-slate-600">Select Template</label>
+            <div className="space-y-1.5 pt-2">
+              <label className="form-label">Select Template</label>
               <select
                 value={cloneFrom}
                 onChange={(e) => setCloneFrom(e.target.value)}
-                className="h-9 w-full rounded border border-slate-300 px-2 text-[14px] focus:border-customRed focus:ring-customRed"
+                className="input"
               >
                 <option value="">Select One</option>
                 {templates.map((t) => (
@@ -108,12 +88,11 @@ export default function RoleTemplateModal({
           )}
         </div>
 
-        {/* footer - right aligned Save like reference */}
-        <div className="flex justify-end gap-2 px-4 py-3 border-t bg-white">
+        <div className="modal-footer flex-col sm:flex-row">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 rounded border border-slate-300 bg-white px-4 text-sm text-slate-700 hover:bg-slate-50"
+            className="btn-outline flex-1 sm:flex-none"
           >
             Cancel
           </button>
@@ -126,14 +105,9 @@ export default function RoleTemplateModal({
                 cloneFrom: cloneOn ? cloneFrom : null,
               })
             }
-            className={[
-              "h-9 rounded px-4 text-sm text-white shadow-sm",
-              canSave
-                ? "bg-customRed hover:bg-customRed/90"
-                : "bg-customRed/60 cursor-not-allowed",
-            ].join(" ")}
+            className={`btn-primary flex-1 sm:flex-none ${!canSave ? "opacity-60 cursor-not-allowed" : ""}`}
           >
-            Save
+            Save Template
           </button>
         </div>
       </div>

@@ -141,15 +141,16 @@ export default function LeavePage() {
 
             <section className="flex-1 min-w-0">
                 <div className="card min-h-[500px]">
-                    <div className="card-header">
-                        <h2 className="card-title">
+                    <div className="card-header flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <h2 className="card-title order-2 sm:order-1 capitalize">
                             {activeKey.replace("-", " ")}
                         </h2>
                         {activeKey === "leave-settings" && !showTypeForm && (
                             <button
                                 onClick={() => { setTypeFormData({ id: null, name: "", entitlement_days: "" }); setShowTypeForm(true); }}
-                                className="btn-primary h-8 text-[11px] uppercase"
+                                className="btn-primary w-full sm:w-auto h-11 px-6 shadow-red-500/10"
                             >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                                 Add Leave Type
                             </button>
                         )}
@@ -184,7 +185,7 @@ export default function LeavePage() {
                                     )}
                                 </div>
 
-                                <div className="overflow-x-auto">
+                                <div className="table-scroll">
                                     <table className="w-full text-sm text-left border-collapse">
                                         <thead>
                                             <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
@@ -235,7 +236,7 @@ export default function LeavePage() {
 
                         {activeKey === "apply-leave" && (
                             <form onSubmit={handleApply} className="w-full space-y-6 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="form-grid">
                                     <div className="md:col-span-2">
                                         <SharedDropdown
                                             label="Leave Type"
@@ -279,10 +280,10 @@ export default function LeavePage() {
                                         ></textarea>
                                     </div>
                                 </div>
-                                <div className="flex justify-end gap-3 pt-2">
+                                <div className="flex justify-end pt-2">
                                     <button
                                         type="submit"
-                                        className="btn-primary w-full md:w-auto md:px-12 h-12 text-xs uppercase tracking-widest shadow-lg shadow-red-100"
+                                        className="btn-success w-full sm:w-auto sm:px-12 h-12 shadow-emerald-500/20"
                                     >
                                         Submit Application
                                     </button>
@@ -291,7 +292,7 @@ export default function LeavePage() {
                         )}
 
                         {activeKey === "leave-approvals" && (
-                            <div className="overflow-x-auto">
+                            <div className="table-scroll">
                                 <table className="w-full text-sm text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">
@@ -321,7 +322,7 @@ export default function LeavePage() {
                                                     <div className="text-[11px] text-slate-400">{l.total_days} days</div>
                                                     {l.reason && (
                                                         <div className="text-[10px] text-slate-500 mt-1 italic leading-tight border-l-2 border-slate-100 pl-2">
-                                                            "{l.reason}"
+                                                            \"{l.reason}\"
                                                         </div>
                                                     )}
                                                 </td>
@@ -336,18 +337,18 @@ export default function LeavePage() {
                                                         <div className="text-[9px] text-slate-400 mt-1 uppercase">By {l.handled_by}</div>
                                                     )}
                                                 </td>
-                                                <td className="px-4 py-4 text-right space-x-2">
+                                                <td className="px-4 py-4 text-right">
                                                     {l.status === "pending" && (
-                                                        <div className="inline-flex gap-2">
+                                                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
                                                             <button
                                                                 onClick={() => handleStatusUpdate(l.id, "approved")}
-                                                                className="h-8 px-3 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 text-[10px] uppercase font-bold transition-colors"
+                                                                className="btn-utility !border-emerald-200 !text-emerald-600 !hover:bg-emerald-50 !h-9 !px-4"
                                                             >
                                                                 Approve
                                                             </button>
                                                             <button
                                                                 onClick={() => handleStatusUpdate(l.id, "rejected")}
-                                                                className="h-8 px-3 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 text-[10px] uppercase font-bold transition-colors"
+                                                                className="btn-utility !border-rose-200 !text-rose-600 !hover:bg-rose-50 !h-9 !px-4"
                                                             >
                                                                 Reject
                                                             </button>
@@ -366,7 +367,7 @@ export default function LeavePage() {
                                 {showTypeForm ? (
                                     <form onSubmit={handleSaveType} className="w-full space-y-6 bg-slate-50/50 p-8 rounded-2xl border border-slate-100">
                                         <h3 className="text-xs font-bold text-slate-700 uppercase mb-4">{typeFormData.id ? "Edit Leave Type" : "Add New Leave Type"}</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="form-grid">
                                             <div>
                                                 <label className="form-label uppercase text-[10px] font-bold">Type Name</label>
                                                 <input
@@ -389,13 +390,13 @@ export default function LeavePage() {
                                                 />
                                             </div>
                                         </div>
-                                        <div className="flex justify-end gap-3 pt-2">
-                                            <button type="button" onClick={() => setShowTypeForm(false)} className="btn-outline md:w-32 h-10 text-[11px] uppercase font-bold border-slate-200 text-slate-500 hover:bg-slate-50">Cancel</button>
-                                            <button type="submit" className="btn-primary md:w-32 h-10 text-[11px] uppercase shadow-md shadow-red-100">Save Type</button>
+                                        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                                            <button type="button" onClick={() => setShowTypeForm(false)} className="btn-outline w-full sm:w-auto h-11 px-8 text-slate-500">Cancel</button>
+                                            <button type="submit" className="btn-primary w-full sm:w-auto h-11 px-8">Save Type</button>
                                         </div>
                                     </form>
                                 ) : (
-                                    <div className="overflow-x-auto">
+                                    <div className="table-scroll">
                                         <table className="w-full text-sm text-left border-collapse">
                                             <thead>
                                                 <tr className="border-b border-slate-100 text-[11px] text-slate-500 uppercase tracking-wider">

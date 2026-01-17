@@ -28,7 +28,7 @@ function EmployeesTable({
 
   return (
     <div className="card overflow-hidden">
-      <div className="overflow-x-auto -mx-1 sm:mx-0">
+      <div className="table-scroll">
         <table className="min-w-full text-sm table-auto sm:table-fixed">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr className="text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">

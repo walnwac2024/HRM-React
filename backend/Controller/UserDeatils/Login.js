@@ -2,6 +2,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { pool } = require("../../Utils/db");
+const { recordLog } = require("../../Utils/AuditUtils");
 
 const JWT_SECRET = process.env.JWT_SECRET || "change_me";
 
@@ -44,6 +45,12 @@ const login = async (req, res) => {
     );
 
     if (!empRows.length) {
+      await recordLog({
+        action: `Failed login attempt (email: ${email})`,
+        category: "Login Attempts",
+        status: "Failed",
+        details: { email }
+      });
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -51,6 +58,13 @@ const login = async (req, res) => {
 
     // ✅ inactive block (clear message)
     if (Number(emp.is_active) !== 1) {
+      await recordLog({
+        actorId: emp.id,
+        action: "Login blocked: Account inactive",
+        category: "Login Attempts",
+        status: "Failed",
+        details: { email: emp.Official_Email }
+      });
       return res
         .status(403)
         .json({ message: "Account is inactive. Contact admin." });
@@ -62,6 +76,13 @@ const login = async (req, res) => {
 
     const ok = await bcrypt.compare(password, emp.password_hash);
     if (!ok) {
+      await recordLog({
+        actorId: emp.id,
+        action: "Login failed: Incorrect password",
+        category: "Login Attempts",
+        status: "Failed",
+        details: { email: emp.Official_Email }
+      });
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
@@ -167,11 +188,18 @@ const login = async (req, res) => {
         { expiresIn: "8h" }
       );
 
-      req.session.save((saveErr) => {
+      req.session.save(async (saveErr) => {
         if (saveErr) {
           console.error("Session save error:", saveErr);
           return res.status(500).json({ message: "Server error" });
         }
+        await recordLog({
+          actorId: emp.id,
+          action: "Login successful",
+          category: "Login Attempts",
+          status: "Success",
+          details: { email: emp.Official_Email }
+        });
         return res
           .status(200)
           .json({ message: "Login successful", user: payload, token });

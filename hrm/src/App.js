@@ -23,6 +23,7 @@ const LeavePage = lazy(() => import("./features/leave/LeavePage"));
 const PermissionsPage = lazy(() => import("./features/permissions/PermissionsPage"));
 const NewsPage = lazy(() => import("./features/news/NewsPage"));
 const ReportsPage = lazy(() => import("./features/reports/ReportsPage"));
+const LogsPage = lazy(() => import("./features/audit/LogsPage"));
 
 // Loading component
 const LoadingFallback = () => (
@@ -103,6 +104,7 @@ export default function App() {
                 <Route path="organcogram" element={<Organcogram />} />
                 <Route path="news" element={<NewsPage />} />
                 <Route path="permissions" element={<PermissionsPage />} />
+                <Route path="logs" element={<LogsPage />} />
               </Route>
 
               {/* Other top-level pages */}

@@ -95,15 +95,15 @@ export default function AddRemoteWorkModal({ open, onClose, onSaved }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 md:p-8">
-      <div className="w-full max-w-4xl rounded-2xl bg-white shadow-xl ring-1 ring-gray-900/5">
+    <div className="modal-overlay">
+      <div className="modal-content max-w-4xl">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-lg font-semibold text-gray-900">Add Remote Work Request</h2>
+        <div className="modal-header">
+          <h2 className="text-lg font-semibold text-gray-800">Add Remote Work Request</h2>
           <button
             type="button"
             onClick={onClose}
-            className="kebab h-9 w-9 border-gray-300 text-gray-500 hover:bg-gray-50"
+            className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
             aria-label="Close"
           >
             ×
@@ -111,9 +111,8 @@ export default function AddRemoteWorkModal({ open, onClose, onSaved }) {
         </div>
 
         {/* Form */}
-        <form onSubmit={submit} className="px-6 py-5">
-          {/* Row 1: Employee / Remote Work Date */}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <form onSubmit={submit} className="modal-body">
+          <div className="form-grid">
             <div>
               <label className="form-label">
                 Employee <span className="text-customRed">*</span>
@@ -145,10 +144,7 @@ export default function AddRemoteWorkModal({ open, onClose, onSaved }) {
                 onBlur={() => setTouched((t) => ({ ...t, remoteDate: true }))}
               />
             </div>
-          </div>
 
-          {/* Row 2: In Date / In Time */}
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="form-label">In Date</label>
               <input
@@ -171,10 +167,7 @@ export default function AddRemoteWorkModal({ open, onClose, onSaved }) {
                 placeholder="Select Time"
               />
             </div>
-          </div>
 
-          {/* Row 3: Out Date / Out Time */}
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
               <label className="form-label">Out Date</label>
               <input
@@ -197,32 +190,32 @@ export default function AddRemoteWorkModal({ open, onClose, onSaved }) {
                 placeholder="Select Time"
               />
             </div>
+
+            <div className="md:col-span-2">
+              <label className="form-label">
+                Reason <span className="text-customRed">*</span>
+              </label>
+              <textarea
+                rows={8}
+                className={input("reason")}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, reason: true }))}
+                placeholder="Explain why remote work is needed…"
+              />
+            </div>
           </div>
 
-          {/* Reason */}
-          <div className="mt-4">
-            <label className="form-label">
-              Reason <span className="text-customRed">*</span>
-            </label>
-            <textarea
-              rows={8}
-              className={input("reason")}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              onBlur={() => setTouched((t) => ({ ...t, reason: true }))}
-              placeholder="Explain why remote work is needed…"
-            />
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-4">
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy ? "Submitting..." : "Submit"}
-            </button>
-            <button type="button" className="btn-outline" onClick={onClose} disabled={busy}>
-              Back
-            </button>
-            <span className="ml-1 text-xs text-gray-500">
+          <div className="modal-footer flex-col sm:flex-row mt-6">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <button type="submit" className="btn-primary flex-1 sm:flex-none" disabled={busy}>
+                {busy ? "Submitting..." : "Submit"}
+              </button>
+              <button type="button" className="btn-outline flex-1 sm:flex-none" onClick={onClose} disabled={busy}>
+                Back
+              </button>
+            </div>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
               Fields marked with <span className="text-customRed">*</span> are mandatory.
             </span>
           </div>

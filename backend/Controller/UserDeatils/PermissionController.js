@@ -1,5 +1,6 @@
 // backend/Controller/UserDeatils/PermissionController.js
 const { pool } = require("../../Utils/db");
+const { recordLog } = require("../../Utils/AuditUtils");
 
 /**
  * GET /api/v1/permissions/user-types
@@ -8,9 +9,19 @@ const { pool } = require("../../Utils/db");
 async function listUserTypes(req, res) {
     console.log("PERMISSION_LOG: Fetching user types...");
     try {
-        const [rows] = await pool.execute(
-            "SELECT id, type, permission_level, Create_permission, Edit_permission, View_permission FROM users_types ORDER BY permission_level DESC"
-        );
+        const user = req.session?.user;
+        const isDeveloper = String(user?.role || "").toLowerCase() === "developer";
+
+        let query = "SELECT id, type, permission_level, Create_permission, Edit_permission, View_permission FROM users_types";
+        let params = [];
+
+        if (!isDeveloper) {
+            query += " WHERE type != 'developer'";
+        }
+
+        query += " ORDER BY permission_level DESC";
+
+        const [rows] = await pool.execute(query, params);
         console.log("PERMISSION_LOG: Found", rows.length, "types");
         return res.json(rows);
     } catch (err) {
@@ -45,6 +56,17 @@ async function listAllPermissions(req, res) {
 async function getTypePermissions(req, res) {
     try {
         const { typeId } = req.params;
+        const user = req.session?.user;
+        const isDeveloper = String(user?.role || "").toLowerCase() === "developer";
+
+        // Check if the target type is 'developer'
+        const [typeRows] = await pool.execute("SELECT type FROM users_types WHERE id = ?", [typeId]);
+        if (typeRows.length > 0 && String(typeRows[0].type).toLowerCase() === "developer") {
+            if (!isDeveloper) {
+                return res.status(403).json({ message: "Forbidden: Only developers can access developer permissions." });
+            }
+        }
+
         const [rows] = await pool.execute(
             "SELECT permission_id FROM user_type_permission WHERE user_type_id = ?",
             [typeId]
@@ -66,6 +88,16 @@ async function updateTypePermissions(req, res) {
     try {
         const { typeId } = req.params;
         const { permissionIds } = req.body || {}; // array of permission IDs
+        const user = req.session?.user;
+        const isDeveloper = String(user?.role || "").toLowerCase() === "developer";
+
+        // Check if the target type is 'developer'
+        const [typeRows] = await conn.execute("SELECT type FROM users_types WHERE id = ?", [typeId]);
+        if (typeRows.length > 0 && String(typeRows[0].type).toLowerCase() === "developer") {
+            if (!isDeveloper) {
+                return res.status(403).json({ message: "Forbidden: Only developers can modify developer permissions." });
+            }
+        }
 
         if (!Array.isArray(permissionIds)) {
             return res.status(400).json({ message: "permissionIds must be an array" });
@@ -90,6 +122,13 @@ async function updateTypePermissions(req, res) {
         }
 
         await conn.commit();
+        await recordLog({
+            actorId: user.id,
+            action: `Updated permissions for user type ID: ${typeId}`,
+            category: "Permission Updates",
+            status: "Success",
+            details: { typeId, permissionIds }
+        });
         return res.json({ message: "Permissions updated successfully" });
     } catch (err) {
         if (conn) await conn.rollback();

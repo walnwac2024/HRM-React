@@ -419,14 +419,14 @@ export default function Dashboard() {
             </div>
 
             {/* Punch buttons */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handlePunch("IN")}
                 disabled={loadingAttendance || punching || !canCheckIn}
-                className={`w-full rounded-lg py-2 text-sm text-white ${loadingAttendance || punching || !canCheckIn
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-customRed hover:opacity-95"
-                  }`}
+                className={`${loadingAttendance || punching || !canCheckIn
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  : "btn-primary !bg-emerald-600 !hover:bg-emerald-700 !shadow-emerald-600/20"
+                  } w-full`}
               >
                 {punching ? "..." : "Check In"}
               </button>
@@ -434,10 +434,10 @@ export default function Dashboard() {
               <button
                 onClick={() => handlePunch("OUT")}
                 disabled={loadingAttendance || punching || !canCheckOut}
-                className={`w-full rounded-lg py-2 text-sm text-white ${loadingAttendance || punching || !canCheckOut
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-customRed hover:opacity-95"
-                  }`}
+                className={`${loadingAttendance || punching || !canCheckOut
+                  ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
+                  : "btn-outline !text-rose-600 !hover:bg-rose-50 !shadow-rose-600/20"
+                  } w-full shadow-lg`}
               >
                 {punching ? "..." : "Check Out"}
               </button>
@@ -510,7 +510,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-                <div className="overflow-x-auto rounded border">
+                <div className="table-scroll border rounded">
                   <table className="min-w-[400px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
@@ -550,7 +550,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="p-2.5 sm:p-3 max-h-[300px] overflow-y-auto custom-scrollbar">
-                <div className="overflow-x-auto rounded border">
+                <div className="table-scroll border rounded">
                   <table className="min-w-[320px] w-full text-[11px] sm:text-[12px]">
                     <thead className="bg-gray-50 text-gray-600">
                       <tr>
@@ -594,7 +594,7 @@ export default function Dashboard() {
             <div className="text-[11px] sm:text-[12px] text-gray-500">—</div>
           </div>
           <div className="p-2.5 sm:p-3">
-            <div className="overflow-x-auto rounded border">
+            <div className="table-scroll border rounded">
               <table className="min-w-[320px] w-full text-[11px] sm:text-[12px]">
                 <thead className="bg-gray-50 text-gray-600">
                   <tr>

@@ -80,10 +80,10 @@ function Filters({ filters, onChange, options }) {
   const asSimpleOptions = (arr) => arr.map((v) => ({ value: v, label: v }));
 
   return (
-    <div className="grid grid-cols-12 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {/* Row 1 */}
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Station"
         name="station"
         value={filters.station}
@@ -93,7 +93,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Department"
         name="department"
         value={filters.department}
@@ -103,7 +103,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Employee Group"
         name="employee_group"
         value={filters.employee_group}
@@ -112,7 +112,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Designation"
         name="designation"
         value={filters.designation}
@@ -123,7 +123,7 @@ function Filters({ filters, onChange, options }) {
 
       {/* Row 2 */}
       <LabeledInput
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Employee Code"
         name="employee_code"
         value={filters.employee_code}
@@ -131,7 +131,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledInput
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Employee Name"
         name="employee_name"
         value={filters.employee_name}
@@ -139,7 +139,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledInput
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="User Name"
         name="user_name"
         value={filters.user_name}
@@ -147,7 +147,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Status"
         name="status"
         value={filters.status}
@@ -157,7 +157,7 @@ function Filters({ filters, onChange, options }) {
 
       {/* Row 3 */}
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Documents Attached"
         name="documents_attached"
         value={filters.documents_attached}
@@ -166,7 +166,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Roles Template"
         name="role_template"
         value={filters.role_template}
@@ -176,7 +176,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledInput
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Cnic #"
         name="cnic"
         value={filters.cnic}
@@ -184,7 +184,7 @@ function Filters({ filters, onChange, options }) {
       />
 
       <LabeledSelect
-        className="col-span-12 md:col-span-6 lg:col-span-3"
+        className="col-span-1"
         label="Flag"
         name="flag"
         value={filters.flag}

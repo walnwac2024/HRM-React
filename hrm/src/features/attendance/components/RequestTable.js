@@ -36,8 +36,8 @@ export default function RequestTable({
   rows = [],
   page = 1,
   pageCount = 1,
-  onPrev = () => {},
-  onNext = () => {},
+  onPrev = () => { },
+  onNext = () => { },
 }) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageCount = Math.max(1, Number(pageCount) || 1);
@@ -47,7 +47,7 @@ export default function RequestTable({
   return (
     <div className="card">
       <div className="card-body">
-        <div className="overflow-x-auto"> {/* keep layout tidy on small screens */}
+        <div className="table-scroll">
           <table className="table">
             <thead className="thead">
               <tr>

@@ -21,6 +21,7 @@ const Leave = require("../Controller/Leaves/Leave");
 const News = require("../Controller/News/NewsController");
 const Notifications = require("../Controller/UserDeatils/NotificationController");
 const Chat = require("../Controller/UserDeatils/ChatController");
+const Audit = require("../Controller/Audit/AuditController");
 
 const {
     listEmployees,
@@ -108,6 +109,10 @@ router.get("/permissions/user-types", isAuthenticated, requireRole("super_admin"
 router.get("/permissions/all", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), listAllPermissions);
 router.get("/permissions/type/:typeId", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), getTypePermissions);
 router.post("/permissions/type/:typeId", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateTypePermissions);
+
+// Audit routes
+router.get("/audit/logs", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), Audit.listLogs);
+router.get("/audit/filters", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), Audit.listLogFilters);
 
 // Employee routes
 router.get("/employees", isAuthenticated, listEmployees);

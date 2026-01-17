@@ -1,5 +1,5 @@
-// backend/Controller/Attendance/Attendance.js
 const { pool } = require("../../Utils/db");
+const { recordLog } = require("../../Utils/AuditUtils");
 const https = require("https");
 const xlsx = require('xlsx');
 
@@ -248,6 +248,18 @@ const punch = async (req, res) => {
       }
     }
 
+    // Audit Log for Punch Security Violation (if detected)
+    // Note: This is already logged to attendance_security_violations table, but adding to audit_logs for unified visibility
+    if (clientTime && Math.abs(now.getTime() - new Date(clientTime).getTime()) > 5 * 60000) {
+      await recordLog({
+        actorId: targetEmployeeId,
+        action: `Attendance security violation (clock drift: ${Math.round(Math.abs(now.getTime() - new Date(clientTime).getTime()) / 60000)}m)`,
+        category: "System",
+        status: "Failed",
+        details: { punch_type, clientTime, serverTime: now }
+      });
+    }
+
     // --- GPS VALIDATION ---
     const [allOffices] = await conn.execute(
       "SELECT id, name, latitude, longitude, allowed_radius_meters FROM offices WHERE is_active = 1"
@@ -419,6 +431,15 @@ const punch = async (req, res) => {
     }
 
     await conn.commit();
+
+    // Audit Log for Successful Punch
+    await recordLog({
+      actorId: sessionUser.id,
+      action: `${punch_type} punch for ${targetEmployeeId === sessionUser.id ? "self" : `employee_id: ${targetEmployeeId}`}`,
+      category: "System",
+      status: "Success",
+      details: { office_id, punch_type, targetEmployeeId, latitude, longitude }
+    });
 
     const [updatedDaily] = await pool.execute(
       `

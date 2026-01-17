@@ -40,7 +40,7 @@ export default function AddRequestModal({ open, onClose, onSaved }) {
       try {
         const t = await getSignInTimeForDate(employee, attendanceDate);
         if (!ignore && t) setInTime(t);
-      } catch {/* ignore */}
+      } catch {/* ignore */ }
     }
     load();
     return () => { ignore = true; };
@@ -87,18 +87,18 @@ export default function AddRequestModal({ open, onClose, onSaved }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 md:p-8">
-      <div className="w-full max-w-4xl rounded-2xl bg-white shadow-xl">
+    <div className="modal-overlay">
+      <div className="modal-content max-w-4xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="modal-header">
           <h2 className="text-lg font-semibold text-gray-800">Add Attendance Request</h2>
-          <button className="kebab h-9 w-9 border-gray-300 text-gray-500 hover:bg-gray-50"
-                  aria-label="Close" onClick={handleClose}>×</button>
+          <button className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors"
+            aria-label="Close" onClick={handleClose}>×</button>
         </div>
 
         {/* Body (form) — same layout as your first screenshot */}
-        <form onSubmit={onSubmit} className="px-6 py-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={onSubmit} className="modal-body">
+          <div className="form-grid">
             {/* Employee */}
             <div>
               <label className="form-label">
@@ -200,14 +200,16 @@ export default function AddRequestModal({ open, onClose, onSaved }) {
           </div>
 
           {/* Footer (Submit bottom-left, like screenshot) */}
-          <div className="mt-6 flex items-center gap-3 border-t border-gray-100 pt-4">
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit"}
-            </button>
-            <button type="button" className="btn-outline" onClick={handleClose}>
-              Cancel
-            </button>
-            <span className="text-xs text-gray-500 ml-1">
+          <div className="modal-footer flex-col sm:flex-row">
+            <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <button type="button" onClick={onClose} className="btn-outline h-11 px-8 text-slate-500">
+                Cancel
+              </button>
+              <button type="submit" className="btn-success h-11 px-10 shadow-emerald-500/20">
+                Submit Request
+              </button>
+            </div>
+            <span className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">
               Fields marked with <span className="text-customRed">*</span> are mandatory.
             </span>
           </div>

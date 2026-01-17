@@ -130,15 +130,15 @@ export default function AttendanceSettings() {
               <button
                 onClick={saveRule}
                 disabled={savingRule || loading}
-                className="btn-primary"
+                className="btn-primary shadow-red-500/20"
               >
                 {savingRule ? "Saving..." : "Save Rule"}
               </button>
             </div>
 
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
-                <label className="text-xs font-semibold text-gray-600">
+                <label className="form-label">
                   Grace Minutes
                 </label>
                 <input
@@ -149,14 +149,15 @@ export default function AttendanceSettings() {
                   onChange={(e) =>
                     setRuleForm((p) => ({ ...p, grace_minutes: e.target.value }))
                   }
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-red-200"
+                  className="input"
                 />
               </div>
 
-              <div className="flex items-end gap-2">
+              <div className="flex items-center gap-2 pt-6">
                 <input
                   id="notifyEmp"
                   type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-customRed focus:ring-customRed"
                   checked={!!Number(ruleForm.notify_employee)}
                   onChange={(e) =>
                     setRuleForm((p) => ({
@@ -165,15 +166,16 @@ export default function AttendanceSettings() {
                     }))
                   }
                 />
-                <label htmlFor="notifyEmp" className="text-sm text-gray-700">
+                <label htmlFor="notifyEmp" className="text-sm font-medium text-slate-700">
                   Email employee
                 </label>
               </div>
 
-              <div className="flex items-end gap-2">
+              <div className="flex items-center gap-2 pt-6">
                 <input
                   id="notifyAdmins"
                   type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300 text-customRed focus:ring-customRed"
                   checked={!!Number(ruleForm.notify_hr_admin)}
                   onChange={(e) =>
                     setRuleForm((p) => ({
@@ -182,59 +184,59 @@ export default function AttendanceSettings() {
                     }))
                   }
                 />
-                <label htmlFor="notifyAdmins" className="text-sm text-gray-700">
+                <label htmlFor="notifyAdmins" className="text-sm font-medium text-slate-700">
                   Email HR/Admin/Super Admin
                 </label>
               </div>
             </div>
 
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-3 text-[11px] font-medium text-slate-500 italic">
               Grace is used for late detection + missing attendance alerts.
             </p>
           </div>
 
           {/* SHIFTS */}
           <div className="rounded-2xl border border-slate-100 overflow-hidden bg-white shadow-sm">
-            <div className="px-6 py-5 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100">
-              <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Shifts</div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-white/60 px-2 py-1 rounded-md border border-slate-100 shadow-sm self-start sm:self-auto">
-                Auto-detected by date range (RAMADAN &gt; SUMMER &gt; WINTER)
+            <div className="px-6 py-5 bg-slate-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100">
+              <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Shifts Configuration</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest bg-white/60 px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm self-start sm:self-auto">
+                Priority: RAMADAN &gt; SUMMER &gt; WINTER
               </div>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-[900px] w-full text-sm">
-                <thead className="bg-gray-100 text-gray-600">
-                  <tr>
-                    <th className="p-3 text-left">Name</th>
-                    <th className="p-3 text-left">Start</th>
-                    <th className="p-3 text-left">End</th>
-                    <th className="p-3 text-left">Effective From</th>
-                    <th className="p-3 text-left">Effective To</th>
-                    <th className="p-3 text-left">Active</th>
-                    <th className="p-3 text-right">Action</th>
+            <div className="table-scroll">
+              <table className="min-w-[1000px] w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100">
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest">Shift Name</th>
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Start<br /><span className="text-[9px] opacity-70">Time</span></th>
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">End<br /><span className="text-[9px] opacity-70">Time</span></th>
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Effective<br /><span className="text-[9px] opacity-70">From</span></th>
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-tight">Effective<br /><span className="text-[9px] opacity-70">To</span></th>
+                    <th className="px-6 py-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-widest">Active</th>
+                    <th className="px-6 py-4 text-right text-[11px] font-bold text-slate-500 uppercase tracking-widest">Action</th>
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="p-4 text-gray-500">
-                        Loading...
+                      <td colSpan={7} className="px-6 py-10 text-center text-slate-400 font-medium">
+                        Loading shift data...
                       </td>
                     </tr>
                   ) : shifts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-4 text-gray-500">
-                        No shifts found.
+                      <td colSpan={7} className="px-6 py-10 text-center text-slate-400 font-medium">
+                        No shifts configured.
                       </td>
                     </tr>
                   ) : (
                     shifts.map((s) => (
-                      <tr key={s.id} className="border-t">
-                        <td className="p-3 font-semibold text-gray-800">{s.name}</td>
+                      <tr key={s.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-bold text-slate-800">{s.name}</td>
 
-                        <td className="p-3">
+                        <td className="px-6 py-4">
                           <input
                             type="time"
                             value={String(s.start_time).slice(0, 5)}
@@ -243,11 +245,11 @@ export default function AttendanceSettings() {
                                 start_time: e.target.value + ":00",
                               })
                             }
-                            className="border rounded-lg px-3 py-2 text-sm w-[140px]"
+                            className="input h-9 py-1 px-2 text-xs w-[120px]"
                           />
                         </td>
 
-                        <td className="p-3">
+                        <td className="px-6 py-4">
                           <input
                             type="time"
                             value={String(s.end_time).slice(0, 5)}
@@ -256,11 +258,11 @@ export default function AttendanceSettings() {
                                 end_time: e.target.value + ":00",
                               })
                             }
-                            className="border rounded-lg px-3 py-2 text-sm w-[140px]"
+                            className="input h-9 py-1 px-2 text-xs w-[120px]"
                           />
                         </td>
 
-                        <td className="p-3">
+                        <td className="px-6 py-4">
                           <input
                             type="date"
                             value={toInputDate(s.effective_from)}
@@ -269,24 +271,25 @@ export default function AttendanceSettings() {
                                 effective_from: e.target.value,
                               })
                             }
-                            className="border rounded-lg px-3 py-2 text-sm"
+                            className="input h-9 py-1 px-2 text-xs w-[140px]"
                           />
                         </td>
 
-                        <td className="p-3">
+                        <td className="px-6 py-4">
                           <input
                             type="date"
                             value={toInputDate(s.effective_to)}
                             onChange={(e) =>
                               updateShiftLocal(s.id, { effective_to: e.target.value })
                             }
-                            className="border rounded-lg px-3 py-2 text-sm"
+                            className="input h-9 py-1 px-2 text-xs w-[140px]"
                           />
                         </td>
 
-                        <td className="p-3">
+                        <td className="px-6 py-4">
                           <input
                             type="checkbox"
+                            className="h-4 w-4 rounded border-slate-300 text-customRed focus:ring-customRed"
                             checked={!!Number(s.is_active)}
                             onChange={(e) =>
                               updateShiftLocal(s.id, {
@@ -296,13 +299,13 @@ export default function AttendanceSettings() {
                           />
                         </td>
 
-                        <td className="p-3 text-right">
+                        <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => saveShift(s)}
                             disabled={savingShiftId === s.id}
-                            className={`btn-primary h-9 px-4 text-xs ${savingShiftId === s.id ? "opacity-30" : ""}`}
+                            className={`btn-primary h-8 px-4 text-[10px] shadow-red-500/10 ${savingShiftId === s.id ? "opacity-30" : ""}`}
                           >
-                            {savingShiftId === s.id ? "Saving..." : "Save"}
+                            {savingShiftId === s.id ? "Saving..." : "Update"}
                           </button>
                         </td>
                       </tr>
@@ -312,13 +315,14 @@ export default function AttendanceSettings() {
               </table>
             </div>
 
-            <div className="p-3 text-xs text-gray-500">
-              Ramadan dates change yearly — update effective range here once per year.
+            <div className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/30 border-t border-slate-100">
+              Note: Ramadan dates change yearly — update effective range once per season.
             </div>
           </div>
 
           {error && (
-            <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-lg p-3">
+            <div className="text-xs font-bold text-red-600 border border-red-100 bg-red-50/50 rounded-xl p-4 flex items-center gap-3">
+              <div className="h-2 w-2 rounded-full bg-red-600 animate-pulse" />
               {error}
             </div>
           )}

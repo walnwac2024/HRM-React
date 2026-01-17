@@ -1,5 +1,5 @@
-// backend/Controller/Employees/Employees.js
 const { pool } = require("../../Utils/db");
+const { recordLog } = require("../../Utils/AuditUtils");
 const bcrypt = require("bcryptjs");
 const path = require("path");
 const fs = require("fs");
@@ -297,6 +297,15 @@ async function createEmployee(req, res) {
       }
 
       await conn.commit();
+
+      // Audit Log for Creating Employee
+      await recordLog({
+        actorId: req.session?.user?.id,
+        action: `Created new employee: ${fullName} (${finalEmployeeCode})`,
+        category: "System",
+        status: "Success",
+        details: { fullName, finalEmployeeCode, department, designation, officialEmail }
+      });
 
       const [rows2] = await conn.execute(
         "SELECT * FROM employee_records WHERE id = ? LIMIT 1",
@@ -659,6 +668,16 @@ async function updateEmployee(req, res) {
     params.push(id);
 
     await pool.execute(sql, params);
+
+    // Audit Log for Updating Employee
+    await recordLog({
+      actorId: sessionUser.id,
+      action: `Updated employee profile (ID: ${id})`,
+      category: "System",
+      status: "Success",
+      details: { employeeId: id, updatedFields: Object.keys(body) }
+    });
+
     return res.json({ message: "Employee updated successfully" });
   } catch (err) {
     console.error("updateEmployee error:", err);
@@ -737,6 +756,16 @@ async function updateEmployeeLogin(req, res) {
       }
 
       await conn.commit();
+
+      // Audit Log for Updating Employee Login
+      await recordLog({
+        actorId: req.session?.user?.id,
+        action: `Updated login credentials for employee ID: ${id}`,
+        category: "System",
+        status: "Success",
+        details: { employeeId: id, officialEmail, canLogin, userTypeUpdated: !!userType }
+      });
+
       return res.json({ message: "Employee login updated successfully" });
     } catch (err) {
       if (conn) await conn.rollback();
