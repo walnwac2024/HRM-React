@@ -274,10 +274,10 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
   if (!open) return null;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content max-w-5xl !max-h-[85vh]">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
+      <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-white rounded-[32px] shadow-2xl overflow-hidden border border-white/20">
         {isSuccess ? (
-          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto">
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-200">
               <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
@@ -317,7 +317,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
         ) : (
           <>
             {/* Header */}
-            <div className="modal-header">
+            <div className="modal-header shrink-0">
               <div>
                 <h2 className="h2 text-slate-900">Add New Employee</h2>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Onboarding Process</p>
@@ -331,7 +331,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
             </div>
 
             {/* Tabs Navigation - Segmented Control */}
-            <div className="px-5 sm:px-8 py-4 bg-white border-b border-slate-50">
+            <div className="px-5 sm:px-8 py-4 bg-white border-b border-slate-50 shrink-0">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
                 {[
                   { id: "employment", label: "Employment" },
@@ -363,7 +363,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
               </div>
             </div>
 
-            <div className="modal-body flex-1 overflow-y-auto min-h-0">
+            <div className="modal-body flex-1 overflow-y-auto min-h-0 custom-scrollbar">
               <form id="add-employee-form" onSubmit={handleSubmit}>
                 {/* Employment Tab */}
                 {activeTab === "employment" && (
@@ -700,7 +700,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
             </div>
 
             {/* Modal Footer Navigation */}
-            <div className="modal-footer justify-between shadow-2xl border-t bg-slate-50/50">
+            <div className="modal-footer justify-between shadow-2xl border-t bg-slate-50/50 shrink-0">
               <div className="flex gap-3">
                 {currentTabIndex > 0 && (
                   <button type="button" onClick={handleBack} className="btn-outline px-8 h-11 rounded-2xl">Back</button>
