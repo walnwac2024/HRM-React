@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo } from "react";
+import { toast } from "react-toastify";
 import api from "../../../utils/api";
 
 export default function UploadExcelModal({ open, onClose, onCreated }) {
@@ -46,16 +47,16 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
       formData.append("file", file);
       formData.append("type", active); // employees, assets, etc.
 
-      await api.post("/employees/import", formData, {
+      const res = await api.post("/employees/import", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Upload successful! Existing records have been updated.");
+      toast.success(res.data?.message || "Upload successful!");
       onClose?.();
       onCreated?.(); // Refresh list
     } catch (e) {
       console.error(e);
-      alert(e?.response?.data?.message || "Upload failed");
+      toast.error(e?.response?.data?.message || "Upload failed");
     } finally {
       setLoading(false);
     }
@@ -66,7 +67,7 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content max-w-2xl">
+      <div className="modal-content max-w-2xl min-h-[500px] flex flex-col">
         <div className="modal-header">
           <h3 className="font-semibold text-gray-800">Upload Excel Files</h3>
           <button
@@ -103,6 +104,7 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
               onClick={async () => {
                 if (active === 'employees') {
                   try {
+                    toast.success("Downloading template...");
                     const res = await api.get("/employees/import-template", { responseType: 'blob' });
                     const url = window.URL.createObjectURL(new Blob([res.data]));
                     const link = document.createElement('a');
@@ -112,10 +114,10 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
                     link.click();
                     link.parentNode.removeChild(link);
                   } catch (e) {
-                    alert("Failed to download template");
+                    toast.error("Failed to download template");
                   }
                 } else {
-                  alert("Template not available");
+                  toast.info("Template not available for this tab");
                 }
               }}
             >
@@ -177,7 +179,7 @@ export default function UploadExcelModal({ open, onClose, onCreated }) {
           </div>
         </div>
 
-        <div className="modal-footer flex-col sm:flex-row">
+        <div className="mt-auto modal-footer flex-col sm:flex-row">
           <button
             type="button"
             onClick={onClose}

@@ -65,6 +65,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
     emergencyContact: "",
     address: "",
     profile_img: "",
+    probation: "",
   });
 
   const [vaultForm, setVaultForm] = useState({
@@ -163,6 +164,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       emergencyContact: employee.emergencyContact || "",
       address: employee.address || "",
       profile_img: employee.profile_img || "",
+      probation: employee.probation || "",
     });
 
     setVaultForm({
@@ -424,7 +426,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
         </div>
 
         {/* Body */}
-        <div className="modal-body">
+        <div className="modal-body min-h-[500px]">
           <div className="grid gap-8 lg:grid-cols-[minmax(0,2fr)_minmax(0,1.3fr)]">
             {/* LEFT: Profile / general */}
             <form onSubmit={handleSaveProfile} className="space-y-5">
@@ -531,6 +533,17 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                     onChange={(val) => setProfileForm(p => ({ ...p, status: val }))}
                     options={statuses}
                     placeholder="Select Status"
+                  />
+                </Field>
+
+                <Field label="Probation Period:">
+                  <input
+                    type="text"
+                    name="probation"
+                    value={profileForm.probation}
+                    onChange={onProfileChange}
+                    className="input"
+                    placeholder="e.g. 3 Months"
                   />
                 </Field>
 

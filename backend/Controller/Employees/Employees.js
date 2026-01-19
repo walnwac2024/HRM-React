@@ -536,8 +536,8 @@ async function getEmployeeById(req, res) {
 
       userType: emp.userType || null,
 
-      profile_picture: emp.profile_img || null,
       profile_img: emp.profile_img || null,
+      probation: emp.Probation || "",
     };
 
     return res.json(normalized);
@@ -586,6 +586,7 @@ async function updateEmployee(req, res) {
       contact,
       emergencyContact,
       address,
+      probation,
     } = body;
 
     const fields = [];
@@ -654,6 +655,10 @@ async function updateEmployee(req, res) {
     if (address !== undefined) {
       fields.push("Address = ?");
       params.push(address);
+    }
+    if (probation !== undefined) {
+      fields.push("Probation = ?");
+      params.push(probation);
     }
 
     if (!fields.length) {
@@ -1274,10 +1279,10 @@ async function lookupStations(req, res) {
   try {
     const [rows] = await pool.execute(
       `
-      SELECT DISTINCT Office_Location AS value
+      SELECT DISTINCT TRIM(Office_Location) AS value
       FROM employee_records
       WHERE Office_Location IS NOT NULL AND Office_Location <> ''
-      ORDER BY Office_Location
+      ORDER BY value
       `
     );
     res.json(rows.map((r) => r.value));
@@ -1291,10 +1296,10 @@ async function lookupDepartments(req, res) {
   try {
     const [rows] = await pool.execute(
       `
-      SELECT DISTINCT Department AS value
+      SELECT DISTINCT TRIM(Department) AS value
       FROM employee_records
       WHERE Department IS NOT NULL AND Department <> ''
-      ORDER BY Department
+      ORDER BY value
       `
     );
     res.json(rows.map((r) => r.value));
@@ -1327,10 +1332,10 @@ async function lookupDesignations(req, res) {
   try {
     const [rows] = await pool.execute(
       `
-      SELECT DISTINCT Designations AS value
+      SELECT DISTINCT TRIM(Designations) AS value
       FROM employee_records
       WHERE Designations IS NOT NULL AND Designations <> ''
-      ORDER BY Designations
+      ORDER BY value
       `
     );
     res.json(rows.map((r) => r.value));
@@ -1452,7 +1457,13 @@ async function exportEmployees(req, res) {
           Email AS personalEmail,
           CNIC AS cnic,
           Emergency_Contact AS emergencyContact,
-          Address AS address
+          Relation AS emergencyRelation,
+          Address AS address,
+          Probation AS probation,
+          Relagion AS religion,
+          \`Status.2\` AS maritalStatus,
+          Reporting AS reportingTo,
+          Offical_Contact AS officialContact
        FROM employee_records 
     `;
 
@@ -1477,10 +1488,16 @@ async function exportEmployees(req, res) {
       "Status": r.employmentStatus,
       "Joining Date": r.dateOfJoining,
       "Phone": r.contact,
+      "Official Contact": r.officialContact,
       "Personal Email": r.personalEmail,
       "CNIC": r.cnic,
       "Emergency Contact": r.emergencyContact,
-      "Address": r.address
+      "Emergency Relation": r.emergencyRelation,
+      "Address": r.address,
+      "Probation": r.probation,
+      "Religion": r.religion,
+      "Marital Status": r.maritalStatus,
+      "Reporting To": r.reportingTo
     }));
 
     const wb = xlsx.utils.book_new();
@@ -1519,8 +1536,14 @@ async function getImportTemplate(req, res) {
         "Personal Email": "",
         "CNIC": "42101-...",
         "Contact": "0300-...",
+        "Official Contact": "",
         "Emergency Contact": "",
-        "Address": ""
+        "Emergency Relation": "",
+        "Address": "",
+        "Probation": "3 Months",
+        "Religion": "Islam",
+        "Marital Status": "Single",
+        "Reporting To": ""
       }
     ];
 
@@ -1642,11 +1665,17 @@ async function importEmployees(req, res) {
           "CNIC": ["CNIC", "Cnic"],
           "Gender": ["Gender", "Sex"],
           "Blood_Group": ["Blood Group", "Blood_Group"],
-          "Contact": ["Contact", "Phone", "Mobile"],
+          "Contact": ["Contact", "Phone", "Mobile", "Personal Contact"],
           "Official_Email": ["Official Email", "Official_Email"],
           "Email": ["Personal Email", "Email"],
           "Address": ["Address"],
           "Emergency_Contact": ["Emergency Contact", "Emergency_Contact"],
+          "Probation": ["Probation", "Probation Period", "Probation_Period"],
+          "Relagion": ["Religion", "Relagion"],
+          "Status.2": ["Marital Status", "MaritalStatus", "Marital"],
+          "Reporting": ["Reporting To", "ReportingTo", "Reporting", "Manager"],
+          "Relation": ["Emergency Relation", "Relation"],
+          "Offical_Contact": ["Official Contact", "Official Phone", "Offical_Contact"],
         };
 
         const fieldsToUpdate = {};

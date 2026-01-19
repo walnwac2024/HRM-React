@@ -90,15 +90,15 @@
     box-shadow: 0 12px 28px -8px rgba(239, 68, 68, 0.6);
   }
 
-  /* Success Action (Save/Submit) - Emerald Theme */
+  /* Success Action (Save/Submit) - Now Red Theme */
   .btn-success {
-    @apply btn bg-gradient-to-br from-emerald-500 to-teal-600 text-white border-t border-white/20;
-    box-shadow: 0 8px 20px -6px rgba(16, 185, 129, 0.4);
+    @apply btn bg-gradient-to-br from-customRed to-red-600 text-white border-t border-white/20;
+    box-shadow: 0 8px 20px -6px rgba(239, 68, 68, 0.5);
   }
 
   .btn-success:hover {
     @apply -translate-y-0.5 brightness-[1.05];
-    box-shadow: 0 12px 28px -8px rgba(16, 185, 129, 0.5);
+    box-shadow: 0 12px 28px -8px rgba(239, 68, 68, 0.6);
   }
 
   /* Secondary Action (Outline) - Soft Border & Clean Look */
