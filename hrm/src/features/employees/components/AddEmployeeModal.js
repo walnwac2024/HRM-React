@@ -90,12 +90,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [lookups, setLookups] = useState({
-    stations: [],
-    departments: [],
-    designations: [],
-    userTypes: [],
-    shifts: [],
     statuses: [],
+    employees: [],
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -169,21 +165,23 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
   useEffect(() => {
     const fetchLookups = async () => {
       try {
-        const [stationsRes, departmentsRes, designationsRes, userTypesRes, shiftsRes, statusesRes] = await Promise.all([
+        const [statRes, deptRes, desRes, typeRes, shiftRes, stRes, empRes] = await Promise.all([
           api.get("/employees/lookups/stations"),
           api.get("/employees/lookups/departments"),
           api.get("/employees/lookups/designations"),
           api.get("/employees/lookups/user-types"),
           api.get("/attendance/settings/shifts"),
           api.get("/employees/lookups/statuses"),
+          api.get("/employees/lookups/basic"),
         ]);
         setLookups({
-          stations: stationsRes.data || [],
-          departments: departmentsRes.data || [],
-          designations: designationsRes.data || [],
-          userTypes: userTypesRes.data || [],
-          shifts: shiftsRes.data?.shifts || [],
-          statuses: statusesRes.data || [],
+          stations: statRes.data || [],
+          departments: deptRes.data || [],
+          designations: desRes.data || [],
+          userTypes: typeRes.data || [],
+          shifts: shiftRes.data?.shifts || [],
+          statuses: stRes.data || [],
+          employees: empRes.data || [],
         });
       } catch (err) {
         console.error("Failed to fetch lookups", err);
@@ -195,7 +193,15 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
-    // Validate all tabs before final submission
+
+    // 1. Enforce sequential progression
+    // If we're not on the final tab, "Submit" should just act like "Next"
+    if (activeTab !== "documents") {
+      handleNext();
+      return;
+    }
+
+    // 2. Final Submission: Validate ALL tabs before creating employee
     for (const tab of TABS) {
       if (!validateTab(tab)) {
         setActiveTab(tab); // Go to the first invalid tab
@@ -499,7 +505,18 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                         <input type="text" className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none" value={form.emergencyRelation} onChange={(e) => updateField("emergencyRelation", e.target.value)} />
                       </Field>
                       <Field label="Reporting To">
-                        <input type="text" className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none" value={form.reportingTo} onChange={(e) => updateField("reportingTo", e.target.value)} />
+                        <select
+                          className="h-9 w-full rounded border border-slate-300 px-3 text-sm focus:border-customRed focus:outline-none bg-white"
+                          value={form.reportingTo}
+                          onChange={(e) => updateField("reportingTo", e.target.value)}
+                        >
+                          <option value="">Select (Optional)</option>
+                          {lookups.employees.map((emp) => (
+                            <option key={emp.id} value={emp.Employee_Name}>
+                              {emp.Employee_Name} ({emp.Employee_ID})
+                            </option>
+                          ))}
+                        </select>
                       </Field>
                     </div>
                   </section>

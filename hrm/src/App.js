@@ -103,8 +103,12 @@ export default function App() {
                 <Route path="recruitment" element={<RecruitmentDashboard />} />
                 <Route path="organcogram" element={<Organcogram />} />
                 <Route path="news" element={<NewsPage />} />
-                <Route path="permissions" element={<PermissionsPage />} />
-                <Route path="logs" element={<LogsPage />} />
+
+                {/* Sensitive management routes */}
+                <Route element={<ProtectedRoute requireRoles={["super_admin", "admin", "hr", "developer"]} />}>
+                  <Route path="permissions" element={<PermissionsPage />} />
+                  <Route path="logs" element={<LogsPage />} />
+                </Route>
               </Route>
 
               {/* Other top-level pages */}

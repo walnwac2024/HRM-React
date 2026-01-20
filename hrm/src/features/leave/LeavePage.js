@@ -338,20 +338,24 @@ export default function LeavePage() {
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4 text-right">
-                                                    {l.status === "pending" && (
+                                                    {(l.status === "pending" || (["super_admin", "admin", "hr", "developer"].includes(user?.role?.toLowerCase()))) && (
                                                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-2">
-                                                            <button
-                                                                onClick={() => handleStatusUpdate(l.id, "approved")}
-                                                                className="btn-utility !border-emerald-200 !text-emerald-600 !hover:bg-emerald-50 !h-9 !px-4"
-                                                            >
-                                                                Approve
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleStatusUpdate(l.id, "rejected")}
-                                                                className="btn-utility !border-rose-200 !text-rose-600 !hover:bg-rose-50 !h-9 !px-4"
-                                                            >
-                                                                Reject
-                                                            </button>
+                                                            {l.status !== 'approved' && (
+                                                                <button
+                                                                    onClick={() => handleStatusUpdate(l.id, "approved")}
+                                                                    className="btn-utility !border-emerald-200 !text-emerald-600 !hover:bg-emerald-50 !h-9 !px-4"
+                                                                >
+                                                                    Approve
+                                                                </button>
+                                                            )}
+                                                            {l.status !== 'rejected' && (
+                                                                <button
+                                                                    onClick={() => handleStatusUpdate(l.id, "rejected")}
+                                                                    className="btn-utility !border-rose-200 !text-rose-600 !hover:bg-rose-50 !h-9 !px-4"
+                                                                >
+                                                                    Reject
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     )}
                                                 </td>

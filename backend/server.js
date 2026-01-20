@@ -120,45 +120,31 @@ app.use(
 
 const csrfProtection = csurf({ cookie: false });
 
-app.use((req, res, next) => {
+app.get("/api/v1/csrf", (req, res, next) => {
+  csrfProtection(req, res, (err) => {
+    if (err) return next(err);
+    res.json({ csrfToken: req.csrfToken() });
+  });
+});
+
+app.use("/api/v1", (req, res, next) => {
   if (req.method === "OPTIONS") return next();
+
   const publicPaths = [
-    "/api/v1/auth/login",
-    "/api/v1/login",
-    "/api/v1/auth/heartbeat",
-    "/api/v1/news/whatsapp/"
+    "/auth/login",
+    "/auth/logout",
+    "/auth/heartbeat",
+    "/login",
+    "/news/whatsapp/",
   ];
 
-  const isPublic = publicPaths.some(p => req.path.startsWith(p));
+  // path relative to /api/v1
+  const isPublic = publicPaths.some((p) => req.path.startsWith(p));
+  if (isPublic) return next();
 
-  if (isPublic) {
-    return next();
-  }
-
-  // Debug logging for CSRF
-  try {
-    csrfProtection(req, res, (err) => {
-      if (err) {
-        const csrfErrorMsg = `${new Date().toISOString()} - CSRF Middleware Error - ${req.method} ${req.path}\nError: ${err.message}\nStack: ${err.stack}\n\n`;
-        fs.appendFileSync(path.join(__dirname, "debug_requests.log"), csrfErrorMsg);
-        return next(err);
-      }
-      next();
-    });
-  } catch (err) {
-    const catchErrorMsg = `${new Date().toISOString()} - CSRF Middleware Crash - ${req.method} ${req.path}\nError: ${err.message}\nStack: ${err.stack}\n\n`;
-    fs.appendFileSync(path.join(__dirname, "debug_requests.log"), catchErrorMsg);
-    next(err);
-  }
+  csrfProtection(req, res, next);
 });
 
-app.get("/api/v1/csrf", (req, res) => {
-  if (typeof req.csrfToken !== "function") {
-    console.error("CSRF token function missing on request. Session might not be initialized properly.");
-    return res.status(500).json({ message: "CSRF Initialization Error" });
-  }
-  res.json({ csrfToken: req.csrfToken() });
-});
 
 app.use("/api/v1", routes);
 

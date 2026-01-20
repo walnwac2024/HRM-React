@@ -84,4 +84,5 @@ module.exports = {
   requireRole,
   requireFeatures,
   requireFeaturesOrSelf,
+  hasFullAccess,
 };

@@ -224,6 +224,9 @@ async function createEmployee(req, res) {
         )
       `;
 
+      const avatarFile = req.files?.avatar?.[0];
+      const profileImgPath = avatarFile ? `/uploads/profile-img/${avatarFile.filename}` : null;
+
       const params = [
         finalEmployeeCode,
         fullName,
@@ -255,7 +258,7 @@ async function createEmployee(req, res) {
         null, // last_login_at
         mustChangePassword,
         officialContact || "",
-        null, // profile_img
+        profileImgPath, // profile_img
       ];
 
       const [insertResult] = await conn.execute(sql, params);
@@ -1420,8 +1423,21 @@ module.exports = {
   deleteEmployee,
   exportEmployees,
   getImportTemplate,
-  sendCredentials
+  sendCredentials,
+  listBasicEmployees,
 };
+
+async function listBasicEmployees(req, res) {
+  try {
+    const [rows] = await pool.execute(
+      "SELECT id, Employee_Name, Employee_ID FROM employee_records WHERE is_active = 1 ORDER BY Employee_Name ASC"
+    );
+    return res.json(rows);
+  } catch (err) {
+    console.error("listBasicEmployees error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
 
 async function deleteEmployee(req, res) {
   // Stub to prevent crash

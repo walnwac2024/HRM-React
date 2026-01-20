@@ -227,7 +227,9 @@ export default function AttendancePage() {
 
   const [viewRow, setViewRow] = useState(null);
 
-  const activeId = nav.find((i) => i.active)?.id || 'attendance-request';
+  const activeItem = nav.find((i) => i.active);
+  const activeId = activeItem?.id || 'attendance-request';
+  const isWorking = activeItem?.status === 'working';
 
   const handleNavigate = (id) => {
     // ✅ Block navigation to settings if user isn’t allowed
@@ -280,90 +282,90 @@ export default function AttendancePage() {
         <Sidebar items={nav} onNavigate={handleNavigate} />
 
         <div className="flex-1 flex flex-col gap-6 min-w-0">
-          {activeId === 'attendance-request' && (
+          {isWorking ? (
+            <ComingSoon label={activeItem?.label || ''} />
+          ) : (
             <>
-              <Filters
-                mode="attendance"
-                title="Attendance Request"
-                onApply={applyFilters}
-                perPage={perPage}
-                onPerPageChange={setPerPage}
-                onUploadExcel={() => { }}
-                onAddNew={() => setModal('attendance')}
-                onAddIrregular={() => { }}
-              />
-              <RequestTable rows={rows} />
+              {activeId === 'attendance-request' && (
+                <>
+                  <Filters
+                    mode="attendance"
+                    title="Attendance Request"
+                    onApply={applyFilters}
+                    perPage={perPage}
+                    onPerPageChange={setPerPage}
+                    onUploadExcel={() => { }}
+                    onAddNew={() => setModal('attendance')}
+                    onAddIrregular={() => { }}
+                  />
+                  <RequestTable rows={rows} />
+                </>
+              )}
+
+              {activeId === 'exemption-request' && (
+                <ExemptionRequestPage
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
+                  onAddNew={() => setModal('exemption')}
+                  onApply={() => { }}
+                />
+              )}
+
+              {activeId === 'worksheet' && (
+                <WorkSheetSection
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
+                  onAddNew={() => setModal('worksheet')}
+                />
+              )}
+
+              {activeId === 'remote-work' && (
+                <RemoteWorkSection
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
+                  onAddNew={() => setModal('remote')}
+                  rows={remoteRows}
+                />
+              )}
+
+              {activeId === 'shift-request' && (
+                <ShiftSection
+                  perPage={perPage}
+                  onPerPageChange={setPerPage}
+                  onAddNew={() => setModal('shift')}
+                  onAddIrregular={() => setModal('shift-irregular')}
+                  rows={shiftRows}
+                />
+              )}
+
+              {activeId === 'attendance-approval' && (
+                <>
+                  <ApprovalFilters
+                    value={approvalFilters}
+                    onChange={setApprovalFilters}
+                    onApply={() => console.log('apply approval filters', approvalFilters)}
+                    onClear={() => setApprovalFilters(initialApprovalFilters)}
+                  />
+                  <AttendanceApprovalTable
+                    rows={approvalRows.map((r) => ({
+                      id: r.id,
+                      employeeName: `${r.employee.name} (${r.employee.code})`,
+                      employeeCode: r.employee.code,
+                      requestDate: r.requestDate,
+                      requestType: r.requestType,
+                      status: r.status,
+                    }))}
+                    onView={(row) => handleApprovalAction('view', row)}
+                    onForceApprove={(row) => handleApprovalAction('force', row)}
+                    onDownload={(row) => handleApprovalAction('download', row)}
+                  />
+                </>
+              )}
+
+              {activeId === 'attendance-settings' && (
+                canSeeSettings ? <AttendanceSettings /> : <UnauthorizedBox />
+              )}
             </>
-          )}
-
-          {activeId === 'exemption-request' && (
-            <ExemptionRequestPage
-              perPage={perPage}
-              onPerPageChange={setPerPage}
-              onAddNew={() => setModal('exemption')}
-              onApply={() => { }}
-            />
-          )}
-
-          {activeId === 'worksheet' && (
-            <WorkSheetSection
-              perPage={perPage}
-              onPerPageChange={setPerPage}
-              onAddNew={() => setModal('worksheet')}
-            />
-          )}
-
-          {activeId === 'remote-work' && (
-            <RemoteWorkSection
-              perPage={perPage}
-              onPerPageChange={setPerPage}
-              onAddNew={() => setModal('remote')}
-              rows={remoteRows}
-            />
-          )}
-
-          {activeId === 'shift-request' && (
-            <ShiftSection
-              perPage={perPage}
-              onPerPageChange={setPerPage}
-              onAddNew={() => setModal('shift')}
-              onAddIrregular={() => setModal('shift-irregular')}
-              rows={shiftRows}
-            />
-          )}
-
-          {activeId === 'attendance-approval' && (
-            <>
-              <ApprovalFilters
-                value={approvalFilters}
-                onChange={setApprovalFilters}
-                onApply={() => console.log('apply approval filters', approvalFilters)}
-                onClear={() => setApprovalFilters(initialApprovalFilters)}
-              />
-              <AttendanceApprovalTable
-                rows={approvalRows.map((r) => ({
-                  id: r.id,
-                  employeeName: `${r.employee.name} (${r.employee.code})`,
-                  employeeCode: r.employee.code,
-                  requestDate: r.requestDate,
-                  requestType: r.requestType,
-                  status: r.status,
-                }))}
-                onView={(row) => handleApprovalAction('view', row)}
-                onForceApprove={(row) => handleApprovalAction('force', row)}
-                onDownload={(row) => handleApprovalAction('download', row)}
-              />
-            </>
-          )}
-
-          {/* ✅ Settings: only upper level */}
-          {activeId === 'attendance-settings' && (
-            canSeeSettings ? <AttendanceSettings /> : <UnauthorizedBox />
-          )}
-
-          {/* Other placeholders */}
-          {['amend-attendance', 'amend-employee-shift', 'schedule'].includes(activeId) && (
-            <ComingSoon label={nav.find((n) => n.id === activeId)?.label || ''} />
           )}
         </div>
       </div>

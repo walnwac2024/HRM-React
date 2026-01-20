@@ -1,5 +1,5 @@
 // src/components/pages/Topbar/Topbar.jsx
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import hrmLogo from "../../../assets/hrm-logo.png";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -68,7 +68,7 @@ export default function Topbar({ logoSrc }) {
   // ✅ Mobile Drawer state
   const [showMobileMenu, setShowMobileMenu] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       if (!user) return;
       const { data } = await api.get("/notifications");
@@ -76,7 +76,7 @@ export default function Topbar({ logoSrc }) {
     } catch (e) {
       console.error("fetchNotifications error", e);
     }
-  };
+  }, [user]);
 
   const markRead = async (id) => {
     try {

@@ -48,7 +48,8 @@ const {
     exportEmployees,
     getImportTemplate,
     sendCredentials,
-    lookupUserTypes
+    lookupUserTypes,
+    listBasicEmployees
 } = require("../Controller/Employees/Employees");
 
 const {
@@ -123,6 +124,7 @@ router.get("/employees/lookups/designations", isAuthenticated, lookupDesignation
 router.get("/employees/lookups/statuses", isAuthenticated, lookupStatuses);
 router.get("/employees/lookups/role-templates", isAuthenticated, lookupRoleTemplates);
 router.get("/employees/lookups/user-types", isAuthenticated, lookupUserTypes);
+router.get("/employees/lookups/basic", isAuthenticated, listBasicEmployees);
 
 // ✅ Import Employees (Excel)
 router.post("/employees/import", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), upload.single("file"), importEmployees);

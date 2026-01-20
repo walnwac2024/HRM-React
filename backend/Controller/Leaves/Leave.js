@@ -1,4 +1,5 @@
 const { pool } = require("../../Utils/db");
+const { hasFullAccess } = require("../../middlewares/middleware");
 const { recordLog } = require("../../Utils/AuditUtils");
 
 /**
@@ -177,20 +178,22 @@ const getAllLeaves = async (req, res) => {
         `;
 
         let params = [];
-        if (!isAdmin) {
+        if (!hasFullAccess(user)) {
             // ✅ Check if this user is a department manager
             const [myDepts] = await pool.execute("SELECT department_name FROM department_managers WHERE manager_id = ?", [user.id]);
             const deptNames = myDepts.map(d => d.department_name);
 
             if (deptNames.length > 0) {
                 console.log(`[getAllLeaves] Manager "${user.name}" (ID: ${user.id}) found departments:`, deptNames);
-                const placeholders = deptNames.map(() => "?").join(",");
-                query += ` WHERE (er.Department IN (${placeholders}) OR er.Reporting = ?) `;
-                params = [...deptNames, user.name];
+                const placeholders = deptNames.map(() => "er.Department LIKE ?").join(" OR ");
+
+                // Also check by name, employee code, and ID just in case
+                query += ` WHERE (${placeholders} OR er.Reporting = ? OR er.Reporting LIKE ? OR er.Reporting = ?) `;
+                params = [...deptNames.map(d => `%${d}%`), user.name, `%${user.name}%`, user.employeeCode];
             } else {
                 console.warn(`[getAllLeaves] User "${user.name}" (ID: ${user.id}) has no manager mappings. Falling back to Reporting check.`);
-                query += ` WHERE er.Reporting = ? `;
-                params.push(user.name);
+                query += ` WHERE (er.Reporting = ? OR er.Reporting LIKE ? OR er.Reporting = ?) `;
+                params.push(user.name, `%${user.name}%`, user.employeeCode);
             }
         }
 
@@ -258,6 +261,17 @@ const approveLeave = async (req, res) => {
             await conn.execute(
                 `UPDATE leave_balances 
                  SET used = used + ?, balance = balance - ?, updated_at = CURRENT_TIMESTAMP 
+                 WHERE employee_id = ? AND leave_type_id = ? AND year = ?`,
+                [la.total_days, la.total_days, la.employee_id, la.leave_type_id, currentYear]
+            );
+        }
+
+        // ✅ Refund Balance on Rejection of already Approved leave
+        if (status === "rejected" && la.current_status === 'approved') {
+            const currentYear = new Date().getFullYear();
+            await conn.execute(
+                `UPDATE leave_balances 
+                 SET used = used - ?, balance = balance + ?, updated_at = CURRENT_TIMESTAMP 
                  WHERE employee_id = ? AND leave_type_id = ? AND year = ?`,
                 [la.total_days, la.total_days, la.employee_id, la.leave_type_id, currentYear]
             );

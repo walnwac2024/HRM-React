@@ -18,7 +18,7 @@ const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Check if request is for news or avatar
         const isNews = req.originalUrl.includes('/news');
-        const isAvatar = req.originalUrl.includes('/avatar');
+        const isAvatar = req.originalUrl.includes('/avatar') || file.fieldname === 'avatar';
 
         console.log(`[Upload Debug] URL: ${req.originalUrl}, isNews: ${isNews}, isAvatar: ${isAvatar}`);
 
@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
     },
     filename: function (req, file, cb) {
         const isNews = req.originalUrl.includes('/news');
-        const isAvatar = req.originalUrl.includes('/avatar');
+        const isAvatar = req.originalUrl.includes('/avatar') || file.fieldname === 'avatar';
 
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         let prefix = '';
