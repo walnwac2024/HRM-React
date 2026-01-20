@@ -255,10 +255,10 @@ export default function Topbar({ logoSrc }) {
                         : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                       }`}
                   >
-                    <Icon className={`text-[15px] transition-all duration-200 
+                    <Icon className={`text-[13px] 2xl:text-[15px] transition-all duration-200 
                       ${isActive ? "scale-105" : "opacity-70 group-hover:opacity-100 group-hover:scale-105"}`}
                     />
-                    <span className="text-[10px] font-bold uppercase tracking-tight">
+                    <span className="text-[9px] 2xl:text-[11px] font-bold uppercase tracking-tight">
                       {item.label}
                     </span>
 
@@ -436,10 +436,10 @@ export default function Topbar({ logoSrc }) {
         <div className="mx-auto max-w-[1600px] h-7 px-4 sm:px-8 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-3">
             <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-            <span className="text-[10px] font-bold uppercase tracking-widest text-white/95">{activeLabel}</span>
+            <span className="text-[9px] 2xl:text-[11px] font-bold uppercase tracking-widest text-white/95">{activeLabel}</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-4 text-[10px] font-bold uppercase tracking-tight">
+          <div className="hidden sm:flex items-center gap-4 text-[9px] 2xl:text-[11px] font-bold uppercase tracking-tight">
             <div className="flex items-center gap-2 pr-4 border-r border-white/20">
               <span className="text-white/60 tracking-widest">Status</span>
               <div className="flex items-center gap-1.5">

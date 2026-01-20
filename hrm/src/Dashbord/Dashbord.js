@@ -140,9 +140,9 @@ export default function Dashboard() {
     return "You have not marked your Attendance Today!";
   }, [attendance]);
 
-  async function loadAttendance() {
+  async function loadAttendance(silent = false) {
     try {
-      setLoadingAttendance(true);
+      if (!silent) setLoadingAttendance(true);
       setError("");
 
       const [officeList, today, balances, stats, summaryData, dbData, newsData] = await Promise.all([
@@ -174,7 +174,7 @@ export default function Dashboard() {
       console.error(e);
       setError("Failed to load dashboard data. Please refresh.");
     } finally {
-      setLoadingAttendance(false);
+      if (!silent) setLoadingAttendance(false);
     }
   }
 
@@ -184,7 +184,7 @@ export default function Dashboard() {
 
     // Real-time polling for team status (every 30 seconds)
     const interval = setInterval(() => {
-      loadAttendance();
+      loadAttendance(true);
     }, 30000);
 
     return () => clearInterval(interval);
