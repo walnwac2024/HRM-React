@@ -199,7 +199,7 @@ export default function Login({
 
           <footer className="mt-10 text-center">
             <p className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">
-              &copy; 2024 HRM Excellence System
+              &copy; 2025 HRM Excellence System
             </p>
           </footer>
         </div>
