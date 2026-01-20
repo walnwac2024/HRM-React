@@ -13,9 +13,10 @@ import {
 } from "../features/leave/services/leaveService";
 import { getDashboardData } from "../features/dashboard/services/dashboardService";
 import { listNews } from "../features/news/newsService";
-import { Megaphone, ChevronRight } from "lucide-react";
+import { Megaphone, ChevronRight, Gift, PartyPopper } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BASE_URL } from "../utils/api";
+import BirthdayCelebration from "../components/common/BirthdayCelebration";
 
 const BACKEND_URL = BASE_URL;
 
@@ -100,6 +101,8 @@ export default function Dashboard() {
   const [rightTab, setRightTab] = useState("requests"); // "requests" or "approvals"
   const [dashboardData, setDashboardData] = useState(null);
   const [news, setNews] = useState([]);
+  const [selectedBirthday, setSelectedBirthday] = useState(null);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const kpiRows = [
     "Working Hour",
@@ -347,14 +350,65 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+          {/* Self Birthday or Selected Colleague Birthday */}
+          {(dashboardData?.widgets?.birthdayToday || selectedBirthday) && (
+            <div className="px-3 pb-3 relative animate-fade-in">
+              <BirthdayCelebration
+                isBirthday={true}
+                name={selectedBirthday ? selectedBirthday.name : (dashboardData?.profile?.name || user?.Employee_Name || user?.name)}
+                isSelf={!selectedBirthday && dashboardData?.widgets?.birthdayToday}
+              />
+              {selectedBirthday && (
+                <button
+                  onClick={() => {
+                    setSelectedBirthday(null);
+                    setShowConfetti(false);
+                  }}
+                  className="w-full mt-1 text-[10px] text-gray-400 hover:text-customRed uppercase font-black tracking-widest transition-colors"
+                >
+                  ✕ Close Celebration
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="border-t">
-            <div className="flex text-[11px] sm:text-xs">
-              <button className={`flex-1 py-2 hover:bg-gray-50 ${dashboardData?.widgets?.birthdayToday ? 'text-red-600 font-bold animate-pulse' : ''}`}>
-                {dashboardData?.widgets?.birthdayToday ? '🎂 Happy Birthday!' :
-                  dashboardData?.widgets?.colleaguesBirthdays?.length > 0 ? `🎂 ${dashboardData.widgets.colleaguesBirthdays.length} Birthday Today` :
-                    'No Birthday Today'}
-              </button>
-              <button className="flex-1 py-2 border-l hover:bg-gray-50">
+            <div className="flex text-[11px] sm:text-xs text-center">
+              {!dashboardData?.widgets?.birthdayToday && (
+                <div className="flex-1 relative group">
+                  <button className={`w-full py-2 hover:bg-gray-50 flex items-center justify-center gap-1 ${dashboardData?.widgets?.colleaguesBirthdays?.length > 0 ? 'text-customRed font-bold' : 'text-gray-500'}`}>
+                    <Gift size={12} className={dashboardData?.widgets?.colleaguesBirthdays?.length > 0 ? "animate-bounce" : ""} />
+                    <span>{dashboardData?.widgets?.colleaguesBirthdays?.length || 0} Birthday Today</span>
+                  </button>
+
+                  {/* Dropdown helper */}
+                  {dashboardData?.widgets?.colleaguesBirthdays?.length > 0 && (
+                    <div className="absolute bottom-full left-0 w-48 bg-white border shadow-xl rounded-lg hidden group-hover:block z-50 animate-fade-in mb-1 overflow-hidden">
+                      <div className="px-3 py-1.5 bg-gray-50 border-b text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                        Who is celebrating?
+                      </div>
+                      <div className="max-h-48 overflow-y-auto">
+                        {dashboardData.widgets.colleaguesBirthdays.map((b, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedBirthday(b)}
+                            className="w-full px-3 py-2 text-left text-[11px] hover:bg-red-50 hover:text-customRed transition-colors border-b last:border-0 flex items-center gap-2"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-red-400 to-customRed text-white flex items-center justify-center text-[10px] font-bold shadow-sm">
+                              {b.name.charAt(0)}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-bold truncate">{b.name}</span>
+                              <span className="text-[9px] text-gray-400 truncate">{b.department || "No Department"}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              <button className="flex-1 py-2 border-l hover:bg-gray-50 text-gray-500">
                 New Message
               </button>
             </div>
@@ -665,8 +719,27 @@ export default function Dashboard() {
                           })()}
                         </div>
                         <div className="min-w-0">
-                          <div className="text-[12px] font-semibold text-gray-700 truncate group-hover:text-customRed transition-colors">
-                            {m.name}
+                          <div className="flex items-center gap-1.5">
+                            <div className="text-[12px] font-semibold text-gray-700 truncate group-hover:text-customRed transition-colors">
+                              {m.name}
+                            </div>
+                            {m.is_birthday_today && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedBirthday(m);
+                                  setShowConfetti(true);
+                                  // Auto-hide confetti after 5 seconds but keep the card
+                                  setTimeout(() => setShowConfetti(false), 5000);
+                                }}
+                                className="flex items-center gap-1 hover:scale-110 transition-transform bg-red-50 px-2 py-0.5 rounded-full border border-red-100 shadow-sm group/btn"
+                              >
+                                <span className="animate-bounce group-hover/btn:rotate-12">🎂</span>
+                                <span className="text-[10px] font-black text-customRed uppercase tracking-tighter animate-pulse flex items-center gap-1">
+                                  Celebrate! <PartyPopper size={10} className="text-orange-500" />
+                                </span>
+                              </button>
+                            )}
                           </div>
                           <div className="text-[10px] text-gray-500 truncate">
                             {m.designation || "Employee"}
@@ -759,6 +832,49 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+      {/* Dramatic Confetti Overlay */}
+      {showConfetti && (
+        <div className="fixed inset-0 z-[100] pointer-events-none flex items-center justify-center overflow-hidden">
+          <div className="absolute inset-0 bg-white/10 backdrop-blur-[1px] animate-pulse" />
+          {[...Array(60)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute top-[-20px] animate-confetti-fall"
+              style={{
+                left: `${Math.random() * 100}%`,
+                width: `${Math.random() * 10 + 5}px`,
+                height: `${Math.random() * 15 + 5}px`,
+                backgroundColor: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899'][Math.floor(Math.random() * 6)],
+                animationDelay: `${Math.random() * 3}s`,
+                animationDuration: `${2 + Math.random() * 2}s`,
+                transform: `rotate(${Math.random() * 360}deg)`,
+                opacity: 0.8
+              }}
+            />
+          ))}
+          <div className="relative z-10 text-center animate-bounce-slow">
+            <h2 className="text-4xl md:text-6xl font-black text-customRed drop-shadow-2xl uppercase tracking-tighter">
+              Happy Birthday! 🎈
+            </h2>
+            <div className="text-2xl mt-4 bg-white/80 backdrop-blur rounded-full px-6 py-2 border shadow-xl inline-block font-bold">
+              {selectedBirthday?.name} 🎉
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes confetti-fall {
+            0% { transform: translateY(0) rotate(0); opacity: 1; }
+            100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+        }
+        .animate-confetti-fall {
+            animation: confetti-fall linear infinite;
+        }
+        .animate-bounce-slow {
+            animation: bounce 2s infinite;
+        }
+      `}</style>
     </div>
   );
 }

@@ -24,6 +24,7 @@ const PermissionsPage = lazy(() => import("./features/permissions/PermissionsPag
 const NewsPage = lazy(() => import("./features/news/NewsPage"));
 const ReportsPage = lazy(() => import("./features/reports/ReportsPage"));
 const LogsPage = lazy(() => import("./features/audit/LogsPage"));
+const OrganizationPage = lazy(() => import("./features/organization/OrganizationPage"));
 
 // Loading component
 const LoadingFallback = () => (
@@ -121,7 +122,8 @@ export default function App() {
               {/* ✅ NEW: Attendance Settings route */}
               <Route path="/attendance/settings" element={<AttendanceSettings />} />
 
-              <Route path="/organization" element={<div className="p-4">Organization</div>} />
+              {/* Organization / Departments */}
+              <Route path="/organization" element={<OrganizationPage />} />
               <Route path="/recruitment" element={<div className="p-4">Recruitment</div>} />
               <Route path="/timesheet" element={<div className="p-4">Timesheet</div>} />
               <Route path="/leave" element={<LeavePage />} />
