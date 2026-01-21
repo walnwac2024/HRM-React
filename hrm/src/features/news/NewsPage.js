@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Plus, Edit2, Trash2, Calendar, User, Megaphone, RefreshCw, LogOut } from "lucide-react";
-import { listNews, createNews, updateNews, deleteNews, getWhatsAppStatus, initWhatsAppSession, updateWhatsAppSettings, syncWhatsAppGroups, logoutWhatsAppSession } from "./newsService";
+import { listNews, createNews, updateNews, deleteNews, getWhatsAppStatus, initWhatsAppSession, updateWhatsAppSettings, syncWhatsAppGroups, logoutWhatsAppSession, toggleReaction, listReactions } from "./newsService";
 import { BASE_URL } from "../../utils/api";
+import socket from "../../utils/socket";
 import NewsModal from "./components/NewsModal";
 import { useAuth } from "../../context/AuthContext";
 import { toast } from "react-toastify";
@@ -61,6 +62,33 @@ export default function NewsPage() {
         }
         return () => clearInterval(interval);
     }, [canPublish]);
+
+    // Reactions Real-time Sync via WebSockets
+    useEffect(() => {
+        const fetchLatestReactions = async () => {
+            try {
+                const reactionsMap = await listReactions();
+                setNewsList(prev => prev.map(item => ({
+                    ...item,
+                    reactions: reactionsMap[item.id] || []
+                })));
+            } catch (err) {
+                console.error("Failed to sync reactions", err);
+            }
+        };
+
+        socket.on("news_reaction_updated", (data) => {
+            console.log("Reaction update received via socket:", data);
+            fetchLatestReactions();
+        });
+
+        // Initial sync
+        fetchLatestReactions();
+
+        return () => {
+            socket.off("news_reaction_updated");
+        };
+    }, []);
 
     const handleSave = async (formData) => {
         try {
@@ -168,6 +196,42 @@ export default function NewsPage() {
         } finally {
             setActionLoading(false);
             setUpdatingSettings(false);
+        }
+    };
+
+    const handleToggleReaction = async (newsId, emoji) => {
+        try {
+            // Optimistic update
+            setNewsList(prev => prev.map(item => {
+                if (item.id === newsId) {
+                    const reactions = [...(item.reactions || [])];
+                    const existingIdx = reactions.findIndex(r => r.emoji === emoji);
+
+                    if (existingIdx !== -1) {
+                        const r = reactions[existingIdx];
+                        if (r.me) {
+                            // Removing my reaction
+                            r.count--;
+                            r.me = false;
+                            if (r.count <= 0) reactions.splice(existingIdx, 1);
+                        } else {
+                            // Adding my reaction
+                            r.count++;
+                            r.me = true;
+                        }
+                    } else {
+                        // Brand new emoji
+                        reactions.push({ emoji, count: 1, me: true });
+                    }
+                    return { ...item, reactions };
+                }
+                return item;
+            }));
+
+            await toggleReaction(newsId, emoji);
+        } catch (err) {
+            toast.error("Failed to react to news");
+            loadData(); // Revert on error
         }
     };
 
@@ -460,8 +524,31 @@ export default function NewsPage() {
                                     </div>
                                 )}
 
-                                <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed whitespace-pre-wrap">
+                                <div className="prose prose-sm max-w-none text-gray-600 leading-relaxed whitespace-pre-wrap mb-6">
                                     {item.content}
+                                </div>
+
+                                {/* Reaction Bar */}
+                                <div className="pt-4 border-t border-slate-50 flex flex-wrap items-center gap-2">
+                                    {['❤️', '👍', '😂', '🎉', '😮'].map(emoji => {
+                                        const reaction = (item.reactions || []).find(r => r.emoji === emoji);
+                                        const hasReacted = reaction?.me;
+                                        const count = reaction?.count || 0;
+
+                                        return (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => handleToggleReaction(item.id, emoji)}
+                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all duration-300
+                                                    ${hasReacted
+                                                        ? 'bg-customRed/10 text-customRed border-customRed/20 shadow-sm'
+                                                        : 'bg-slate-50 text-slate-400 hover:bg-slate-100 border-transparent'} border`}
+                                            >
+                                                <span className={`${hasReacted ? 'scale-110' : 'grayscale group-hover:grayscale-0'} transition-all`}>{emoji}</span>
+                                                {count > 0 && <span>{count}</span>}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

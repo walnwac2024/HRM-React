@@ -90,6 +90,11 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [successData, setSuccessData] = useState(null);
   const [lookups, setLookups] = useState({
+    stations: [],
+    departments: [],
+    designations: [],
+    userTypes: [],
+    shifts: [],
     statuses: [],
     employees: [],
   });
@@ -192,22 +197,19 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
   }, [open]);
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
 
-    // 1. Enforce sequential progression
-    // If we're not on the final tab, "Submit" should just act like "Next"
-    if (activeTab !== "documents") {
-      handleNext();
-      return;
-    }
-
-    // 2. Final Submission: Validate ALL tabs before creating employee
+    // Final Submission: Validate ALL tabs before creating employee
     for (const tab of TABS) {
       if (!validateTab(tab)) {
         setActiveTab(tab); // Go to the first invalid tab
         return;
       }
     }
+
+    // 3. Show confirmation before final save
+    const ok = window.confirm(`Are you sure you want to onboard ${form.fullName}?`);
+    if (!ok) return;
 
     setLoading(true);
     try {
@@ -247,8 +249,8 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
           fd.append("documents", d.file);
           fd.append("titles", d.title.trim());
           fd.append("types", d.type || "");
-          fd.append("issuedAt", d.issuedAt || "");
-          fd.append("expiresAt", d.expiresAt || "");
+          fd.append("issued_at", d.issuedAt || "");
+          fd.append("expires_at", d.expiresAt || "");
         });
 
         await api.post(`/employees/${created.id}/documents`, fd, {
@@ -279,9 +281,21 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
 
   if (!open) return null;
 
+  const handleFormKeyDown = (e) => {
+    if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+      e.preventDefault();
+      if (activeTab !== "documents") {
+        handleNext();
+      } else {
+        handleSubmit();
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 sm:p-6 bg-slate-900/60 backdrop-blur-sm">
       <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col bg-white rounded-[32px] shadow-2xl overflow-hidden border border-white/20">
+
         {isSuccess ? (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-y-auto">
             <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mb-6 shadow-sm border border-emerald-200">
@@ -370,7 +384,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
             </div>
 
             <div className="modal-body flex-1 overflow-y-auto min-h-0 custom-scrollbar">
-              <form id="add-employee-form" onSubmit={handleSubmit}>
+              <form id="add-employee-form" onKeyDown={handleFormKeyDown}>
                 {/* Employment Tab */}
                 {activeTab === "employment" && (
                   <section className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -730,7 +744,7 @@ export default function AddEmployeeModal({ open, onClose, onCreated, onSave }) {
                 {currentTabIndex < TABS.length - 1 ? (
                   <button type="button" onClick={handleNext} className="btn-primary px-12 h-11 rounded-2xl">Next Step</button>
                 ) : (
-                  <button type="submit" form="add-employee-form" disabled={loading} className="btn-success px-12 h-11 rounded-2xl">
+                  <button type="button" onClick={handleSubmit} disabled={loading} className="btn-success px-12 h-11 rounded-2xl">
                     {loading ? (
                       <div className="flex items-center gap-2">
                         <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

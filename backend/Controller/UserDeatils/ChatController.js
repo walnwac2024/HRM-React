@@ -38,7 +38,9 @@ async function getMessages(req, res) {
 
     try {
         const [rows] = await pool.execute(
-            `SELECT cm.id, cm.message, cm.created_at, cm.sender_id, e.Employee_Name as sender_name, e.profile_img as sender_image
+            `SELECT cm.id, cm.message, cm.created_at, cm.sender_id, cm.file_url, cm.file_type, cm.file_name,
+                e.Employee_Name as sender_name, e.profile_img as sender_image,
+                (SELECT COUNT(*) FROM chat_read_receipts crr WHERE crr.message_id = cm.id AND crr.user_id != cm.sender_id) > 0 as seen
              FROM chat_messages cm
              JOIN employee_records e ON cm.sender_id = e.id
              WHERE cm.room_id = ?
@@ -60,8 +62,8 @@ async function sendMessage(req, res) {
     const { roomId, message } = req.body;
     const userId = req.session?.user?.id;
 
-    if (!userId || !roomId || !message) {
-        return res.status(400).json({ message: "Missing required fields" });
+    if (!userId || !roomId || (!message && !req.file)) {
+        return res.status(400).json({ message: "Missing required fields (text or file)" });
     }
 
     // Same security checks as getMessages
@@ -87,10 +89,38 @@ async function sendMessage(req, res) {
     }
 
     try {
-        await pool.execute(
-            "INSERT INTO chat_messages (sender_id, room_id, message) VALUES (?, ?, ?)",
-            [userId, roomId, message]
+        const file = req.file;
+        let fileUrl = null;
+        let fileType = null;
+        let fileName = null;
+
+        if (file) {
+            fileUrl = `/uploads/chat/${file.filename}`;
+            fileType = file.mimetype;
+            fileName = file.originalname;
+        }
+
+        const [result] = await pool.execute(
+            "INSERT INTO chat_messages (sender_id, room_id, message, file_url, file_type, file_name) VALUES (?, ?, ?, ?, ?, ?)",
+            [userId, roomId, message || "", fileUrl, fileType, fileName]
         );
+
+        const messageId = result.insertId;
+
+        // Fetch the full message data for emission
+        const [fullMsgRows] = await pool.execute(
+            `SELECT cm.id, cm.message, cm.created_at, cm.sender_id, cm.room_id, cm.file_url, cm.file_type, cm.file_name,
+                e.Employee_Name as sender_name, e.profile_img as sender_image
+             FROM chat_messages cm
+             JOIN employee_records e ON cm.sender_id = e.id
+             WHERE cm.id = ?`,
+            [messageId]
+        );
+        const fullMsg = fullMsgRows[0];
+
+        if (fullMsg) {
+            req.io.emit("chat_message", { ...fullMsg, seen: false });
+        }
 
         // --- DASHBOARD NOTIFICATIONS ---
         const [senderRows] = await pool.execute("SELECT Employee_Name FROM employee_records WHERE id = ?", [userId]);
@@ -136,7 +166,7 @@ async function sendMessage(req, res) {
             }
         }
 
-        return res.json({ success: true });
+        return res.json({ success: true, messageId, fileUrl, fileType, fileName });
     } catch (err) {
         console.error("sendMessage error:", err);
         return res.status(500).json({ message: "Server error" });
@@ -170,11 +200,6 @@ async function getAuthorityRooms(req, res) {
              ORDER BY last_msg_at DESC`
         );
 
-        const fs = require('fs');
-        try {
-            fs.writeFileSync('e:\\hrm-react\\HRM-React\\backend\\debug_rooms.json', JSON.stringify(rows, null, 2));
-        } catch (e) { }
-        console.log("Authority Rooms Debug Data:", rows);
         return res.json(rows);
     } catch (err) {
         console.error("getAuthorityRooms error:", err);
@@ -206,10 +231,6 @@ async function getUnreadCounts(req, res) {
 
             if (roomId === "TOTAL_AUTH" && isAdmin) {
                 // Special case for admins: count all unread messages across all AUTH_ rooms
-                // except messages sent by the admin themselves.
-                // We need to compare against last seen for EACH room if strictly tracking, 
-                // but usually for a badge we can just count "new" ones or use a global last seen.
-                // For now, let's keep it simple: count messages in rooms where admin is NOT the sender.
                 const [rows] = await pool.execute(
                     "SELECT COUNT(*) as unread FROM chat_messages WHERE room_id LIKE 'AUTH_%' AND id > ? AND sender_id != ?",
                     [lastId, userId]
@@ -230,9 +251,45 @@ async function getUnreadCounts(req, res) {
     }
 }
 
+/**
+ * POST /api/v1/chat/read/:roomId
+ */
+async function markAsRead(req, res) {
+    const { roomId } = req.params;
+    const userId = req.session?.user?.id;
+
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+        const [unreadMessages] = await pool.execute(
+            `SELECT cm.id 
+             FROM chat_messages cm
+             LEFT JOIN chat_read_receipts crr ON cm.id = crr.message_id AND crr.user_id = ?
+             WHERE cm.room_id = ? AND cm.sender_id != ? AND crr.id IS NULL`,
+            [userId, roomId, userId]
+        );
+
+        if (unreadMessages.length > 0) {
+            const values = unreadMessages.map(m => `(${m.id}, ${userId})`).join(",");
+            await pool.execute(
+                `INSERT IGNORE INTO chat_read_receipts (message_id, user_id) VALUES ${values}`
+            );
+
+            // Notify sender(s) that their messages were read
+            req.io.emit("chat_read", { roomId, readerId: userId });
+        }
+
+        return res.json({ success: true });
+    } catch (err) {
+        console.error("markAsRead error:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
 module.exports = {
     getMessages,
     sendMessage,
     getAuthorityRooms,
     getUnreadCounts,
+    markAsRead,
 };

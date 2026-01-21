@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaComments, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaUserShield, FaUsers } from "react-icons/fa";
+import { FaComments, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaUserShield, FaUsers, FaPaperclip, FaFileAlt, FaImage, FaMicrophone, FaStop, FaTrash } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
-import api from "../../utils/api";
+import api, { BASE_URL } from "../../utils/api";
 import { flushSync } from "react-dom";
 import { toast } from "react-toastify";
+import socket from "../../utils/socket";
 
 export default function ChatPopup() {
     const { user } = useAuth();
@@ -15,6 +16,17 @@ export default function ChatPopup() {
     const [rooms, setRooms] = useState([]); // For Admins/HR
     const [selectedRoomId, setSelectedRoomId] = useState("");
     const [unreadCount, setUnreadCount] = useState(0);
+    const [selectedFile, setSelectedFile] = useState(null);
+    const [filePreview, setFilePreview] = useState(null);
+    const fileInputRef = useRef(null);
+
+    // Voice Recording States
+    const [isRecording, setIsRecording] = useState(false);
+    const [audioBlob, setAudioBlob] = useState(null);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef(null);
+    const timerRef = useRef(null);
+    const audioChunksRef = useRef([]);
 
     const scrollRef = useRef(null);
     const lastSeenRef = useRef({}); // { roomId: lastId }
@@ -60,6 +72,15 @@ export default function ChatPopup() {
         }
     }, [activeTab, deptRoomId, authRoomId, isAdmin, selectedRoomId]);
 
+    const handleMarkAsRead = async (roomId) => {
+        if (!roomId || !isOpen || minimized) return;
+        try {
+            await api.post(`/chat/read/${roomId}`);
+        } catch (err) {
+            console.error("handleMarkAsRead error", err);
+        }
+    };
+
     const fetchMessages = async () => {
         if (!selectedRoomId) return;
         try {
@@ -81,14 +102,12 @@ export default function ChatPopup() {
         try {
             const { data } = await api.get("/chat/rooms");
             setRooms(data);
-            console.log("Fetched Rooms:", data);
         } catch (e) {
             console.error("fetchRooms error", e);
         }
     };
 
     const fetchUnreadCounts = async () => {
-        // Only if closed or minimized
         if (isOpen && !minimized) return;
 
         const roomIdsList = [deptRoomId];
@@ -96,8 +115,6 @@ export default function ChatPopup() {
 
         if (isAdmin) {
             roomIdsList.push("TOTAL_AUTH");
-            // For TOTAL_AUTH, we'll use a special global last seen or just latest from any AUTH room
-            // Simplest: use max of all AUTH rooms last seen
             const authLastSeen = Object.entries(lastSeenRef.current)
                 .filter(([k]) => k.startsWith("AUTH_"))
                 .reduce((max, [_, v]) => Math.max(max, v), 0);
@@ -112,7 +129,6 @@ export default function ChatPopup() {
 
         try {
             const { data } = await api.get(`/chat/unread?roomIds=${roomIds}&lastIds=${lastIds}`);
-            // Sum all unread
             const total = Object.values(data).reduce((sum, val) => sum + Number(val), 0);
             setUnreadCount(total);
         } catch (e) {
@@ -123,28 +139,46 @@ export default function ChatPopup() {
     useEffect(() => {
         if (isOpen && !minimized) {
             fetchMessages();
-            const interval = setInterval(fetchMessages, 5000);
-            return () => clearInterval(interval);
+            handleMarkAsRead(selectedRoomId);
         } else {
-            // Background check every 30s
             fetchUnreadCounts();
             const interval = setInterval(fetchUnreadCounts, 30000);
             return () => clearInterval(interval);
         }
     }, [selectedRoomId, isOpen, minimized, deptRoomId, authRoomId]);
 
-    // ✅ Real-time Toast Notification Logic
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("chat_message", (newMsg) => {
+            if (newMsg.room_id === selectedRoomId) {
+                setMessages(prev => [...prev, newMsg]);
+                if (isOpen && !minimized) {
+                    handleMarkAsRead(selectedRoomId);
+                }
+            } else {
+                fetchUnreadCounts();
+            }
+        });
+
+        socket.on("chat_read", (data) => {
+            if (data.roomId === selectedRoomId) {
+                fetchMessages();
+            }
+        });
+
+        return () => {
+            socket.off("chat_message");
+            socket.off("chat_read");
+        };
+    }, [selectedRoomId, isOpen, minimized]);
+
     useEffect(() => {
         if (isAdmin && unreadCount > prevUnreadRef.current) {
-            // Only toast if not already looking at the chat
             if (!isOpen || minimized) {
                 toast.info("📩 New Support Message Received", {
                     position: "bottom-right",
                     autoClose: 5000,
-                    hideProgressBar: false,
-                    closeOnClick: true,
-                    pauseOnHover: true,
-                    draggable: true,
                     onClick: () => {
                         setIsOpen(true);
                         setMinimized(false);
@@ -176,33 +210,123 @@ export default function ChatPopup() {
         if (scrollRef.current && isOpen && !minimized) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
-    }, [messages, isOpen, minimized]);
+    }, [messages, isOpen, minimized, filePreview]);
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > 10 * 1024 * 1024) {
+            toast.error("File excessively large! Please keep it under 10MB.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
+            return;
+        }
+
+        setSelectedFile(file);
+        if (file.type.startsWith("image/")) {
+            setFilePreview(URL.createObjectURL(file));
+        } else {
+            setFilePreview(null);
+        }
+    };
+
+    const clearFile = () => {
+        setSelectedFile(null);
+        setFilePreview(null);
+        setAudioBlob(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    // --- Voice Recording Functions ---
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) audioChunksRef.current.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                setAudioBlob(blob);
+                // Create a "file" from blob for sending
+                const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: 'audio/webm' });
+                setSelectedFile(file);
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+            setRecordingTime(0);
+            timerRef.current = setInterval(() => {
+                setRecordingTime(prev => prev + 1);
+            }, 1000);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            toast.error("Microphone access denied or not available.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+            clearInterval(timerRef.current);
+        }
+    };
+
+    const discardRecording = () => {
+        stopRecording();
+        setAudioBlob(null);
+        setSelectedFile(null);
+    };
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     const [isSending, setIsSending] = useState(false);
 
     const handleSend = async (e) => {
         if (e) e.preventDefault();
         const val = text.trim();
-        if (!val || !selectedRoomId || isSending) return;
+        if ((!val && !selectedFile) || !selectedRoomId || isSending) return;
 
         setIsSending(true);
-        setText(""); // Instant clear
+        const formData = new FormData();
+        formData.append("roomId", selectedRoomId);
+        formData.append("message", val);
+        if (selectedFile) {
+            formData.append("file", selectedFile);
+        }
 
         try {
-            await api.post("/chat/send", { roomId: selectedRoomId, message: val });
-            setText(""); // Double-tap clear
+            await api.post("/chat/send", formData);
+            // ONLY CLEAR AFTER SUCCESS
+            setText("");
+            clearFile();
             fetchMessages();
-            // Force a slight delay to ensure the empty state is committed
-            setTimeout(() => setText(""), 10);
         } catch (err) {
             console.error("handleSend error", err);
-            setText(val); // Restore only on failure
+            toast.error("Failed to send message. Please try again.");
         } finally {
             setIsSending(false);
         }
     };
 
     if (!user) return null;
+
+    // Helper to build absolute URL for attachments
+    const getFileUrl = (path) => {
+        if (!path) return "";
+        // BASE_URL is typically 'http://localhost:5000' or similar
+        return `${BASE_URL.replace(/\/api\/v1\/?$/, "")}${path}`;
+    };
 
     return (
         <div className="fixed bottom-4 right-4 z-[900]">
@@ -306,8 +430,49 @@ export default function ChatPopup() {
                                                         <div className={`max-w-[80%] rounded-2xl p-2.5 shadow-sm text-xs ${isMe ? "bg-customRed text-white rounded-tr-none" : "bg-white text-gray-800 rounded-tl-none border"}`}>
                                                             {!isMe && <div className="font-bold text-[9px] mb-1 opacity-70">{m.sender_name}</div>}
                                                             <div className="whitespace-pre-wrap break-words">{m.message}</div>
-                                                            <div className={`text-[8px] mt-1 text-right ${isMe ? "text-red-100" : "text-gray-400"}`}>
-                                                                {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+
+                                                            {/* Attachment Rendering */}
+                                                            {m.file_url && (
+                                                                <div className="mt-2 pt-2 border-t border-white/20">
+                                                                    {m.file_type?.startsWith("image/") ? (
+                                                                        <a href={getFileUrl(m.file_url)} target="_blank" rel="noopener noreferrer">
+                                                                            <img
+                                                                                src={getFileUrl(m.file_url)}
+                                                                                alt={m.file_name}
+                                                                                className="max-w-full rounded-lg border border-white/10 hover:opacity-90 transition-opacity"
+                                                                            />
+                                                                        </a>
+                                                                    ) : m.file_type?.startsWith("audio/") ? (
+                                                                        <div className="py-1">
+                                                                            <audio
+                                                                                controls
+                                                                                src={getFileUrl(m.file_url)}
+                                                                                className={`w-full h-8 ${isMe ? 'filter invert' : ''}`}
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <a
+                                                                            href={getFileUrl(m.file_url)}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={`flex items-center gap-2 p-2 rounded-lg ${isMe ? "bg-white/10" : "bg-gray-100"} hover:underline`}
+                                                                        >
+                                                                            {m.file_type?.includes("pdf") ? <FaFileAlt className="text-red-500" /> : <FaPaperclip />}
+                                                                            <span className="truncate flex-1">{m.file_name}</span>
+                                                                        </a>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            <div className="flex items-center justify-end gap-1 mt-1">
+                                                                <div className={`text-[8px] ${isMe ? "text-red-100" : "text-gray-400"}`}>
+                                                                    {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </div>
+                                                                {isMe && m.seen && (
+                                                                    <div className="text-[8px] text-red-100 font-bold">
+                                                                        • Seen
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -317,21 +482,83 @@ export default function ChatPopup() {
                                     </div>
 
                                     {/* Input */}
-                                    <form onSubmit={handleSend} className="p-3 border-t shrink-0 flex gap-2">
-                                        <input
-                                            value={text}
-                                            onChange={(e) => setText(e.target.value)}
-                                            placeholder="Type a message..."
-                                            autoComplete="off"
-                                            className="flex-1 text-xs border rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-customRed"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={!text.trim() || isSending}
-                                            className="bg-customRed text-white p-2 rounded-full hover:scale-105 disabled:opacity-50 transition-all shadow-md flex items-center justify-center w-8 h-8"
-                                        >
-                                            <FaPaperPlane className="w-3.5 h-3.5" />
-                                        </button>
+                                    <form onSubmit={handleSend} className="p-3 border-t shrink-0 flex flex-col gap-2">
+                                        {/* File / Recording Preview */}
+                                        {selectedFile && (
+                                            <div className="flex items-center justify-between bg-gray-100 p-2 rounded-lg animate-in slide-in-from-bottom-2">
+                                                <div className="flex items-center gap-2 overflow-hidden text-customRed font-bold">
+                                                    {audioBlob ? (
+                                                        <FaMicrophone className="animate-pulse" />
+                                                    ) : filePreview ? (
+                                                        <img src={filePreview} className="w-8 h-8 rounded object-cover" alt="" />
+                                                    ) : (
+                                                        <FaFileAlt className="text-gray-400" />
+                                                    )}
+                                                    <span className="text-[10px] truncate">{audioBlob ? "Voice Note Ready" : selectedFile.name}</span>
+                                                </div>
+                                                <button type="button" onClick={clearFile} className="text-gray-400 hover:text-red-500 p-1">
+                                                    <FaTimes size={12} />
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        <div className="flex gap-2 items-center">
+                                            {isRecording ? (
+                                                <div className="flex-1 flex items-center gap-3 bg-red-50 p-2 rounded-full border border-red-200">
+                                                    <div className="flex items-center gap-2 flex-1 px-2">
+                                                        <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                                                        <span className="text-xs font-bold text-red-600 italic">Recording... {formatTime(recordingTime)}</span>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button type="button" onClick={discardRecording} className="text-gray-400 hover:text-red-600 p-1">
+                                                            <FaTrash size={14} />
+                                                        </button>
+                                                        <button type="button" onClick={stopRecording} className="bg-red-500 text-white p-2 rounded-full hover:scale-105 shadow-sm">
+                                                            <FaStop size={12} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => fileInputRef.current?.click()}
+                                                        className="text-gray-400 hover:text-customRed p-2 transition-colors"
+                                                        title="Attach File"
+                                                    >
+                                                        <FaPaperclip size={18} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={startRecording}
+                                                        className="text-gray-400 hover:text-customRed p-2 transition-colors"
+                                                        title="Record Voice Note"
+                                                    >
+                                                        <FaMicrophone size={18} />
+                                                    </button>
+                                                    <input
+                                                        type="file"
+                                                        ref={fileInputRef}
+                                                        onChange={handleFileChange}
+                                                        className="hidden"
+                                                    />
+                                                    <input
+                                                        value={text}
+                                                        onChange={(e) => setText(e.target.value)}
+                                                        placeholder="Type a message..."
+                                                        autoComplete="off"
+                                                        className="flex-1 text-xs border rounded-full px-4 py-2 focus:outline-none focus:ring-1 focus:ring-customRed"
+                                                    />
+                                                    <button
+                                                        type="submit"
+                                                        disabled={(!text.trim() && !selectedFile) || isSending}
+                                                        className="bg-customRed text-white p-2 rounded-full hover:scale-105 disabled:opacity-50 transition-all shadow-md flex items-center justify-center w-8 h-8 shrink-0"
+                                                    >
+                                                        <FaPaperPlane className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </form>
                                 </>
                             )}

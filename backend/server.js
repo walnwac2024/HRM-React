@@ -13,6 +13,42 @@ const fs = require("fs");
 dotenv.config();
 
 const app = express();
+const http = require("http");
+const { Server } = require("socket.io");
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: (origin, callback) => {
+      // Allow localhost 3000 and propeople.cloud
+      const allowed = [
+        "http://localhost:3000",
+        "http://propeople.cloud",
+        "https://propeople.cloud",
+        "http://api.propeople.cloud",
+        "https://api.propeople.cloud"
+      ];
+      if (!origin || allowed.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true
+  }
+});
+
+// Make io accessible in routes
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+io.on("connection", (socket) => {
+  console.log("New client connected:", socket.id);
+  socket.on("disconnect", () => {
+    console.log("Client disconnected:", socket.id);
+  });
+});
 
 
 // Enable gzip compression for all responses
@@ -38,9 +74,6 @@ app.use((req, res, next) => {
 
 const isProd = process.env.NODE_ENV === "production";
 
-// Enable gzip compression for all responses
-app.use(compression());
-
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
@@ -57,7 +90,6 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -81,7 +113,9 @@ app.use(cors(corsOptions));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
+// Static Routes
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/chat", express.static(path.join(__dirname, "uploads/chat")));
 
 app.set("trust proxy", 1);
 
@@ -138,7 +172,6 @@ app.use("/api/v1", (req, res, next) => {
     "/news/whatsapp/",
   ];
 
-  // path relative to /api/v1
   const isPublic = publicPaths.some((p) => req.path.startsWith(p));
   if (isPublic) return next();
 
@@ -189,6 +222,6 @@ app.use((err, req, res, next) => {
 
 const port = Number(process.env.PORT || 5000);
 const host = "0.0.0.0";
-app.listen(port, host, () => {
+server.listen(port, host, () => {
   console.log(`Server listening on http://${host}:${port}`);
 });

@@ -198,7 +198,8 @@
 
   /* -------- table scroll helper -------- */
   .table-scroll {
-    @apply w-full overflow-x-auto overflow-y-hidden;
+    @apply w-full overflow-x-auto;
+    overflow-y: visible !important;
     -webkit-overflow-scrolling: touch;
   }
 

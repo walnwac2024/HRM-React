@@ -100,10 +100,11 @@ router.patch("/notifications/read-all", isAuthenticated, Notifications.markAllAs
 router.get("/chat/rooms", isAuthenticated, Chat.getAuthorityRooms);
 router.get("/chat/authority-rooms", isAuthenticated, Chat.getAuthorityRooms);
 router.get("/chat/messages/:roomId", isAuthenticated, Chat.getMessages);
-router.post("/chat/messages", isAuthenticated, Chat.sendMessage);
-router.post("/chat/send", isAuthenticated, Chat.sendMessage);
+router.post("/chat/messages", isAuthenticated, upload.single("file"), Chat.sendMessage);
+router.post("/chat/send", isAuthenticated, upload.single("file"), Chat.sendMessage);
 router.get("/chat/unread-counts", isAuthenticated, Chat.getUnreadCounts);
 router.get("/chat/unread", isAuthenticated, Chat.getUnreadCounts);
+router.post("/chat/read/:roomId", isAuthenticated, Chat.markAsRead);
 
 // Permission routes
 router.get("/permissions/user-types", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), listUserTypes);
@@ -183,6 +184,8 @@ router.get("/news", isAuthenticated, News.listNews);
 router.post("/news", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), upload.single('image'), News.createNews);
 router.patch("/news/:id", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), upload.single('image'), News.updateNews);
 router.delete("/news/:id", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.deleteNews);
+router.get("/news/reactions", isAuthenticated, News.getNewsReactions);
+router.post("/news/:id/react", isAuthenticated, News.toggleReaction);
 router.get("/news/whatsapp/status", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.getWHStatus);
 router.post("/news/whatsapp/init", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.initWH);
 router.post("/news/whatsapp/settings", isAuthenticated, requireRole("hr", "admin", "super_admin", "developer"), News.setWHSettings);

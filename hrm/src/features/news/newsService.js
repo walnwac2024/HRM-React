@@ -45,3 +45,13 @@ export const logoutWhatsAppSession = async (hardReset = false) => {
     const res = await api.post(`${API_URL}/whatsapp/logout`, { hardReset });
     return res.data;
 };
+
+export const toggleReaction = async (id, emoji) => {
+    const res = await api.post(`${API_URL}/${id}/react`, { emoji });
+    return res.data;
+};
+
+export const listReactions = async () => {
+    const res = await api.get(`${API_URL}/reactions`);
+    return res.data;
+};

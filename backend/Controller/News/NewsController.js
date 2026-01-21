@@ -24,6 +24,29 @@ async function listNews(req, res) {
         query += " ORDER BY n.created_at DESC";
 
         const [rows] = await pool.execute(query);
+
+        // Fetch reactions for these news items
+        if (rows.length > 0) {
+            const newsIds = rows.map(r => r.id);
+            const [reactions] = await pool.query(
+                "SELECT news_id, emoji, COUNT(*) as count, GROUP_CONCAT(user_id) as user_ids FROM news_reactions WHERE news_id IN (?) GROUP BY news_id, emoji",
+                [newsIds]
+            );
+
+            // Attach reactions to each news item
+            rows.forEach(item => {
+                const itemReactions = reactions.filter(r => r.news_id === item.id);
+                item.reactions = itemReactions.map(r => {
+                    const reactUserIds = r.user_ids ? r.user_ids.toString().split(',').map(Number) : [];
+                    return {
+                        emoji: r.emoji,
+                        count: parseInt(r.count) || 0,
+                        me: user.id ? reactUserIds.includes(Number(user.id)) : false
+                    };
+                });
+            });
+        }
+
         return res.json(rows);
     } catch (err) {
         console.error("listNews error:", err);
@@ -239,11 +262,89 @@ async function logoutWH(req, res) {
     return res.json({ message: hardReset ? "WhatsApp hard reset initiated" : "WhatsApp logout initiated" });
 }
 
+/**
+ * POST /api/v1/news/:id/react
+ */
+async function toggleReaction(req, res) {
+    const { id: newsId } = req.params;
+    const { emoji } = req.body;
+    const userId = req.session?.user?.id;
+
+    if (!emoji) return res.status(400).json({ message: "Emoji is required" });
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    try {
+        // Check if reaction exists
+        const [existing] = await pool.execute(
+            "SELECT id FROM news_reactions WHERE news_id = ? AND user_id = ? AND emoji = ?",
+            [newsId, userId, emoji]
+        );
+
+        if (existing.length > 0) {
+            // Remove it
+            await pool.execute("DELETE FROM news_reactions WHERE id = ?", [existing[0].id]);
+            req.io.emit("news_reaction_updated", { newsId, emoji });
+            return res.json({ action: "removed", emoji });
+        } else {
+            // Add it
+            try {
+                await pool.execute(
+                    "INSERT INTO news_reactions (news_id, user_id, emoji) VALUES (?, ?, ?)",
+                    [newsId, userId, emoji]
+                );
+                req.io.emit("news_reaction_updated", { newsId, emoji });
+                return res.json({ action: "added", emoji });
+            } catch (insErr) {
+                if (insErr.code === 'ER_DUP_ENTRY') {
+                    return res.json({ action: "exists", emoji });
+                }
+                throw insErr;
+            }
+        }
+    } catch (err) {
+        console.error("toggleReaction error:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
+/**
+ * GET /api/v1/news/reactions
+ */
+async function getNewsReactions(req, res) {
+    try {
+        const userId = req.session?.user?.id;
+
+        const [reactions] = await pool.query(
+            "SELECT news_id, emoji, COUNT(*) as count, GROUP_CONCAT(user_id) as user_ids FROM news_reactions GROUP BY news_id, emoji"
+        );
+
+        // Group by news_id
+        const result = {};
+        reactions.forEach(r => {
+            if (!result[r.news_id]) result[r.news_id] = [];
+
+            const reactUserIds = r.user_ids ? r.user_ids.toString().split(',').map(Number) : [];
+            result[r.news_id].push({
+                emoji: r.emoji,
+                count: parseInt(r.count) || 0,
+                me: userId ? reactUserIds.includes(Number(userId)) : false
+            });
+        });
+
+        return res.json(result);
+    } catch (err) {
+        console.error("getNewsReactions error:", err);
+        return res.status(500).json({ message: "Server error" });
+    }
+}
+
 module.exports = {
     listNews,
     createNews,
     updateNews,
     deleteNews,
+    toggleReaction,
+    getNewsReactions,
     getWHStatus,
     initWH,
     setWHSettings,

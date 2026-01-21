@@ -27,7 +27,7 @@ function EmployeesTable({
   const FILE_BASE = BASE_URL;
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card !overflow-visible">
       <div className="table-scroll">
         <table className="min-w-full text-sm table-auto sm:table-fixed">
           <thead className="bg-slate-50 border-b border-slate-200">
