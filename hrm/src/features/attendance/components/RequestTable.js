@@ -45,26 +45,30 @@ export default function RequestTable({
   const canNext = safePage < safePageCount;
 
   return (
-    <div className="card">
-      <div className="card-body">
-        <div className="table-scroll">
-          <table className="table">
-            <thead className="thead">
-              <tr>
-                <th className="th w-14">S#</th>
-                <th className="th min-w-[240px]">Employee</th>
-                <th className="th w-44">Attendance Date</th>
-                <th className="th w-44">Change Type</th>
-                <th className="th w-32">Status</th>
-                <th className="th">Details</th>
-                <th className="th w-44">Approvals</th>
-                <th className="th w-48">Added On</th>
-                <th className="th w-16 text-right">Action</th>
-              </tr>
-            </thead>
+    <div className="card !overflow-visible">
+      <div className="table-scroll">
+        <table className="min-w-full text-sm table-auto sm:table-fixed">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <th className="px-4 py-3 w-12 hidden sm:table-cell">S#</th>
+              <th className="px-4 py-3 min-w-[200px]">Employee</th>
+              <th className="px-4 py-3 w-40">Date</th>
+              <th className="px-4 py-3 w-40">Change Type</th>
+              <th className="px-4 py-3 w-32">Status</th>
+              <th className="px-4 py-3 min-w-[150px]">Details</th>
+              <th className="px-4 py-3 w-16 text-right sticky right-0 bg-slate-50">Action</th>
+            </tr>
+          </thead>
 
-            <tbody>
-              {rows.map((row, idx) => {
+          <tbody className="divide-y divide-slate-100 font-outfit">
+            {rows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-12 text-center text-slate-400 italic">
+                  No requests found.
+                </td>
+              </tr>
+            ) : (
+              rows.map((row, idx) => {
                 const name =
                   pick(row, "employee.name", "employee.fullName", "employeeName", "name", "fullName") ||
                   [pick(row, "firstName", "employee.firstName"), pick(row, "lastName", "employee.lastName")]
@@ -77,65 +81,74 @@ export default function RequestTable({
                 const changeType = pick(row, "changeType", "type", "change");
                 const status = pick(row, "status", "state");
                 const details = pick(row, "details", "reason", "note", "description");
-                const approvals = pick(row, "approvals", "approver", "approvedBy", "lineManager", "lineMgr");
-                const addedOn = fmtDate(pick(row, "addedOn", "createdAt", "created_on", "added_at"));
 
                 return (
-                  <tr key={row.id ?? idx} className="row tr">
-                    <td className="td">{idx + 1}</td>
+                  <tr key={row.id ?? idx} className="hover:bg-slate-50/80 transition-colors border-b last:border-0 font-outfit">
+                    <td className="px-4 py-4 align-top text-xs text-slate-400 hidden sm:table-cell font-mono">
+                      {idx + 1}
+                    </td>
 
-                    <td className="td">
-                      <div className="font-medium text-gray-900">{name || "—"}</div>
-                      <div className="text-[13px] text-gray-500">
-                        {`Code: ${code || "—"}`} <span className="mx-1">•</span> {`Punch: ${punch || "—"}`}
+                    <td className="px-4 py-3 align-top">
+                      <div className="font-bold text-slate-800 leading-tight truncate text-[14px]">
+                        {name || "—"}
+                      </div>
+                      <div className="mt-1 text-[11px] text-slate-500 font-medium">
+                        <span className="opacity-60">ID:</span> {code || "—"} <span className="mx-1">•</span> <span className="opacity-60">Punch:</span> {punch || "—"}
                       </div>
                     </td>
 
-                    <td className="td">{date || "—"}</td>
-                    <td className="td">{changeType || "—"}</td>
+                    <td className="px-4 py-4 align-top text-slate-600">
+                      <div className="font-medium text-[13px]">{date || "—"}</div>
+                    </td>
 
-                    <td className="td">
+                    <td className="px-4 py-4 align-top text-slate-600">
+                      <div className="text-[13px]">{changeType || "—"}</div>
+                    </td>
+
+                    <td className="px-4 py-4 align-top">
                       <span className={`badge ${statusClass(status)}`}>{status || "—"}</span>
                     </td>
 
-                    <td className="td whitespace-pre-line">{details || "—"}</td>
-                    <td className="td">{approvals || "—"}</td>
-                    <td className="td">{addedOn || "—"}</td>
+                    <td className="px-4 py-4 align-top text-slate-500 text-[13px] whitespace-pre-line leading-relaxed">
+                      {details || "—"}
+                    </td>
 
-                    <td className="td text-right">
-                      <button aria-label="Actions" className="kebab">⋯</button>
+                    <td className="px-4 py-3 align-top text-right sticky right-0">
+                      <button className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-slate-200 text-slate-400 hover:text-customRed hover:bg-red-50 transition-colors">
+                        <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0zm6 0a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                      </button>
                     </td>
                   </tr>
                 );
-              })}
-            </tbody>
-          </table>
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="px-4 py-3 flex items-center justify-between text-sm pagination-safe">
+        <div className="text-slate-500 font-medium">
+          Page {safePage} of {safePageCount}
         </div>
-
-        {/* bottom bar: Page X of Y (left) + disabled-aware controls (right) */}
-        <div className="mt-3 flex items-center justify-between pagination-safe">
-          <span className="text-sm text-gray-600">
-            Page {safePage} of {safePageCount}
-          </span>
-
-          <div className="flex gap-2">
-            <button
-              className="btn-outline"
-              onClick={onPrev}
-              disabled={!canPrev}
-              aria-disabled={!canPrev}
-            >
-              Previous
-            </button>
-            <button
-              className="btn-outline"
-              onClick={onNext}
-              disabled={!canNext}
-              aria-disabled={!canNext}
-            >
-              Next
-            </button>
-          </div>
+        <div className="space-x-2">
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={onPrev}
+            disabled={!canPrev}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={onNext}
+            disabled={!canNext}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

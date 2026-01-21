@@ -46,44 +46,50 @@ export default function AttendanceApprovalTable({ rows, onView, onForceApprove, 
   };
 
   return (
-    <div className="card overflow-hidden">
+    <div className="card !overflow-visible">
       <div className="table-scroll">
-        <table className="min-w-[1200px] w-full text-sm">
-          <thead className="thead">
-            <tr>
-              {["S#", "Employee", "Employee Details", "Request Date", "Request Type", "Status", "Forwarded On", "Is From Dashboard", "Details", "Approvals", "Action"].map((h) => (
-                <th key={h} className="th border-0">{h}</th>
-              ))}
+        <table className="min-w-full text-sm table-auto sm:table-fixed">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr className="text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <th className="px-4 py-3 w-12 hidden sm:table-cell">S#</th>
+              <th className="px-4 py-3 min-w-[200px]">Employee</th>
+              <th className="px-4 py-3 w-44">Request Date</th>
+              <th className="px-4 py-3 w-40">Request Type</th>
+              <th className="px-4 py-3 w-32">Status</th>
+              <th className="px-4 py-3 w-16 text-right sticky right-0 bg-slate-50">Action</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-100">
+          <tbody className="divide-y divide-slate-100 font-outfit">
             {rows.length === 0 ? (
-              <tr><td colSpan={11} className="px-6 py-12 text-center text-slate-400 italic">No records found.</td></tr>
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-slate-400 italic">
+                  No records found.
+                </td>
+              </tr>
             ) : (
               rows.map((r, idx) => (
-                <tr key={r.id} className="tr border-0">
-                  <td className="px-6 py-4 text-slate-400 font-medium">#{idx + 1}</td>
-                  <td className="px-6 py-4">
-                    <button className="text-customRed font-bold hover:underline text-left block">
-                      {r.employee?.name}
-                    </button>
-                    <div className="text-[11px] font-black uppercase tracking-wider text-slate-400 mt-0.5">
-                      {r.employee?.code}
+                <tr key={r.id} className="hover:bg-slate-50/80 transition-colors border-b last:border-0 font-outfit">
+                  <td className="px-4 py-4 align-top text-xs text-slate-400 hidden sm:table-cell font-mono">
+                    {idx + 1}
+                  </td>
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-bold text-slate-800 leading-tight truncate text-[14px]">
+                      {r.employeeName || r.employee?.name || "—"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-500 font-medium">
+                      <span className="opacity-60">ID:</span> {r.employeeCode || r.employee?.code || "—"}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-xs text-slate-500 leading-relaxed min-w-[200px]">{r.employeeDetails}</td>
-                  <td className="px-6 py-4 font-semibold text-slate-700">{r.requestDate}</td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{r.requestType}</td>
-                  <td className="px-6 py-4"><StatusBadge status={r.status} /></td>
-                  <td className="px-6 py-4 text-slate-500">{r.forwardedOn}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${r.isFromDashboard ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-500'}`}>
-                      {r.isFromDashboard ? "Dashboard" : "System"}
-                    </span>
+                  <td className="px-4 py-4 align-top text-slate-600">
+                    <div className="font-medium text-[13px]">{r.requestDate || "—"}</div>
                   </td>
-                  <td className="px-6 py-4 text-slate-400">—</td>
-                  <td className="px-6 py-4 text-slate-400">—</td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4 align-top text-slate-600">
+                    <div className="text-[13px]">{r.requestType || "—"}</div>
+                  </td>
+                  <td className="px-4 py-4 align-top">
+                    <StatusBadge status={r.status} />
+                  </td>
+                  <td className="px-4 py-3 align-top text-right sticky right-0">
                     <RowActionMenu
                       onView={() => onView?.(r)}
                       onForceApprove={() => onForceApprove?.(r)}

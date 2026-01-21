@@ -84,10 +84,10 @@ export default function Filters({
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+        <h2 className="card-title">Filters</h2>
       </div>
 
-      <div className="card-body">
+      <div className="p-4">
         {/* Row 1 (shared) */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <SharedDropdown
@@ -265,32 +265,21 @@ export default function Filters({
           </div>
         )}
 
-        {/* Actions Section */}
-        <div className="mt-8 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-6 border-t border-slate-100 pt-6">
-          {/* Group 1: Filter Logic Actions */}
-          <div className="grid grid-cols-2 sm:flex items-center gap-3">
-            <button
-              className="btn-primary flex-1 sm:flex-none"
-              onClick={() => onApply?.(vals)}
-            >
-              Apply Filter
+        {/* Actions Section - Matching ActionsBar pattern */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100 pt-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="btn-primary" onClick={() => onApply?.(vals)}>
+              Apply Filters
             </button>
-            <button
-              className="btn-outline flex-1 sm:flex-none"
-              onClick={resetVals}
-            >
+            <button className="btn-outline" onClick={resetVals}>
               Clear
             </button>
-          </div>
-
-          {/* Group 2: Table Utilities & Primary Actions */}
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 flex-1 justify-end">
-            {/* Show Records Selector */}
-            <div className="flex items-center px-4 h-11 bg-white rounded-2xl border border-slate-200 shadow-sm transition-all focus-within:border-customRed min-w-[120px]">
+            <div className="ml-2 h-10 w-px bg-slate-200 hidden sm:block" />
+            <div className="flex items-center px-4 h-10 bg-white rounded-xl border border-slate-200 shadow-sm">
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mr-3">Show</span>
               <select
-                className="bg-transparent outline-none font-bold text-slate-800 cursor-pointer flex-1 appearance-none pr-6"
-                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2.5\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right center', backgroundSize: '1rem' }}
+                className="bg-transparent outline-none font-bold text-slate-800 cursor-pointer appearance-none pr-4 text-xs"
+                style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2394a3b8\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2.5\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right center', backgroundSize: '0.8rem' }}
                 value={perPage}
                 onChange={(e) => onPerPageChange?.(Number(e.target.value))}
               >
@@ -299,36 +288,25 @@ export default function Filters({
                 ))}
               </select>
             </div>
+          </div>
 
-            {/* Dynamic Action Buttons Group - Responsive Grid/Flex */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 sm:flex flex-wrap items-center gap-2">
-              {!isExemption && !isRemote && !isShift && (
-                <button
-                  onClick={onUploadExcel}
-                  className="btn-utility flex-1 sm:flex-none"
-                >
-                  Upload
-                </button>
-              )}
-
-              <button
-                onClick={onAddNew}
-                className="btn-primary flex-1 sm:flex-none shadow-lg shadow-red-500/20"
-              >
-                {isWorksheet ? '+ WorkSheet' : '+ New Request'}
+          <div className="flex flex-wrap items-center gap-2">
+            {!isExemption && !isRemote && !isShift && (
+              <button onClick={onUploadExcel} className="btn-utility">
+                Upload Excel
               </button>
-
-              {/* Irregular Actions */}
-              {!isWorksheet && !isRemote && !isExemption && (
-                <button
-                  onClick={onAddIrregular}
-                  className="btn-utility flex-1 sm:flex-none"
-                  title={isShift ? "Add Irregular Shift" : "Add Irregular Attendance"}
-                >
-                  + Irregular
-                </button>
-              )}
-            </div>
+            )}
+            {!isWorksheet && !isRemote && !isExemption && (
+              <button onClick={onAddIrregular} className="btn-utility">
+                + Irregular
+              </button>
+            )}
+            <button
+              onClick={onAddNew}
+              className="btn-primary shadow-lg shadow-red-500/20"
+            >
+              {isWorksheet ? '+ WorkSheet' : '+ New Request'}
+            </button>
           </div>
         </div>
       </div>

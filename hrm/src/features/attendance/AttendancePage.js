@@ -275,13 +275,12 @@ export default function AttendancePage() {
       )
     );
   };
-
   return (
-    <div className="bg-slate-50/50 min-h-screen">
-      <div className="flex flex-col lg:flex-row gap-6">
-        <Sidebar items={nav} onNavigate={handleNavigate} />
+    <div className="flex flex-col lg:flex-row gap-6">
+      <Sidebar items={nav} onNavigate={handleNavigate} />
 
-        <div className="flex-1 flex flex-col gap-6 min-w-0">
+      <section className="flex-1 min-w-0 w-full overflow-hidden">
+        <div className="flex flex-col gap-6">
           {isWorking ? (
             <ComingSoon label={activeItem?.label || ''} />
           ) : (
@@ -368,7 +367,7 @@ export default function AttendancePage() {
             </>
           )}
         </div>
-      </div>
+      </section>
 
       {/* Modals */}
       <AddRequestModal open={modal === 'attendance'} onClose={() => setModal(null)} />
