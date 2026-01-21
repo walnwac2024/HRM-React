@@ -1440,8 +1440,98 @@ async function listBasicEmployees(req, res) {
 }
 
 async function deleteEmployee(req, res) {
-  // Stub to prevent crash
-  return res.status(501).json({ message: "Delete employee not implemented yet" });
+  let conn;
+  try {
+    const sessionUser = req.session?.user;
+    if (!sessionUser?.id) return res.status(401).json({ message: "Unauthenticated" });
+    if (!hasFullAccess(sessionUser)) return res.status(403).json({ message: "Forbidden" });
+
+    const { id } = req.params;
+    const empId = Number(id);
+
+    if (!empId || Number.isNaN(empId)) {
+      return res.status(400).json({ message: "Invalid employee id" });
+    }
+
+    conn = await pool.getConnection();
+
+    // 1. Get employee info for file cleanup
+    const [empRows] = await conn.execute(
+      "SELECT Employee_Name, Employee_ID, profile_img FROM employee_records WHERE id = ? LIMIT 1",
+      [empId]
+    );
+
+    if (!empRows.length) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const employee = empRows[0];
+
+    // 2. Get all document paths for cleanup
+    const [docRows] = await conn.execute(
+      "SELECT path FROM employee_documents WHERE employee_id = ?",
+      [empId]
+    );
+
+    await conn.beginTransaction();
+
+    // 3. Delete from dependent tables
+    // Attendance related
+    await conn.execute("DELETE FROM attendance_alert_logs WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM attendance_punches WHERE employee_id = ? OR marked_by_employee_id = ?", [empId, empId]);
+    await conn.execute("DELETE FROM attendance_daily WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM employee_shift_assignments WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM attendance_security_violations WHERE employee_id = ?", [empId]);
+
+    // Employee related
+    await conn.execute("DELETE FROM employee_user_types WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM employee_documents WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM employee_info_requests WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM employee_transfers WHERE employee_id = ?", [empId]);
+
+    // Leaves
+    await conn.execute("DELETE FROM leave_balances WHERE employee_id = ?", [empId]);
+    await conn.execute("DELETE FROM leave_applications WHERE employee_id = ?", [empId]);
+
+    // Other social/notif
+    await conn.execute("DELETE FROM news_reactions WHERE user_id = ?", [empId]);
+    await conn.execute("DELETE FROM notifications WHERE user_id = ?", [empId]);
+    await conn.execute("DELETE FROM chat_messages WHERE sender_id = ?", [empId]);
+    await conn.execute("DELETE FROM chat_read_receipts WHERE user_id = ?", [empId]);
+
+    // 4. Delete the main record
+    await conn.execute("DELETE FROM employee_records WHERE id = ? LIMIT 1", [empId]);
+
+    await conn.commit();
+
+    // 5. Cleanup Files
+    if (employee.profile_img) {
+      safeUnlink(resolveUploadedAbsPath(employee.profile_img));
+    }
+    for (const doc of docRows) {
+      if (doc.path) {
+        safeUnlink(resolveUploadedAbsPath(doc.path));
+      }
+    }
+
+    // Audit Log
+    await recordLog({
+      actorId: sessionUser.id,
+      action: `Permanently deleted employee: ${employee.Employee_Name} (${employee.Employee_ID})`,
+      category: "System",
+      status: "Success",
+      details: { employee_id: empId, name: employee.Employee_Name, code: employee.Employee_ID }
+    });
+
+    return res.json({ message: "Employee and all associated data deleted successfully" });
+
+  } catch (err) {
+    if (conn) await conn.rollback();
+    console.error("deleteEmployee error:", err);
+    return res.status(500).json({ message: "Server error during deletion: " + (err.message || "Unknown error") });
+  } finally {
+    if (conn) conn.release();
+  }
 }
 
 /* ------------------------------------------------------------------

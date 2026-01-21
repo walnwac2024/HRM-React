@@ -81,6 +81,11 @@ export async function updateActiveAttendanceRule(payload) {
   return data;
 }
 
+export async function bulkAssignAttendanceShift(payload) {
+  const { data } = await api.post("/attendance/settings/shifts/bulk-assign", payload);
+  return data;
+}
+
 export async function getPersonalAttendanceSummary() {
   const { data } = await api.get("/attendance/summary/personal");
   return data;

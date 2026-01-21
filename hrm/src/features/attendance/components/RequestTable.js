@@ -113,7 +113,7 @@ export default function RequestTable({
         </div>
 
         {/* bottom bar: Page X of Y (left) + disabled-aware controls (right) */}
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex items-center justify-between pagination-safe">
           <span className="text-sm text-gray-600">
             Page {safePage} of {safePageCount}
           </span>

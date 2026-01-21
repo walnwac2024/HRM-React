@@ -5,6 +5,7 @@ import {
   getAttendanceShifts,
   updateActiveAttendanceRule,
   updateAttendanceShift,
+  bulkAssignAttendanceShift,
 } from "../services/attendanceService";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -28,6 +29,10 @@ export default function AttendanceSettings() {
     () => rules?.find((r) => Number(r.is_active) === 1) || rules?.[0] || null,
     [rules]
   );
+
+  const [bulkShiftId, setBulkShiftId] = useState("");
+  const [savingBulk, setSavingBulk] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState("");
 
   const [ruleForm, setRuleForm] = useState({
     grace_minutes: 15,
@@ -106,6 +111,31 @@ export default function AttendanceSettings() {
       setError(e?.response?.data?.message || "Failed to update rule");
     } finally {
       setSavingRule(false);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (!bulkShiftId) {
+      setError("Please select a shift first.");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to assign this shift to ALL active employees? This will overwrite their current shift assignments.")) {
+      return;
+    }
+
+    try {
+      setSavingBulk(true);
+      setError("");
+      setBulkMessage("");
+      const res = await bulkAssignAttendanceShift({ shift_id: bulkShiftId });
+      setBulkMessage(res.message);
+      await load();
+    } catch (e) {
+      console.error(e);
+      setError(e?.response?.data?.message || "Failed to perform bulk shift assignment");
+    } finally {
+      setSavingBulk(false);
     }
   };
 
@@ -193,6 +223,48 @@ export default function AttendanceSettings() {
             <p className="mt-3 text-[11px] font-medium text-slate-500 italic">
               Grace is used for late detection + missing attendance alerts.
             </p>
+          </div>
+
+          {/* BULK ASSIGN */}
+          <div className="rounded-2xl border border-slate-100 p-6 bg-slate-50/30">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="text-[13px] font-bold text-slate-700 uppercase tracking-wider">Bulk Shift Assignment</div>
+              </div>
+              <button
+                onClick={handleBulkAssign}
+                disabled={savingBulk || loading || !bulkShiftId}
+                className="btn-primary shadow-red-500/20"
+              >
+                {savingBulk ? "Processing..." : "Assign to All Employees"}
+              </button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="w-full sm:max-w-xs">
+                <label className="form-label">Select Shift to Apply Everywhere</label>
+                <select
+                  value={bulkShiftId}
+                  onChange={(e) => setBulkShiftId(e.target.value)}
+                  className="input"
+                >
+                  <option value="">-- Choose Shift --</option>
+                  {shifts.filter(s => !!Number(s.is_active)).map(s => (
+                    <option key={s.id} value={s.id}>{s.name} ({s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)})</option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-[11px] font-medium text-slate-500 italic pb-2">
+                This will automatically update the shift assignment for all active employees starting from today.
+              </p>
+            </div>
+
+            {bulkMessage && (
+              <div className="mt-4 text-xs font-bold text-slate-600 border border-slate-100 bg-white rounded-xl p-3 flex items-center gap-3">
+                <div className="h-2 w-2 rounded-full bg-slate-400 animate-pulse" />
+                {bulkMessage}
+              </div>
+            )}
           </div>
 
           {/* SHIFTS */}

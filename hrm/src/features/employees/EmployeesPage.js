@@ -135,6 +135,33 @@ export default function EmployeesPage() {
     }
   };
 
+  /* ------------------------------------------------------------------
+   * ✅ PERMANENT DELETE
+   * ------------------------------------------------------------------ */
+  const handleDeleteEmployee = async (row) => {
+    if (!row?.id) return;
+
+    const name = row.employee_name || row.Employee_Name || row.name || "this employee";
+
+    const ok1 = window.confirm(`Are you sure you want to PERMANENTLY delete ${name}? This will remove all their records (attendance, documents, etc.) and CANNOT be undone.`);
+    if (!ok1) return;
+
+    const ok2 = window.confirm(`FINAL CONFIRMATION: Are you absolutely sure you want to delete ${name}?`);
+    if (!ok2) return;
+
+    try {
+      await api.delete(`/employees/${row.id}`);
+      refetch();
+    } catch (e) {
+      console.error("Failed to delete employee", e);
+      alert(
+        e?.response?.data?.message ||
+        e?.message ||
+        "Failed to delete employee"
+      );
+    }
+  };
+
   const handleCloseEdit = useCallback((shouldRefresh = false) => {
     setEditEmployeeId(null);
     if (shouldRefresh) refetch();
@@ -232,9 +259,10 @@ export default function EmployeesPage() {
             onViewEmployee={handleViewEmployee}
             onEditEmployee={handleEditEmployee}
             onMarkInactive={handleMarkInactive}
+            onDeleteEmployee={handleDeleteEmployee}
           />
 
-          <div className="px-4 py-3 flex items-center justify-between text-sm">
+          <div className="px-4 py-3 flex items-center justify-between text-sm pagination-safe">
             <div>
               Page {total === 0 ? 0 : page} of {totalPages}
             </div>

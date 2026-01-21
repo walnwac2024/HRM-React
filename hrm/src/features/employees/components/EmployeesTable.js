@@ -6,7 +6,8 @@ function EmployeesTable({
   firstItem = 1,
   onViewEmployee,
   onEditEmployee,
-  onMarkInactive, // ✅ now toggles: active->inactive OR inactive->active (parent decides)
+  onMarkInactive,
+  onDeleteEmployee,
 }) {
   const [openRowId, setOpenRowId] = useState(null);
 
@@ -281,6 +282,35 @@ function EmployeesTable({
                               )}
                             </span>
                             <span>{isInactive ? "Activate employee" : "Mark inactive"}</span>
+                          </button>
+
+                          <div className="my-1 border-t border-slate-100" />
+
+                          <button
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50"
+                            onClick={() => {
+                              setOpenRowId(null);
+                              onDeleteEmployee?.(row);
+                            }}
+                          >
+                            <span className="inline-flex h-4 w-4 items-center justify-center">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                className="h-4 w-4"
+                              >
+                                <path
+                                  d="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </span>
+                            <span>Delete employee</span>
                           </button>
                         </div>
                       )}

@@ -4,8 +4,8 @@ export default function WorkSheetTable({
   rows = [],
   page = 1,
   pageCount = 1,
-  onPrev = () => {},
-  onNext = () => {},
+  onPrev = () => { },
+  onNext = () => { },
 }) {
   const safePage = Math.max(1, Number(page) || 1);
   const safePageCount = Math.max(1, Number(pageCount) || 1);
@@ -55,7 +55,7 @@ export default function WorkSheetTable({
           </table>
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex items-center justify-between pagination-safe">
           <span className="text-sm text-gray-600">Page {safePage} of {safePageCount}</span>
           <div className="flex gap-2">
             <button className="btn-outline" onClick={onPrev} disabled={!canPrev}>Previous</button>

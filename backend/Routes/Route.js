@@ -142,6 +142,7 @@ router.post("/employees", isAuthenticated, requireRole("super_admin", "admin", "
 router.patch("/employees/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployee);
 router.put("/employees/:id/login", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployeeLogin);
 router.patch("/employees/:id/status", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), updateEmployeeStatus);
+router.delete("/employees/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), deleteEmployee);
 router.post("/employees/:id/avatar", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), upload.single("avatar"), updateEmployeeAvatar);
 
 // Employee Document routes
@@ -166,6 +167,7 @@ router.get("/attendance/settings/shifts", isAuthenticated, requireRole("super_ad
 router.patch("/attendance/settings/shifts/:id", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.updateShift);
 router.get("/attendance/settings/rules", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.getRules);
 router.put("/attendance/settings/rules/active", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.updateActiveRule);
+router.post("/attendance/settings/shifts/bulk-assign", isAuthenticated, requireRole("super_admin", "admin", "hr", "developer"), AttendanceSettings.bulkAssignShift);
 
 // Leave routes
 router.get("/leaves/types", isAuthenticated, Leave.getLeaveTypes);
