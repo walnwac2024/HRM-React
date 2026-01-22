@@ -8,16 +8,18 @@ let qrCodeString = null;
 let connectionStatus = "DISCONNECTED"; // DISCONNECTED, CONNECTING, QR_READY, CONNECTED
 let connectionStage = null; // LAUNCHING_BROWSER, LOADING_WHATSAPP, FINALIZING
 let availableGroups = [];
+let isInitializing = false; // Moved to top level
 
 /**
  * Initialize WhatsApp Client
  */
 async function initWhatsApp() {
     // If already doing something, don't start another init
-    if (client && (connectionStatus === "CONNECTED" || connectionStatus === "CONNECTING" || connectionStatus === "QR_READY")) {
-        console.log("WhatsApp already initializing or connected.");
+    if (isInitializing || (client && (connectionStatus === "CONNECTED" || connectionStatus === "CONNECTING" || connectionStatus === "QR_READY"))) {
+        console.log("[V2-FIX] WhatsApp already initializing or connected. Skipping init call.");
         return;
     }
+    isInitializing = true;
 
     // Clean up old instance if it exists
     if (client) {
@@ -33,47 +35,25 @@ async function initWhatsApp() {
         }
     }
 
-    console.log("Initializing WhatsApp Client...");
+    console.log("[V3-STABLE] Initializing WhatsApp Client...");
     connectionStatus = "CONNECTING";
     connectionStage = "LAUNCHING_BROWSER";
 
     client = new Client({
         authStrategy: new LocalAuth({
-            clientId: "hrm-system",
+            clientId: "hrm-system-v3",
             dataPath: path.join(__dirname, "../.wwebjs_auth")
         }),
-        // webVersionCache removed to allow library to use compatible version
         puppeteer: {
             handleSIGINT: false,
-            headless: true, // Revert to legacy headless for better Windows stability
-            protocolTimeout: 0,
+            headless: true,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--no-zygote",
-                "--disable-extensions",
-                "--disable-default-apps",
-                "--mute-audio",
-                "--no-first-run",
-                "--disable-web-security",
-                "--disable-accelerated-2d-canvas",
-                "--no-pings",
-                "--disable-notifications",
-                "--disable-background-networking",
-                "--disable-default-browser-check",
-                "--blink-settings=imagesEnabled=false",
-                "--disable-remote-fonts",
-                "--disable-features=IsolateOrigins,site-per-process",
-                "--js-flags='--expose-gc'",
-                "--disable-ipc-flooding-protection",
-                "--disable-renderer-backgrounding",
-                "--disable-background-timer-throttling",
-                "--disable-backgrounding-occluded-windows",
-                "--disable-client-side-phishing-detection",
-                "--shm-size=2gb", // Increase shared memory for media
             ],
+            timeout: 60000,
         }
     });
 
@@ -146,8 +126,15 @@ async function initWhatsApp() {
     });
 
     client.initialize().catch(err => {
-        console.error("WhatsApp Initialization Error:", err);
+        console.error("[V3-STABLE] WhatsApp Initialization Error:", err);
         connectionStatus = "DISCONNECTED";
+        isInitializing = false;
+
+        if (err.message && err.message.includes("Target closed")) {
+            console.error("[V3-STABLE] HINT: The browser crashed during launch. On Windows, this is usually due to zombie Chrome processes. Please End Task on all 'chrome.exe' in Task Manager.");
+        }
+    }).finally(() => {
+        isInitializing = false;
     });
 
     // Add generic error listener to catch connection issues
@@ -221,24 +208,27 @@ async function pushToWhatsApp(message, target = null, imagePath = null) {
                     const data = buffer.toString('base64');
                     const media = new MessageMedia('image/jpeg', data, `announcement.jpg`);
 
-                    console.log(`pushToWhatsApp: Sending PHOTO to ${chatId}...`);
+                    console.log(`[V3-STABLE] pushToWhatsApp: Sending PHOTO with caption to ${chatId} (${buffer.length} bytes)...`);
 
-                    // 1️⃣ SEND MEDIA (Without caption to maximize success rate)
-                    await client.sendMessage(chatId, media, { sendSeen: false });
-                    console.log(`pushToWhatsApp: Photo sent successfully.`);
+                    // 1️⃣ SEND MEDIA WITH CAPTION (Wrapped in timeout and safer options)
+                    const sendPromise = client.sendMessage(chatId, media, {
+                        caption: message,
+                        sendMediaAsDocument: false, // Ensure it's an image
+                    });
 
-                    // Wait a moment for WhatsApp to process the photo
-                    await new Promise(resolve => setTimeout(resolve, 3000));
+                    // 45s timeout for media sending (Windows can be slow)
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error("Media send timeout after 45s")), 45000)
+                    );
 
-                    // 2️⃣ SEND CAPTION/TEXT (As separate message)
-                    console.log(`pushToWhatsApp: Sending TEXT to ${chatId}...`);
-                    await client.sendMessage(chatId, message, { sendSeen: false });
+                    await Promise.race([sendPromise, timeoutPromise]);
 
-                    console.log(`pushToWhatsApp: Full announcement delivered successfully.`);
+                    console.log(`[V3-STABLE] pushToWhatsApp: Photo and caption delivered successfully.`);
                     return true;
                 } catch (mediaErr) {
-                    console.error("pushToWhatsApp: Photo delivery failed. Retrying with text-only...", mediaErr.message);
-                    // Continue to fallback text-only sending
+                    console.error("[V3-STABLE] pushToWhatsApp: Photo delivery failed:", mediaErr.message);
+                    // Fallback to text-only if media fails
+                    console.log("[V3-STABLE] pushToWhatsApp: Falling back to text-only delivery.");
                 }
             } else {
                 console.warn(`pushToWhatsApp: Image path provided but file not found. Falling back to text-only.`);
@@ -247,7 +237,7 @@ async function pushToWhatsApp(message, target = null, imagePath = null) {
 
         // 3️⃣ FALLBACK: Send text only
         console.log(`pushToWhatsApp: Triggering text-only delivery to ${chatId}...`);
-        await client.sendMessage(chatId, message, { sendSeen: false });
+        await client.sendMessage(chatId, message);
 
         console.log(`pushToWhatsApp: Text message delivered to ${chatId}`);
         return true;
@@ -332,8 +322,14 @@ async function logoutWhatsApp(hardReset = false) {
         if (hardReset) {
             const authPath = path.join(__dirname, "../.wwebjs_auth");
             if (fs.existsSync(authPath)) {
-                console.log("Hard resetting WhatsApp: Deleting session folder...");
-                fs.rmSync(authPath, { recursive: true, force: true });
+                try {
+                    console.log("[V2-FIX] Hard resetting WhatsApp: Deleting session folder...");
+                    fs.rmSync(authPath, { recursive: true, force: true, maxRetries: 5, retryDelay: 1000 });
+                    console.log("[V2-FIX] Session cleared successfully.");
+                } catch (rmErr) {
+                    console.error("[V2-FIX] CRITICAL: Could not delete session folder. Files are likely locked by a zombie Chrome process.");
+                    console.error("[V2-FIX] SOLUTION: Please open Task Manager and end all 'Google Chrome' or 'Puppeteer' processes.");
+                }
             }
         }
 

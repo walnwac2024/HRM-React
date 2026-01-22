@@ -67,7 +67,9 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     const log = `${new Date().toISOString()} - ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)\n`;
-    fs.appendFileSync(path.join(__dirname, "debug_requests.log"), log);
+    fs.appendFile(path.join(__dirname, "debug_requests.log"), log, (err) => {
+      if (err) console.error("Failed to append to log:", err);
+    });
   });
   next();
 });
@@ -210,11 +212,9 @@ app.use((err, req, res, next) => {
 
   // Enhanced logging for other 500 errors
   const errorDetails = `${new Date().toISOString()} - ERROR 500 - ${req.method} ${req.path}\nStack: ${err.stack}\n\n`;
-  try {
-    fs.appendFileSync(path.join(__dirname, "debug_requests.log"), errorDetails);
-  } catch (logErr) {
-    console.error("Failed to write to log file:", logErr);
-  }
+  fs.appendFile(path.join(__dirname, "debug_requests.log"), errorDetails, (logErr) => {
+    if (logErr) console.error("Failed to write to log file:", logErr);
+  });
 
   console.error(err);
   return res.status(500).json({ message: "Server error" });

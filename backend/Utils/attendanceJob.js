@@ -111,12 +111,12 @@ async function checkMissingAttendance() {
           const notifyTitle = "Attendance Alert";
           const notifyMsg = `${emp.Employee_Name} has failed to mark attendance for today (${today}).`;
 
-          for (const authId of uniqueAuthIds) {
-            await pool.execute(
+          await Promise.all(uniqueAuthIds.map(authId =>
+            pool.execute(
               "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'attendance')",
               [authId, notifyTitle, notifyMsg]
-            );
-          }
+            )
+          ));
 
           await pool.execute(
             `INSERT INTO attendance_alert_logs
@@ -216,12 +216,12 @@ async function checkMissingCheckout() {
           const notifyTitle = "Missing Check-out";
           const notifyMsg = `${emp.Employee_Name} has not checked out for today (${today}).`;
 
-          for (const authId of uniqueAuthIds) {
-            await pool.execute(
+          await Promise.all(uniqueAuthIds.map(authId =>
+            pool.execute(
               "INSERT INTO notifications (user_id, title, message, type) VALUES (?, ?, ?, 'attendance')",
               [authId, notifyTitle, notifyMsg]
-            );
-          }
+            )
+          ));
 
           await pool.execute(
             `INSERT INTO attendance_alert_logs

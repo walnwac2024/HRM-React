@@ -80,14 +80,31 @@ async function resolveShiftForDate(dateStr) {
 }
 
 async function getActiveRule() {
-  const [rows] = await pool.execute(
-    `SELECT id, grace_minutes, notify_employee, notify_hr_admin, block_vpn
-     FROM attendance_rules
-     WHERE is_active = 1
-     ORDER BY id DESC
-     LIMIT 1`
-  );
-  return rows[0] || { grace_minutes: 15, notify_employee: 1, notify_hr_admin: 1, block_vpn: 0 };
+  try {
+    const [rows] = await pool.execute(
+      `SELECT id, grace_minutes, notify_employee, notify_hr_admin, block_vpn
+       FROM attendance_rules
+       WHERE is_active = 1
+       ORDER BY id DESC
+       LIMIT 1`
+    );
+    return rows[0] || { grace_minutes: 15, notify_employee: 1, notify_hr_admin: 1, block_vpn: 0 };
+  } catch (err) {
+    if (err.message && err.message.includes("Unknown column 'block_vpn'")) {
+      // Fallback for missing column
+      const [rows] = await pool.execute(
+        `SELECT id, grace_minutes, notify_employee, notify_hr_admin
+          FROM attendance_rules
+          WHERE is_active = 1
+          ORDER BY id DESC
+          LIMIT 1`
+      );
+      const rule = rows[0] || { grace_minutes: 15, notify_employee: 1, notify_hr_admin: 1 };
+      rule.block_vpn = 0; // default value
+      return rule;
+    }
+    throw err;
+  }
 }
 
 function toYMD(d = new Date()) {
