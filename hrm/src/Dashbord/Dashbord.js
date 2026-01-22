@@ -17,6 +17,7 @@ import { Megaphone, ChevronRight, Gift, PartyPopper } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { BASE_URL } from "../utils/api";
 import BirthdayCelebration from "../components/common/BirthdayCelebration";
+import TimeSyncModal from "../components/common/TimeSyncModal";
 
 const BACKEND_URL = BASE_URL;
 
@@ -103,6 +104,7 @@ export default function Dashboard() {
   const [news, setNews] = useState([]);
   const [selectedBirthday, setSelectedBirthday] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [timeSync, setTimeSync] = useState({ show: false, drift: 0 });
 
   const kpiRows = [
     "Working Hour",
@@ -173,6 +175,16 @@ export default function Dashboard() {
       const inOfficeId = today?.attendance?.office_id_first_in;
       if (inOfficeId) setSelectedOfficeId(String(inOfficeId));
       else if (officeList?.length) setSelectedOfficeId(String(officeList[0].id));
+
+      // --- Proactive Time Sync Check ---
+      if (today?.serverTime) {
+        const sTime = new Date(today.serverTime);
+        const cTime = new Date();
+        const driftMin = Math.abs(sTime.getTime() - cTime.getTime()) / 60000;
+        if (driftMin > 5) {
+          setTimeSync({ show: true, drift: Math.round(driftMin) });
+        }
+      }
     } catch (e) {
       console.error(e);
       setError("Failed to load dashboard data. Please refresh.");
@@ -291,7 +303,8 @@ export default function Dashboard() {
       if (e?.response?.status === 403) {
         const data = e.response.data;
         if (data.drift !== undefined) {
-          setError(`SECURITY VIOLATION: Your device time is out of sync by ~${data.drift} minutes. Attendance blocked. Please set your device to automatic time.`);
+          setTimeSync({ show: true, drift: Math.round(data.drift) });
+          setError(`SECURITY VIOLATION: Your device time is out of sync. Please follow the instructions in the popup.`);
         } else {
           setError(data.message || "Attendance blocked due to security reasons.");
         }
@@ -875,6 +888,12 @@ export default function Dashboard() {
             animation: bounce 2s infinite;
         }
       `}</style>
+      {/* Time Sync Warning Modal */}
+      <TimeSyncModal
+        show={timeSync.show}
+        drift={timeSync.drift}
+        onClose={() => setTimeSync({ ...timeSync, show: false })}
+      />
     </div>
   );
 }

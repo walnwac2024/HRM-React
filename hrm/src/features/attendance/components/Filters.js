@@ -119,6 +119,7 @@ export default function Filters({
             value={vals.employeeGroup}
             onChange={set('employeeGroup')}
             options={EMPLOYEE_GROUPS}
+            searchable
           />
         </div>
 
@@ -151,6 +152,7 @@ export default function Filters({
                 value={vals.status}
                 onChange={set('status')}
                 options={STATUSES}
+                searchable
               />
 
               {isExemption ? (
@@ -221,6 +223,7 @@ export default function Filters({
             value={vals.requestType}
             onChange={set('requestType')}
             options={REQUEST_TYPES}
+            searchable
           />
 
           <SharedDropdown
@@ -228,6 +231,7 @@ export default function Filters({
             value={vals.flag}
             onChange={set('flag')}
             options={FLAGS}
+            searchable
           />
 
           {/* Attendance-only control */}

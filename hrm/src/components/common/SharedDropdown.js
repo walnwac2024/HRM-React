@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { LuChevronDown, LuSearch, LuCheck, LuX } from 'react-icons/lu';
 
 /**
@@ -28,48 +28,66 @@ export default function SharedDropdown({
     const containerRef = useRef(null);
     const listRef = useRef(null);
 
-    // Normalize options
-    const normalizedOptions = options.map(opt => {
-        if (typeof opt === 'string') return { value: opt, label: opt };
-        return opt;
-    });
+    // Memoize normalized options - only recalculate when options change
+    const normalizedOptions = useMemo(() => {
+        return options.map(opt => {
+            if (typeof opt === 'string') return { value: opt, label: opt };
+            return opt;
+        });
+    }, [options]);
 
-    const selectedOption = normalizedOptions.find(opt => opt.value === value);
+    // Memoize selected option lookup - only recalculate when value or options change
+    const selectedOption = useMemo(() => {
+        return normalizedOptions.find(opt => opt.value === value);
+    }, [normalizedOptions, value]);
 
-    const filteredOptions = normalizedOptions.filter(opt =>
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Memoize filtered options - only recalculate when search term or options change
+    const filteredOptions = useMemo(() => {
+        if (!searchTerm) return normalizedOptions;
+        const lowerSearch = searchTerm.toLowerCase();
+        return normalizedOptions.filter(opt =>
+            opt.label.toLowerCase().includes(lowerSearch)
+        );
+    }, [normalizedOptions, searchTerm]);
 
-    const handleToggle = () => setIsOpen(!isOpen);
+    // Memoize toggle handler
+    const handleToggle = useCallback(() => {
+        setIsOpen(prev => !prev);
+    }, []);
 
-    const handleSelect = (val) => {
+    // Memoize select handler
+    const handleSelect = useCallback((val) => {
         onChange?.(val);
         setIsOpen(false);
         setSearchTerm("");
-    };
+    }, [onChange]);
 
-    const handleClear = (e) => {
+    // Memoize clear handler
+    const handleClear = useCallback((e) => {
         e.stopPropagation();
         onChange?.("");
         setSearchTerm("");
-    };
+    }, [onChange]);
 
-    // Outside click listener
+    // Optimized outside click listener - only active when dropdown is open
     useEffect(() => {
+        if (!isOpen) return;
+
         const handleClickOutside = (event) => {
             if (containerRef.current && !containerRef.current.contains(event.target)) {
                 setIsOpen(false);
             }
         };
+
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [isOpen]);
 
     // Focus search when opening
     useEffect(() => {
         if (isOpen && searchable) {
             setTimeout(() => {
-                const searchInput = containerRef.current.querySelector('input');
+                const searchInput = containerRef.current?.querySelector('input');
                 searchInput?.focus();
             }, 50);
         }
@@ -129,11 +147,11 @@ export default function SharedDropdown({
                                 No results found
                             </div>
                         ) : (
-                            filteredOptions.map((opt, idx) => {
+                            filteredOptions.map((opt) => {
                                 const isSelected = opt.value === value;
                                 return (
                                     <div
-                                        key={idx}
+                                        key={opt.value}
                                         onClick={() => handleSelect(opt.value)}
                                         className={`
                                             px-4 py-2.5 text-[14px] cursor-pointer flex items-center justify-between transition-colors

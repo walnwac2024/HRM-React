@@ -45,6 +45,7 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
 
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingVault, setSavingVault] = useState(false);
+  const [vaultSuccess, setVaultSuccess] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
@@ -221,6 +222,9 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
       }
       await api.put(`/employees/${employeeId}/login`, payload);
       setVaultForm((prev) => ({ ...prev, password: "" }));
+      setVaultSuccess(true);
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setVaultSuccess(false), 5000);
     } catch (err) {
       console.error(err);
     } finally {
@@ -1065,6 +1069,28 @@ export default function EditEmployeeModal({ employeeId, onClose }) {
                   </p>
                 )}
               </div>
+
+              {/* Success Message */}
+              {vaultSuccess && (
+                <div className="mt-4 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <svg className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-emerald-900">Success!</h4>
+                    <p className="mt-0.5 text-xs text-emerald-700">Vault information has been updated successfully.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setVaultSuccess(false)}
+                    className="text-emerald-600 hover:text-emerald-800 transition-colors"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-wrap justify-center sm:justify-end gap-3 pt-4 border-t border-slate-100">
                 <button

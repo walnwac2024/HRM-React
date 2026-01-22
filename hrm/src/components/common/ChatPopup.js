@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { FaComments, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaUserShield, FaUsers, FaPaperclip, FaFileAlt, FaImage, FaMicrophone, FaStop, FaTrash } from "react-icons/fa";
+import { FaComments, FaTimes, FaPaperPlane, FaChevronDown, FaChevronUp, FaUserShield, FaUsers, FaPaperclip, FaFileAlt, FaImage, FaMicrophone, FaStop, FaTrash, FaFilePdf, FaFileWord, FaFileExcel, FaFilePowerpoint, FaFileArchive, FaFileVideo, FaDownload } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import api, { BASE_URL } from "../../utils/api";
 import { flushSync } from "react-dom";
 import { toast } from "react-toastify";
 import socket from "../../utils/socket";
+import VoiceNotePlayer from "./VoiceNotePlayer";
 
 export default function ChatPopup() {
     const { user } = useAuth();
@@ -241,7 +242,22 @@ export default function ChatPopup() {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
+
+            // Enhanced audio quality settings
+            const options = {
+                mimeType: 'audio/webm;codecs=opus',
+                audioBitsPerSecond: 128000  // 128 kbps for better quality
+            };
+
+            // Fallback for browsers that don't support opus
+            let mediaRecorder;
+            try {
+                mediaRecorder = new MediaRecorder(stream, options);
+            } catch (e) {
+                console.warn('Opus codec not supported, using default:', e);
+                mediaRecorder = new MediaRecorder(stream);
+            }
+
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
@@ -329,13 +345,13 @@ export default function ChatPopup() {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-[900]">
+        <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-[900] max-w-[calc(100vw-1rem)] sm:max-w-none">
             {!isOpen ? (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="relative bg-customRed text-white p-4 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center gap-2"
+                    className="relative bg-customRed text-white p-3 sm:p-4 rounded-full shadow-2xl hover:scale-110 transition-transform flex items-center gap-2"
                 >
-                    <FaComments size={24} />
+                    <FaComments size={20} className="sm:w-6 sm:h-6" />
                     <span className="font-semibold hidden sm:inline">Chat</span>
                     {unreadCount > 0 && (
                         <span className="absolute -top-1 -right-1 bg-white text-customRed text-[10px] font-bold h-5 w-5 rounded-full flex items-center justify-center border-2 border-customRed animate-bounce">
@@ -344,7 +360,10 @@ export default function ChatPopup() {
                     )}
                 </button>
             ) : (
-                <div className={`bg-white rounded-xl shadow-2xl border flex flex-col transition-all duration-300 ${minimized ? 'h-12 w-64' : 'h-[450px] w-80 sm:w-96'}`}>
+                <div className={`bg-white rounded-xl shadow-2xl border flex flex-col transition-all duration-300 ${minimized
+                        ? 'h-12 w-64 sm:w-80'
+                        : 'h-[500px] w-[calc(100vw-1rem)] sm:h-[550px] sm:w-96 md:w-[420px] lg:w-[450px]'
+                    }`}>
                     {/* Header */}
                     <div className="bg-customRed text-white p-3 rounded-t-xl flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2 truncate">
@@ -443,23 +462,59 @@ export default function ChatPopup() {
                                                                             />
                                                                         </a>
                                                                     ) : m.file_type?.startsWith("audio/") ? (
-                                                                        <div className="py-1">
-                                                                            <audio
-                                                                                controls
-                                                                                src={getFileUrl(m.file_url)}
-                                                                                className={`w-full h-8 ${isMe ? 'filter invert' : ''}`}
-                                                                            />
-                                                                        </div>
+                                                                        <VoiceNotePlayer
+                                                                            audioUrl={getFileUrl(m.file_url)}
+                                                                            isMe={isMe}
+                                                                        />
                                                                     ) : (
-                                                                        <a
-                                                                            href={getFileUrl(m.file_url)}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className={`flex items-center gap-2 p-2 rounded-lg ${isMe ? "bg-white/10" : "bg-gray-100"} hover:underline`}
-                                                                        >
-                                                                            {m.file_type?.includes("pdf") ? <FaFileAlt className="text-red-500" /> : <FaPaperclip />}
-                                                                            <span className="truncate flex-1">{m.file_name}</span>
-                                                                        </a>
+                                                                        <div className={`flex items-center gap-3 p-3 rounded-2xl max-w-[280px] ${isMe ? 'bg-white/10' : 'bg-white border border-gray-200'
+                                                                            }`}>
+                                                                            {/* File Icon */}
+                                                                            <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${isMe ? 'bg-white/20' : 'bg-gray-100'
+                                                                                }`}>
+                                                                                {m.file_type?.includes('pdf') ? (
+                                                                                    <FaFilePdf className="text-red-500 text-2xl" />
+                                                                                ) : m.file_type?.includes('word') || m.file_type?.includes('document') ? (
+                                                                                    <FaFileWord className="text-blue-500 text-2xl" />
+                                                                                ) : m.file_type?.includes('excel') || m.file_type?.includes('spreadsheet') ? (
+                                                                                    <FaFileExcel className="text-green-600 text-2xl" />
+                                                                                ) : m.file_type?.includes('powerpoint') || m.file_type?.includes('presentation') ? (
+                                                                                    <FaFilePowerpoint className="text-orange-500 text-2xl" />
+                                                                                ) : m.file_type?.includes('zip') || m.file_type?.includes('rar') ? (
+                                                                                    <FaFileArchive className="text-yellow-600 text-2xl" />
+                                                                                ) : m.file_type?.includes('video') ? (
+                                                                                    <FaFileVideo className="text-purple-500 text-2xl" />
+                                                                                ) : (
+                                                                                    <FaFileAlt className={isMe ? 'text-white' : 'text-gray-500'} size={24} />
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* File Info */}
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className={`text-xs font-semibold truncate ${isMe ? 'text-white' : 'text-gray-900'
+                                                                                    }`}>
+                                                                                    {m.file_name || 'Document'}
+                                                                                </div>
+                                                                                <div className={`text-[10px] mt-0.5 ${isMe ? 'text-white/70' : 'text-gray-500'
+                                                                                    }`}>
+                                                                                    {m.file_type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                                                                </div>
+                                                                            </div>
+
+                                                                            {/* Download Button */}
+                                                                            <a
+                                                                                href={getFileUrl(m.file_url)}
+                                                                                download
+                                                                                onClick={(e) => e.stopPropagation()}
+                                                                                className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${isMe
+                                                                                    ? 'bg-white/20 hover:bg-white/30 text-white'
+                                                                                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                                                                                    }`}
+                                                                                title="Download"
+                                                                            >
+                                                                                <FaDownload size={12} />
+                                                                            </a>
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             )}
@@ -485,36 +540,85 @@ export default function ChatPopup() {
                                     <form onSubmit={handleSend} className="p-3 border-t shrink-0 flex flex-col gap-2">
                                         {/* File / Recording Preview */}
                                         {selectedFile && (
-                                            <div className="flex items-center justify-between bg-gray-100 p-2 rounded-lg animate-in slide-in-from-bottom-2">
-                                                <div className="flex items-center gap-2 overflow-hidden text-customRed font-bold">
+                                            <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-2xl border border-gray-200 animate-in slide-in-from-bottom-2 shadow-sm">
+                                                <div className="flex items-center gap-3 overflow-hidden flex-1">
                                                     {audioBlob ? (
-                                                        <FaMicrophone className="animate-pulse" />
+                                                        <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+                                                            <FaMicrophone className="text-red-600 animate-pulse" size={18} />
+                                                        </div>
                                                     ) : filePreview ? (
-                                                        <img src={filePreview} className="w-8 h-8 rounded object-cover" alt="" />
+                                                        <div className="w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm">
+                                                            <img src={filePreview} className="w-full h-full object-cover" alt="" />
+                                                        </div>
                                                     ) : (
-                                                        <FaFileAlt className="text-gray-400" />
+                                                        <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+                                                            <FaFileAlt className="text-blue-600" size={18} />
+                                                        </div>
                                                     )}
-                                                    <span className="text-[10px] truncate">{audioBlob ? "Voice Note Ready" : selectedFile.name}</span>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs font-bold text-gray-900 truncate">
+                                                            {audioBlob ? "Voice Note Ready" : selectedFile.name}
+                                                        </div>
+                                                        <div className="text-[10px] text-gray-500 mt-0.5">
+                                                            {audioBlob ? 'Audio Message' : selectedFile.type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <button type="button" onClick={clearFile} className="text-gray-400 hover:text-red-500 p-1">
-                                                    <FaTimes size={12} />
+                                                <button
+                                                    type="button"
+                                                    onClick={clearFile}
+                                                    className="ml-2 w-8 h-8 rounded-full bg-white hover:bg-red-50 text-gray-400 hover:text-red-500 flex items-center justify-center transition-colors shadow-sm"
+                                                    title="Remove"
+                                                >
+                                                    <FaTimes size={14} />
                                                 </button>
                                             </div>
                                         )}
 
                                         <div className="flex gap-2 items-center">
                                             {isRecording ? (
-                                                <div className="flex-1 flex items-center gap-3 bg-red-50 p-2 rounded-full border border-red-200">
-                                                    <div className="flex items-center gap-2 flex-1 px-2">
-                                                        <div className="w-2 h-2 bg-red-500 rounded-full animate-ping" />
-                                                        <span className="text-xs font-bold text-red-600 italic">Recording... {formatTime(recordingTime)}</span>
+                                                <div className="flex-1 flex items-center gap-3 bg-red-50 p-3 rounded-2xl border-2 border-red-300 animate-in slide-in-from-bottom-2">
+                                                    {/* Animated Recording Indicator */}
+                                                    <div className="relative flex items-center justify-center">
+                                                        <div className="absolute w-6 h-6 bg-red-500 rounded-full animate-ping opacity-75" />
+                                                        <div className="relative w-4 h-4 bg-red-600 rounded-full" />
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button type="button" onClick={discardRecording} className="text-gray-400 hover:text-red-600 p-1">
+
+                                                    {/* Waveform Animation */}
+                                                    <div className="flex items-center gap-[2px] h-6">
+                                                        {[...Array(20)].map((_, i) => (
+                                                            <div
+                                                                key={i}
+                                                                className="w-[2px] bg-red-500 rounded-full animate-pulse"
+                                                                style={{
+                                                                    height: `${20 + Math.random() * 80}%`,
+                                                                    animationDelay: `${i * 50}ms`,
+                                                                    animationDuration: '0.8s'
+                                                                }}
+                                                            />
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Timer */}
+                                                    <span className="text-red-600 font-bold text-sm tabular-nums">{formatTime(recordingTime)}</span>
+
+                                                    {/* Action Buttons */}
+                                                    <div className="flex gap-2 ml-auto">
+                                                        <button
+                                                            type="button"
+                                                            onClick={discardRecording}
+                                                            className="text-gray-400 hover:text-red-600 p-2 transition-colors"
+                                                            title="Discard"
+                                                        >
                                                             <FaTrash size={14} />
                                                         </button>
-                                                        <button type="button" onClick={stopRecording} className="bg-red-500 text-white p-2 rounded-full hover:scale-105 shadow-sm">
-                                                            <FaStop size={12} />
+                                                        <button
+                                                            type="button"
+                                                            onClick={stopRecording}
+                                                            className="bg-red-600 text-white p-2 rounded-full hover:bg-red-700 transition-colors shadow-lg"
+                                                            title="Stop Recording"
+                                                        >
+                                                            <FaStop size={14} />
                                                         </button>
                                                     </div>
                                                 </div>

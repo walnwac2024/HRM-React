@@ -81,13 +81,13 @@ async function resolveShiftForDate(dateStr) {
 
 async function getActiveRule() {
   const [rows] = await pool.execute(
-    `SELECT id, grace_minutes, notify_employee, notify_hr_admin
+    `SELECT id, grace_minutes, notify_employee, notify_hr_admin, block_vpn
      FROM attendance_rules
      WHERE is_active = 1
      ORDER BY id DESC
      LIMIT 1`
   );
-  return rows[0] || { grace_minutes: 15, notify_employee: 1, notify_hr_admin: 1 };
+  return rows[0] || { grace_minutes: 15, notify_employee: 1, notify_hr_admin: 1, block_vpn: 0 };
 }
 
 function toYMD(d = new Date()) {
@@ -124,6 +124,51 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
   return R * c;
+}
+
+/**
+ * Check if an IP address is a VPN or Proxy
+ * Uses headers and ip-api.com
+ */
+async function checkVPN(ip, reqHeaders = {}) {
+  // 1. Check for common proxy headers
+  const proxyHeaders = [
+    'via',
+    'x-proxy-id',
+    'proxy-connection',
+    'x-forwarded-proto',
+    'forwarded'
+  ];
+
+  for (const h of proxyHeaders) {
+    if (reqHeaders[h]) return true;
+  }
+
+  // 2. IP Intelligence check (ip-api.com)
+  // Note: ip-api.com free tier allows 45 requests per minute
+  if (!ip || ip === '::1' || ip === '127.0.0.1') return false;
+
+  return new Promise((resolve) => {
+    const req = https.get(`https://demo.ip-api.com/json/${ip}?fields=proxy,hosting`, (res) => {
+      let data = "";
+      res.on("data", (chunk) => (data += chunk));
+      res.on("end", () => {
+        try {
+          const json = JSON.parse(data);
+          // if proxy or hosting (datacenter) is true, it's likely a VPN/Proxy
+          resolve(!!(json.proxy || json.hosting));
+        } catch (e) {
+          resolve(false);
+        }
+      });
+    });
+
+    req.on("error", () => resolve(false));
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
 }
 
 /**
@@ -169,6 +214,7 @@ const getToday = async (req, res) => {
 
     return res.json({
       date: today,
+      serverTime: new Date(),
       shift: shift
         ? { id: shift.id, name: shift.name, start_time: shift.start_time, end_time: shift.end_time }
         : null,
@@ -240,7 +286,7 @@ const punch = async (req, res) => {
         }
 
         return res.status(403).json({
-          message: "Security violation detected: Your system clock is not synchronized with the server. Please correct your time and try again.",
+          message: "Security violation detected: Your system clock is not synchronized with the server. Please set your device time to 'Automatic' using internet time settings and try again.",
           serverTime: now,
           clientTime: cTime,
           drift: Math.round(diffMin)
@@ -258,6 +304,32 @@ const punch = async (req, res) => {
         status: "Failed",
         details: { punch_type, clientTime, serverTime: now }
       });
+    }
+
+    // --- SECURITY CHECK 3: VPN / PROXY DETECTION ---
+    const rule = await getActiveRule();
+    if (rule.block_vpn && !isAdminLike(sessionUser)) {
+      const clientIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      const isVpnDetected = await checkVPN(clientIp, req.headers);
+
+      if (isVpnDetected) {
+        // Log restriction attempt
+        try {
+          await conn.execute(
+            `INSERT INTO attendance_security_violations 
+              (employee_id, server_time, client_time, drift_minutes, punch_type, note)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [targetEmployeeId, now, now, 0, punch_type, `VPN/Proxy Detected: ${clientIp}`]
+          );
+        } catch (logErr) {
+          console.error("Failed to log VPN security violation:", logErr);
+        }
+
+        return res.status(403).json({
+          message: "Security Restriction: VPN or Proxy usage detected. Please disable your VPN/Proxy and use a direct internet connection to mark attendance.",
+          ip: clientIp
+        });
+      }
     }
 
     // --- GPS VALIDATION ---
@@ -308,12 +380,11 @@ const punch = async (req, res) => {
     }
 
     // ------------------------------------------
-
     const today = toYMD(now);
     const shift = await resolveShiftForDate(today);
     if (!shift) return res.status(400).json({ message: "No active shift configured" });
 
-    const rule = await getActiveRule();
+    // rule is already fetched above for VPN check
     const grace = Number(rule.grace_minutes || 0);
 
     await conn.beginTransaction();

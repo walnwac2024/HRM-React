@@ -63,7 +63,7 @@ const getRules = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `
-      SELECT id, grace_minutes, notify_employee, notify_hr_admin, is_active, created_at
+      SELECT id, grace_minutes, notify_employee, notify_hr_admin, block_vpn, is_active, created_at
       FROM attendance_rules
       ORDER BY id DESC
       LIMIT 10
@@ -78,7 +78,7 @@ const getRules = async (req, res) => {
 
 const updateActiveRule = async (req, res) => {
   try {
-    const { grace_minutes, notify_employee, notify_hr_admin } = req.body || {};
+    const { grace_minutes, notify_employee, notify_hr_admin, block_vpn } = req.body || {};
     const g = Number(grace_minutes);
 
     if (!Number.isFinite(g) || g < 0 || g > 240) {
@@ -89,10 +89,10 @@ const updateActiveRule = async (req, res) => {
 
     await pool.execute(
       `
-      INSERT INTO attendance_rules (grace_minutes, notify_employee, notify_hr_admin, is_active)
-      VALUES (?, ?, ?, 1)
+      INSERT INTO attendance_rules (grace_minutes, notify_employee, notify_hr_admin, block_vpn, is_active)
+      VALUES (?, ?, ?, ?, 1)
       `,
-      [g, notify_employee ? 1 : 0, notify_hr_admin ? 1 : 0]
+      [g, notify_employee ? 1 : 0, notify_hr_admin ? 1 : 0, block_vpn ? 1 : 0]
     );
 
     return res.json({ message: "Rule updated" });
