@@ -1,6 +1,7 @@
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const qrcode = require("qrcode-terminal");
 const path = require("path");
+const sharp = require("sharp");
 
 let client;
 let qrCodeString = null;
@@ -41,16 +42,11 @@ async function initWhatsApp() {
             clientId: "hrm-system",
             dataPath: path.join(__dirname, "../.wwebjs_auth")
         }),
-        /* 
-        webVersionCache: {
-            type: 'remote',
-            remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.3000.1015844855-alpha.html',
-        },
-        */
-        webVersionCache: { type: 'local' },
+        // webVersionCache removed to allow library to use compatible version
         puppeteer: {
             handleSIGINT: false,
-            headless: true,
+            headless: true, // Revert to legacy headless for better Windows stability
+            protocolTimeout: 0,
             args: [
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -71,6 +67,12 @@ async function initWhatsApp() {
                 "--disable-remote-fonts",
                 "--disable-features=IsolateOrigins,site-per-process",
                 "--js-flags='--expose-gc'",
+                "--disable-ipc-flooding-protection",
+                "--disable-renderer-backgrounding",
+                "--disable-background-timer-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-client-side-phishing-detection",
+                "--shm-size=2gb", // Increase shared memory for media
             ],
         }
     });
@@ -88,18 +90,28 @@ async function initWhatsApp() {
         connectionStage = null;
         console.log("WhatsApp Client is READY!");
 
+        // 🛠️ MONKEY PATCH: Safely wrap sendSeen to prevent internal WhatsApp Web crashes
         try {
-            const chats = await client.getChats();
-            availableGroups = chats
-                .filter(chat => chat.isGroup)
-                .map(g => ({
-                    id: g.id._serialized,
-                    name: g.name
-                }));
-            console.log(`Synced ${availableGroups.length} WhatsApp groups.`);
-        } catch (err) {
-            console.error("Error syncing groups:", err);
+            await client.pupPage.evaluate(() => {
+                if (window.WWebJS && window.WWebJS.sendSeen) {
+                    const originalSendSeen = window.WWebJS.sendSeen;
+                    window.WWebJS.sendSeen = async (chat) => {
+                        try {
+                            return await originalSendSeen(chat);
+                        } catch (e) {
+                            console.warn("Caught WWebJS.sendSeen error safely:", e.message);
+                            return true; // Pretend it succeeded
+                        }
+                    };
+                    console.log("WWebJS.sendSeen monkey patch applied successfully.");
+                }
+            });
+        } catch (e) {
+            console.warn("Failed to apply sendSeen monkey patch:", e.message);
         }
+
+        // Sync groups in background to avoid blocking
+        syncGroups().catch(err => console.error("Initial group sync error:", err));
     });
 
     client.on("authenticated", () => {
@@ -148,6 +160,24 @@ async function initWhatsApp() {
 }
 
 /**
+ * Get Mime Type from filename
+ */
+function getMimeType(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    const map = {
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
+        '.gif': 'image/gif',
+        '.mp3': 'audio/mpeg',
+        '.ogg': 'audio/ogg',
+        '.wav': 'audio/wav'
+    };
+    return map[ext] || 'application/octet-stream';
+}
+
+/**
  * Send message to a group or contact
  */
 async function pushToWhatsApp(message, target = null, imagePath = null) {
@@ -163,23 +193,67 @@ async function pushToWhatsApp(message, target = null, imagePath = null) {
             return false;
         }
 
-        // Send with image if provided
-        if (imagePath && require('fs').existsSync(imagePath)) {
-            const { MessageMedia } = require("whatsapp-web.js");
-            const media = MessageMedia.fromFilePath(imagePath);
-            await client.sendMessage(chatId, media, { caption: message });
-            console.log(`WhatsApp message with image sent to ${chatId}`);
-        } else {
-            // Send text only
-            await client.sendMessage(chatId, message);
-            console.log(`WhatsApp message sent to ${chatId}`);
+        // 🛠️ NEW: Check if pupPage is still alive to prevent protocol hangs
+        if (!client.pupPage || client.pupPage.isClosed()) {
+            console.error("WhatsApp Browser page is closed or not available. Re-init might be needed.");
+            connectionStatus = "DISCONNECTED";
+            return false;
         }
 
+        // Send with image if provided
+        if (imagePath) {
+            const fs = require('fs');
+            const absolutePath = path.isAbsolute(imagePath) ? imagePath : path.resolve(imagePath);
+            const exists = fs.existsSync(absolutePath);
+
+            console.log(`pushToWhatsApp: Processing image at ${absolutePath} - Exists: ${exists}`);
+
+            if (exists) {
+                try {
+                    const { MessageMedia } = require("whatsapp-web.js");
+
+                    // 🟢 NORMALIZATION: Standardize to high-compatibility JPEG
+                    const buffer = await sharp(absolutePath)
+                        .resize({ width: 1200, height: 1200, fit: 'inside', withoutEnlargement: true })
+                        .jpeg({ quality: 80 })
+                        .toBuffer();
+
+                    const data = buffer.toString('base64');
+                    const media = new MessageMedia('image/jpeg', data, `announcement.jpg`);
+
+                    console.log(`pushToWhatsApp: Sending PHOTO to ${chatId}...`);
+
+                    // 1️⃣ SEND MEDIA (Without caption to maximize success rate)
+                    await client.sendMessage(chatId, media, { sendSeen: false });
+                    console.log(`pushToWhatsApp: Photo sent successfully.`);
+
+                    // Wait a moment for WhatsApp to process the photo
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+
+                    // 2️⃣ SEND CAPTION/TEXT (As separate message)
+                    console.log(`pushToWhatsApp: Sending TEXT to ${chatId}...`);
+                    await client.sendMessage(chatId, message, { sendSeen: false });
+
+                    console.log(`pushToWhatsApp: Full announcement delivered successfully.`);
+                    return true;
+                } catch (mediaErr) {
+                    console.error("pushToWhatsApp: Photo delivery failed. Retrying with text-only...", mediaErr.message);
+                    // Continue to fallback text-only sending
+                }
+            } else {
+                console.warn(`pushToWhatsApp: Image path provided but file not found. Falling back to text-only.`);
+            }
+        }
+
+        // 3️⃣ FALLBACK: Send text only
+        console.log(`pushToWhatsApp: Triggering text-only delivery to ${chatId}...`);
+        await client.sendMessage(chatId, message, { sendSeen: false });
+
+        console.log(`pushToWhatsApp: Text message delivered to ${chatId}`);
         return true;
     } catch (err) {
-        console.error("pushToWhatsApp error:", err);
-        // If it fails with a session error, force disconnect
-        if (err.message && err.message.includes("Session closed")) {
+        console.error("pushToWhatsApp Final Error:", err.message || err);
+        if (err.message && (err.message.includes("Session closed") || err.message.includes("Protocol error"))) {
             connectionStatus = "DISCONNECTED";
         }
         return false;

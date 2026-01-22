@@ -54,6 +54,13 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
         e.preventDefault();
         setSaving(true);
         try {
+            console.log("Submitting News Form:", {
+                title: formData.title,
+                post_type: formData.post_type,
+                hasFile: !!imageFile,
+                fileName: imageFile?.name
+            });
+
             const submitData = new FormData();
             submitData.append('title', formData.title);
             submitData.append('content', formData.content);
@@ -78,105 +85,112 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
     };
 
     return (
-        <div className="modal-overlay">
-            <div className="modal-content max-w-lg">
-                <div className="modal-header">
-                    <h2 className="text-lg font-bold text-gray-800">
-                        {initialData ? "Edit News" : "Publish News"}
-                    </h2>
-                    <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500 transition-colors">
+        <div className="modal-overlay backdrop-blur-sm bg-slate-900/40 px-4">
+            <div className="modal-content max-w-2xl rounded-[32px] shadow-2xl border-none animate-in zoom-in-95 duration-300">
+                <div className="modal-header border-b-0 pb-2 px-8 pt-6 flex items-center justify-between">
+                    <div>
+                        <h2 className="text-2xl font-black text-slate-800 tracking-tight leading-tight">
+                            {initialData ? "Edit News" : "Publish News"}
+                        </h2>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Announcement Details</p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="h-10 w-10 flex items-center justify-center rounded-2xl bg-slate-50 text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all active:scale-90"
+                    >
                         <X size={20} />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="modal-body space-y-4">
-                    {/* Post Type Selector */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Post Type</label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, post_type: 'text' })}
-                                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${formData.post_type === 'text'
-                                    ? 'border-customRed bg-red-50 text-customRed'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                            >
-                                <FileText size={18} />
-                                <span className="font-medium">Text Post</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormData({ ...formData, post_type: 'image' })}
-                                className={`flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${formData.post_type === 'image'
-                                    ? 'border-customRed bg-red-50 text-customRed'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                    }`}
-                            >
-                                <ImagePlus size={18} />
-                                <span className="font-medium">Image Post</span>
-                            </button>
+                <form onSubmit={handleSubmit} className="modal-body px-8 py-4 space-y-4 overflow-hidden">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Segmented Post Type Selector */}
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] ml-1">Post Format</label>
+                            <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200/50">
+                                {[
+                                    { id: 'text', label: 'Text', icon: FileText },
+                                    { id: 'image', label: 'Photo', icon: ImagePlus }
+                                ].map((type) => (
+                                    <button
+                                        key={type.id}
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, post_type: type.id })}
+                                        className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all duration-300 ${formData.post_type === type.id
+                                            ? 'bg-white text-customRed shadow-sm border border-slate-200/40'
+                                            : 'text-slate-500 hover:text-slate-700'
+                                            }`}
+                                    >
+                                        <type.icon size={14} />
+                                        {type.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] ml-1">Title</label>
+                            <input
+                                required
+                                type="text"
+                                value={formData.title}
+                                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                className="w-full px-5 py-2.5 h-11 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-bold text-slate-700 placeholder:text-slate-300 focus:ring-4 focus:ring-customRed/5 focus:border-customRed/30 focus:bg-white transition-all outline-none"
+                                placeholder="Headlines..."
+                            />
                         </div>
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                        <input
-                            required
-                            type="text"
-                            value={formData.title}
-                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-customRed outline-none transition-all"
-                            placeholder="News Title"
-                        />
-                    </div>
-
-                    {/* Content field - required for text posts, optional for image posts */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] ml-1">
                             {formData.post_type === 'text' ? 'Content' : 'Caption (Optional)'}
                         </label>
                         <textarea
                             required={formData.post_type === 'text'}
-                            rows={5}
+                            rows={3}
                             value={formData.content}
                             onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-customRed outline-none transition-all resize-none"
-                            placeholder={formData.post_type === 'text' ? "What's the update?" : "Add a caption (optional)"}
+                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] font-medium text-slate-700 placeholder:text-slate-300 focus:ring-4 focus:ring-customRed/5 focus:border-customRed/30 focus:bg-white transition-all outline-none resize-none"
+                            placeholder={formData.post_type === 'text' ? "What's the update?" : "Add context..."}
                         />
                     </div>
 
-                    {/* Image field - optional for text posts, required for image posts */}
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            {formData.post_type === 'image' ? 'Image (Required)' : 'Image (Optional)'}
+                    {/* Enhanced Image field */}
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] ml-1">
+                            Attachment {formData.post_type === 'image' && <span className="text-customRed font-black italic">(REQUIRED)</span>}
                         </label>
 
                         {imagePreview && !removeImage ? (
-                            <div className="relative group">
+                            <div className="relative group rounded-[20px] overflow-hidden border-2 border-slate-100 shadow-inner h-32">
                                 <img
                                     src={imagePreview}
                                     alt="Preview"
-                                    className="w-full h-48 object-cover rounded-lg border"
+                                    className="w-full h-full object-cover"
                                 />
-                                <button
-                                    type="button"
-                                    onClick={handleRemoveImage}
-                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
+                                <div className="absolute inset-0 bg-slate-900/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={handleRemoveImage}
+                                        className="h-9 w-9 bg-white text-rose-500 rounded-xl shadow-xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all"
+                                        title="Remove Image"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            <label className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${formData.post_type === 'image'
-                                ? 'border-customRed hover:border-red-600 bg-red-50'
-                                : 'border-gray-300 hover:border-customRed'
+                            <label className={`flex flex-col items-center justify-center w-full h-24 border-2 border-dashed rounded-[20px] cursor-pointer transition-all duration-300 group ${formData.post_type === 'image'
+                                ? 'bg-red-50/30 border-customRed/20 hover:border-customRed/40 hover:bg-red-50/50'
+                                : 'bg-slate-50/50 border-slate-200 hover:border-customRed/20 hover:bg-slate-50'
                                 }`}>
-                                <ImageIcon size={32} className={formData.post_type === 'image' ? 'text-customRed mb-2' : 'text-gray-400 mb-2'} />
-                                <span className={`text-sm ${formData.post_type === 'image' ? 'text-customRed font-medium' : 'text-gray-500'}`}>
-                                    Click to upload image {formData.post_type === 'image' && '(Required)'}
+                                <div className={`p-2.5 rounded-xl mb-1.5 transition-all group-hover:scale-110 ${formData.post_type === 'image' ? 'bg-white text-customRed shadow-sm' : 'bg-white text-slate-300 border border-slate-100'
+                                    }`}>
+                                    <ImageIcon size={18} />
+                                </div>
+                                <span className={`text-[11px] font-bold ${formData.post_type === 'image' ? 'text-customRed' : 'text-slate-500'}`}>
+                                    {imageFile ? imageFile.name : "Click to select a photo"}
                                 </span>
-                                <span className="text-xs text-gray-400 mt-1">Max 5MB (JPG, PNG, GIF, WebP)</span>
                                 <input
                                     type="file"
                                     accept="image/*"
@@ -187,33 +201,41 @@ export default function NewsModal({ isOpen, onClose, onSave, initialData = null 
                         )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3 px-4 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 group cursor-pointer transition-colors hover:bg-slate-100/50">
                         <input
                             type="checkbox"
                             id="is_published"
                             checked={formData.is_published}
                             onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                            className="w-4 h-4 text-customRed border-gray-300 rounded focus:ring-customRed"
+                            className="w-5 h-5 accent-customRed border-slate-300 rounded-lg cursor-pointer"
                         />
-                        <label htmlFor="is_published" className="text-sm text-gray-700 select-none">
-                            Publish immediately (Push to WhatsApp)
+                        <label htmlFor="is_published" className="text-[13px] font-bold text-slate-600 select-none cursor-pointer flex-1">
+                            Broadcast to WhatsApp immediately
                         </label>
                     </div>
 
-                    <div className="modal-footer">
+                    <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="btn-outline flex-1 sm:flex-none"
+                            className="flex-1 h-12 rounded-2xl border-2 border-slate-100 text-slate-400 text-sm font-black uppercase tracking-widest hover:bg-slate-50 hover:text-slate-600 transition-all active:scale-[0.98]"
                         >
                             Cancel
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="btn-success flex-1 sm:flex-none px-12 shadow-emerald-500/20"
+                            className={`flex-[1.5] h-12 rounded-2xl bg-customRed text-white text-sm font-black uppercase tracking-widest shadow-lg shadow-red-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${saving ? 'opacity-70 grayscale' : 'hover:bg-red-600'
+                                }`}
                         >
-                            {saving ? "Saving..." : initialData ? "Update News" : "Publish"}
+                            {saving ? (
+                                <>
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Syncing...</span>
+                                </>
+                            ) : (
+                                <span>{initialData ? "Update News" : "Publish Now"}</span>
+                            )}
                         </button>
                     </div>
                 </form>

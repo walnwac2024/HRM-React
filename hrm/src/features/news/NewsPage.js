@@ -328,6 +328,16 @@ export default function NewsPage() {
                             Waiting for Scan...
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">QR expires in 60 seconds. Refresh if it stops working.</p>
+
+                        <div className="mt-4 pt-4 border-t border-slate-100 w-full flex flex-col items-center">
+                            <button
+                                onClick={handleHardResetWhatsApp}
+                                className="text-[11px] font-bold text-slate-400 hover:text-customRed transition-colors flex items-center gap-1.5"
+                            >
+                                <RefreshCw size={12} />
+                                Device could not be linked? Reset Service
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

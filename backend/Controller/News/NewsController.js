@@ -62,6 +62,14 @@ async function createNews(req, res) {
     const authorId = req.session?.user?.id;
     const imageUrl = req.file ? `/uploads/news/${req.file.filename}` : null;
 
+    console.log("Create News Debug:", {
+        title,
+        post_type,
+        hasFile: !!req.file,
+        fileName: req.file?.filename,
+        is_published_raw: is_published
+    });
+
     // Validation based on post type
     if (!title) {
         return res.status(400).json({ message: "Title is required" });
@@ -83,15 +91,26 @@ async function createNews(req, res) {
 
         const newsId = result.insertId;
 
-        if (is_published) {
+        // Better truthiness check for FormData values
+        const shouldPublish = is_published === 'true' || is_published === '1' || is_published === true;
+
+        if (shouldPublish) {
             // Get target group from settings
             const [settings] = await pool.execute("SELECT setting_value FROM settings WHERE setting_key = 'whatsapp_group_id'");
             const targetGroupId = settings.length > 0 ? settings[0].setting_value : process.env.WHP_GROUP_ID;
 
             if (targetGroupId) {
-                const imagePath = imageUrl ? path.join(__dirname, '../../', imageUrl) : null;
+                // Ensure imageUrl doesn't have a leading slash that breaks path.join on some OS/Path configs
+                const relativePath = imageUrl && imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+                const imagePath = imageUrl ? path.join(__dirname, '../../', relativePath) : null;
                 const message = content ? `📢 *${title}*\n\n${content}` : `📢 *${title}*`;
-                await pushToWhatsApp(message, targetGroupId, imagePath);
+
+                console.log("Triggering WhatsApp broadcast with path:", imagePath);
+
+                // Fire and forget in background for better UX speed
+                pushToWhatsApp(message, targetGroupId, imagePath).catch(err => {
+                    console.error("Background WhatsApp broadcast error:", err);
+                });
             }
         }
 
@@ -158,9 +177,17 @@ async function updateNews(req, res) {
             const targetGroupId = settings.length > 0 ? settings[0].setting_value : process.env.WHP_GROUP_ID;
 
             if (targetGroupId) {
-                const imagePath = finalImageUrl ? path.join(__dirname, '../../', finalImageUrl) : null;
+                // Ensure finalImageUrl doesn't have a leading slash that breaks path.join on some OS/Path configs
+                const relativePath = finalImageUrl && finalImageUrl.startsWith('/') ? finalImageUrl.substring(1) : finalImageUrl;
+                const imagePath = finalImageUrl ? path.join(__dirname, '../../', relativePath) : null;
                 const message = content ? `📢 *${title}*\n\n${content}` : `📢 *${title}*`;
-                await pushToWhatsApp(message, targetGroupId, imagePath);
+
+                console.log("Triggering WhatsApp broadcast update with path:", imagePath);
+
+                // Fire and forget in background for better UX speed
+                pushToWhatsApp(message, targetGroupId, imagePath).catch(err => {
+                    console.error("Background WhatsApp broadcast error:", err);
+                });
             }
         }
 
